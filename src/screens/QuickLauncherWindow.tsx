@@ -1,0 +1,256 @@
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { SearchEngine } from '../services/search-engine';
+import { VariableParser } from '../services/variable-parser';
+import { VariableFillModal } from '../components/VariableFillModal';
+import { usePromptStore } from '../stores/prompt-store';
+import type { PromptRecipe } from '../types/index';
+
+// ─── Singleton instances ───────────────────────────────────────────────────────
+
+const searchEngine = new SearchEngine();
+const variableParser = new VariableParser();
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
+/**
+ * QuickLauncherWindow — a compact, always-on-top overlay for rapid prompt
+ * search and selection. Activated via the global hotkey (Cmd+Shift+P /
+ * Ctrl+Shift+P). This component is rendered in a separate Tauri window
+ * (label: "quick-launcher").
+ */
+export function QuickLauncherWindow() {
+  const prompts = usePromptStore((s) => s.prompts);
+
+  const [query, setQuery] = useState('');
+  const [selectedPrompt, setSelectedPrompt] = useState<PromptRecipe | null>(null);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Auto-focus search input on mount ─────────────────────────────────────
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  // ── Search results ───────────────────────────────────────────────────────
+  const results = useMemo(
+    () => searchEngine.search(prompts, query),
+    [prompts, query],
+  );
+
+  // Reset highlight when results change
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [results]);
+
+  // ── Close on Escape ──────────────────────────────────────────────────────
+  const handleClose = useCallback(async () => {
+    setQuery('');
+    setSelectedPrompt(null);
+    setHighlightIndex(0);
+    try {
+      await invoke('toggle_quick_launcher');
+    } catch {
+      // Silently ignore — may fail outside Tauri runtime (e.g. tests)
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedPrompt) {
+          // If variable fill modal is open, close it first
+          setSelectedPrompt(null);
+        } else {
+          handleClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPrompt, handleClose]);
+
+  // ── Copy to clipboard and close ──────────────────────────────────────────
+  const copyAndClose = useCallback(async (text: string) => {
+    try {
+      await invoke('copy_to_clipboard', { text });
+    } catch {
+      // Fallback: ignore if not in Tauri runtime
+    }
+    setQuery('');
+    setSelectedPrompt(null);
+    setHighlightIndex(0);
+    try {
+      await invoke('toggle_quick_launcher');
+    } catch {
+      // Silently ignore
+    }
+  }, []);
+
+  // ── Paste into active app ────────────────────────────────────────────────
+  const pasteToApp = useCallback(async (text: string) => {
+    try {
+      await invoke('copy_to_clipboard', { text });
+    } catch {
+      // Ignore
+    }
+    setQuery('');
+    setSelectedPrompt(null);
+    setHighlightIndex(0);
+    try {
+      await invoke('toggle_quick_launcher');
+    } catch {
+      // Ignore
+    }
+    try {
+      await invoke('paste_to_active_app');
+    } catch {
+      // Paste failed — text is already on clipboard as fallback
+    }
+  }, []);
+
+  // ── Handle prompt selection ──────────────────────────────────────────────
+  const handleSelectPrompt = useCallback(
+    (prompt: PromptRecipe) => {
+      const variables = variableParser.parse(prompt.body);
+      if (variables.length > 0) {
+        setSelectedPrompt(prompt);
+      } else {
+        // No variables — copy body directly and close
+        copyAndClose(prompt.body);
+      }
+    },
+    [copyAndClose],
+  );
+
+  // ── Keyboard navigation in results list ──────────────────────────────────
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightIndex((prev) => Math.min(prev + 1, results.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightIndex((prev) => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' && results.length > 0) {
+        e.preventDefault();
+        handleSelectPrompt(results[highlightIndex]);
+      }
+    },
+    [results, highlightIndex, handleSelectPrompt],
+  );
+
+  // ── Render ───────────────────────────────────────────────────────────────
+
+  // If a prompt with variables is selected, show the variable fill modal inline
+  if (selectedPrompt) {
+    return (
+      <div className="flex h-screen flex-col bg-white dark:bg-gray-800">
+        <VariableFillModal
+          body={selectedPrompt.body}
+          title={selectedPrompt.title}
+          onCopy={(text) => {
+            void invoke('copy_to_clipboard', { text }).catch(() => {});
+          }}
+          onPaste={(text) => {
+            void pasteToApp(text);
+          }}
+          onCopyAndClose={(text) => {
+            void copyAndClose(text);
+          }}
+          onClose={() => setSelectedPrompt(null)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen flex-col overflow-hidden bg-white dark:bg-gray-800">
+      {/* Search input */}
+      <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search prompts…"
+          className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+          aria-label="Search prompts"
+          autoFocus
+        />
+      </div>
+
+      {/* Results list */}
+      <div className="flex-1 overflow-y-auto" role="listbox" aria-label="Search results">
+        {results.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+            {query.trim() ? 'No prompts found.' : 'Start typing to search…'}
+          </div>
+        ) : (
+          results.map((prompt, index) => (
+            <button
+              key={prompt.id}
+              type="button"
+              role="option"
+              aria-selected={index === highlightIndex}
+              onClick={() => handleSelectPrompt(prompt)}
+              onMouseEnter={() => setHighlightIndex(index)}
+              className={`w-full cursor-pointer border-b border-gray-100 px-4 py-2.5 text-left transition-colors dark:border-gray-700 ${
+                index === highlightIndex
+                  ? 'bg-blue-50 dark:bg-blue-900/30'
+                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {prompt.title}
+                </span>
+                {prompt.favorite && (
+                  <span className="text-xs text-yellow-500" aria-label="Favorite">
+                    ★
+                  </span>
+                )}
+              </div>
+              {prompt.description && (
+                <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                  {prompt.description}
+                </p>
+              )}
+              {prompt.tags.length > 0 && (
+                <div className="mt-1 flex gap-1">
+                  {prompt.tags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {prompt.tags.length > 3 && (
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                      +{prompt.tags.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* Footer hint */}
+      <div className="border-t border-gray-200 px-4 py-1.5 dark:border-gray-700">
+        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          <kbd className="rounded border border-gray-300 px-1 dark:border-gray-600">↑↓</kbd>{' '}
+          navigate{' '}
+          <kbd className="rounded border border-gray-300 px-1 dark:border-gray-600">Enter</kbd>{' '}
+          select{' '}
+          <kbd className="rounded border border-gray-300 px-1 dark:border-gray-600">Esc</kbd>{' '}
+          close
+        </p>
+      </div>
+    </div>
+  );
+}

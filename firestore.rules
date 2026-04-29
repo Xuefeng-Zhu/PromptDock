@@ -1,0 +1,118 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ────────────────────────────────────────────────────────
+
+    // Check if the request is from an authenticated user.
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the authenticated user matches the given userId.
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the authenticated user is a member of the given workspace.
+    function isWorkspaceMember(workspaceId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+    }
+
+    // Get the role of the authenticated user in the given workspace.
+    function getMemberRole(workspaceId) {
+      return get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role;
+    }
+
+    // Check if the authenticated user has the owner role in the given workspace.
+    function isWorkspaceOwner(workspaceId) {
+      return isWorkspaceMember(workspaceId) && getMemberRole(workspaceId) == 'owner';
+    }
+
+    // Check if the authenticated user has the owner or editor role in the given workspace.
+    function isOwnerOrEditor(workspaceId) {
+      return isWorkspaceMember(workspaceId)
+        && (getMemberRole(workspaceId) == 'owner' || getMemberRole(workspaceId) == 'editor');
+    }
+
+    // ─── /users/{userId} ────────────────────────────────────────────────────────
+    // Requirement 9.1: Users can read/write only their own user document.
+    // Requirement 9.5: Deny all access to unauthenticated requests.
+
+    match /users/{userId} {
+      allow read, write: if isUser(userId);
+    }
+
+    // ─── /settings/{userId} ─────────────────────────────────────────────────────
+    // Settings follow the same pattern as user documents.
+
+    match /settings/{userId} {
+      allow read, write: if isUser(userId);
+    }
+
+    // ─── /workspaces/{workspaceId} ──────────────────────────────────────────────
+    // Requirement 9.2: Workspace members can read workspace documents they belong to.
+    // Requirement 9.4: Only owner role can delete a workspace.
+    // Requirement 9.5: Deny all access to unauthenticated requests.
+
+    match /workspaces/{workspaceId} {
+      // Any workspace member can read the workspace document.
+      allow read: if isWorkspaceMember(workspaceId);
+
+      // Any authenticated user can create a workspace (they become the owner).
+      allow create: if isAuthenticated();
+
+      // Only the workspace owner can update or delete the workspace.
+      allow update: if isWorkspaceOwner(workspaceId);
+      allow delete: if isWorkspaceOwner(workspaceId);
+
+      // ─── /workspaces/{workspaceId}/members/{memberId} ──────────────────────
+      // Requirement 9.2: Workspace members can read member documents.
+      // Requirement 9.4: Only owner role can modify member roles.
+
+      match /members/{memberId} {
+        // Any workspace member can read the members list.
+        allow read: if isWorkspaceMember(workspaceId);
+
+        // Only the workspace owner can create, update, or delete members.
+        allow create, update, delete: if isWorkspaceOwner(workspaceId);
+      }
+
+      // ─── /workspaces/{workspaceId}/prompts/{promptId} ──────────────────────
+      // Requirement 9.2: Workspace members can read prompts.
+      // Requirement 9.3: Only owner/editor can create, update, or soft-delete prompts.
+
+      match /prompts/{promptId} {
+        // Any workspace member can read prompts.
+        allow read: if isWorkspaceMember(workspaceId);
+
+        // Only owners and editors can create, update, or delete prompts.
+        allow create, update, delete: if isOwnerOrEditor(workspaceId);
+
+        // ─── /workspaces/{workspaceId}/prompts/{promptId}/versions/{versionId}
+        match /versions/{versionId} {
+          allow read: if isWorkspaceMember(workspaceId);
+          allow create, update, delete: if isOwnerOrEditor(workspaceId);
+        }
+      }
+
+      // ─── /workspaces/{workspaceId}/folders/{folderId} ──────────────────────
+      match /folders/{folderId} {
+        // Any workspace member can read folders.
+        allow read: if isWorkspaceMember(workspaceId);
+
+        // Only owners and editors can manage folders.
+        allow create, update, delete: if isOwnerOrEditor(workspaceId);
+      }
+
+      // ─── /workspaces/{workspaceId}/conflicts/{conflictId} ──────────────────
+      match /conflicts/{conflictId} {
+        // Any workspace member can read and manage their conflicts.
+        allow read: if isWorkspaceMember(workspaceId);
+        allow create, update, delete: if isOwnerOrEditor(workspaceId);
+      }
+    }
+  }
+}

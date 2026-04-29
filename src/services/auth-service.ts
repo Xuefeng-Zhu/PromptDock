@@ -148,9 +148,14 @@ export class AuthService implements IAuthService {
   /**
    * Subscribe to auth state changes.
    * Returns an unsubscribe function.
+   *
+   * Uses a `disposed` flag so that if the caller tears down before the async
+   * Firebase setup completes, the listener is detached immediately once setup
+   * finishes — preventing leaked subscriptions.
    */
   onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void {
     let unsubscribe: (() => void) | null = null;
+    let disposed = false;
 
     // Initialize asynchronously — the listener is set up once Firebase is ready
     (async () => {
@@ -159,6 +164,10 @@ export class AuthService implements IAuthService {
         const { onAuthStateChanged: firebaseOnAuthStateChanged } = await import('firebase/auth');
 
         const auth = await getFirebaseAuth();
+
+        // If the caller already cleaned up while we were awaiting, don't attach
+        if (disposed) return;
+
         unsubscribe = firebaseOnAuthStateChanged(auth, (firebaseUser) => {
           if (firebaseUser) {
             callback(toAuthUser(firebaseUser));
@@ -168,12 +177,15 @@ export class AuthService implements IAuthService {
         });
       } catch {
         // If Firebase init fails, report null (Local Mode)
-        callback(null);
+        if (!disposed) {
+          callback(null);
+        }
       }
     })();
 
     // Return a function that will unsubscribe when called
     return () => {
+      disposed = true;
       if (unsubscribe) {
         unsubscribe();
       }

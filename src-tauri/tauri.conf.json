@@ -1,0 +1,85 @@
+{
+  "productName": "PromptDock",
+  "version": "0.1.0",
+  "identifier": "com.promptdock.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "description": "Capability for the main window",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "global-shortcut:default",
+            "global-shortcut:allow-register",
+            "global-shortcut:allow-unregister",
+            "clipboard-manager:default",
+            "clipboard-manager:allow-write-text",
+            "clipboard-manager:allow-read-text",
+            "store:default"
+          ]
+        },
+        {
+          "identifier": "quick-launcher-capability",
+          "description": "Capability for the quick launcher window",
+          "windows": ["quick-launcher"],
+          "permissions": [
+            "core:default",
+            "clipboard-manager:default",
+            "clipboard-manager:allow-write-text",
+            "clipboard-manager:allow-read-text",
+            "store:default"
+          ]
+        }
+      ]
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "PromptDock",
+        "width": 1024,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "visible": true,
+        "decorations": true
+      },
+      {
+        "label": "quick-launcher",
+        "title": "Quick Launcher",
+        "url": "index.html",
+        "width": 680,
+        "height": 480,
+        "resizable": false,
+        "fullscreen": false,
+        "center": true,
+        "visible": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ]
+  },
+  "plugins": {}
+}

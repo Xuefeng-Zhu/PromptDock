@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /settings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /workspaces/{workspaceId} {
+      function isMember() {
+        return request.auth != null &&
+          exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
+      }
+
+      function isOwner() {
+        return request.auth != null &&
+          get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data.role == 'owner';
+      }
+
+      function isEditor() {
+        let memberData = get(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid)).data;
+        return memberData.role == 'owner' || memberData.role == 'editor';
+      }
+
+      allow read: if isMember();
+      allow create: if request.auth != null;
+      allow update: if isOwner();
+      allow delete: if isOwner();
+
+      match /members/{memberId} {
+        allow read: if isMember();
+        allow write: if isOwner();
+      }
+
+      match /prompts/{promptId} {
+        allow read: if isMember();
+        allow create, update: if isEditor();
+        allow delete: if isOwner();
+      }
+
+      match /folders/{folderId} {
+        allow read: if isMember();
+        allow create, update: if isEditor();
+        allow delete: if isOwner();
+      }
+
+      match /conflicts/{conflictId} {
+        allow read, write: if isMember();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

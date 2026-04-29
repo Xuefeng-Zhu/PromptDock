@@ -1,0 +1,49 @@
+{
+  "name": "promptdock",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "tauri": "tauri"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xuefeng-Zhu/PromptDock.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Xuefeng-Zhu/PromptDock/issues"
+  },
+  "homepage": "https://github.com/Xuefeng-Zhu/PromptDock#readme",
+  "dependencies": {
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.2.0",
+    "@tauri-apps/plugin-global-shortcut": "^2.2.0",
+    "@tauri-apps/plugin-store": "^2.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "uuid": "^11.1.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.5",
+    "@tauri-apps/cli": "^2.5.0",
+    "@types/react": "^18.3.20",
+    "@types/react-dom": "^18.3.7",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "fast-check": "^4.1.1",
+    "tailwindcss": "^4.1.5",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.4",
+    "vitest": "^3.1.3"
+  }
+}

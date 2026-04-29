@@ -1,0 +1,45 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "prompts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "prompts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "lastUsedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "prompts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "prompts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "favorite", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "prompts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "archived", "order": "ASCENDING" },
+        { "fieldPath": "tags", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

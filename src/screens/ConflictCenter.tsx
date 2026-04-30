@@ -10,7 +10,7 @@
  * Requirements: 18.2, 18.3, 18.4, 18.5
  */
 
-import { useState, useCallback, useSyncExternalStore } from 'react';
+import { useState, useCallback, useRef, useSyncExternalStore } from 'react';
 import type { PromptConflict, PromptRecipe } from '../types/index';
 import type { ConflictService } from '../services/conflict-service';
 
@@ -207,10 +207,23 @@ function ConflictItem({ conflict, onKeepLocal, onKeepRemote }: ConflictItemProps
  * Requirements: 18.3, 18.4, 18.5
  */
 export function ConflictCenter({ conflictService, onResolve, onBack }: ConflictCenterProps) {
-  // Subscribe to conflict service changes for reactive updates
+  // Subscribe to conflict service changes for reactive updates.
+  // Cache the snapshot to avoid infinite re-render loops — useSyncExternalStore
+  // requires referential stability from getSnapshot.
+  const cachedConflicts = useRef<PromptConflict[]>([]);
   const conflicts = useSyncExternalStore(
     useCallback((cb: () => void) => conflictService.subscribe(cb), [conflictService]),
-    () => conflictService.getUnresolvedConflicts(),
+    () => {
+      const next = conflictService.getUnresolvedConflicts();
+      // Only return a new reference if the data actually changed
+      if (
+        next.length !== cachedConflicts.current.length ||
+        next.some((c, i) => c.id !== cachedConflicts.current[i]?.id || c.resolvedAt !== cachedConflicts.current[i]?.resolvedAt)
+      ) {
+        cachedConflicts.current = next;
+      }
+      return cachedConflicts.current;
+    },
   );
 
   const handleKeepLocal = useCallback(

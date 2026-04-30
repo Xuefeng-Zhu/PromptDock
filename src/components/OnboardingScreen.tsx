@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Terminal,
   Monitor,
@@ -12,11 +12,36 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { useAppModeStore } from '../stores/app-mode-store';
+import type { IAuthService } from '../services/interfaces';
+import type { AuthError } from '../types/index';
+
+// ─── Onboarding persistence ────────────────────────────────────────────────────
+
+export const ONBOARDING_KEY = 'promptdock_onboarding_complete';
+
+export function isOnboardingComplete(): boolean {
+  return localStorage.getItem(ONBOARDING_KEY) === 'true';
+}
+
+export function markOnboardingComplete(): void {
+  localStorage.setItem(ONBOARDING_KEY, 'true');
+}
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface OnboardingScreenProps {
   onComplete: (choice: 'local' | 'sync' | 'signin') => void;
+  authService?: IAuthService;
+  syncService?: {
+    transitionToSynced: (
+      userId: string,
+      workspaceId: string,
+      localPrompts: never[],
+      migrationChoice: 'fresh',
+    ) => Promise<void>;
+  };
 }
 
 // ─── Option Card Data ──────────────────────────────────────────────────────────
@@ -92,14 +117,127 @@ const BENEFITS: BenefitItem[] = [
   },
 ];
 
+// ─── Auth Error Messages ───────────────────────────────────────────────────────
+
+function authErrorMessage(error: AuthError): string {
+  switch (error) {
+    case 'invalid-credentials':
+      return 'Invalid email or password. Please try again.';
+    case 'email-in-use':
+      return 'An account with this email already exists.';
+    case 'weak-password':
+      return 'Password is too weak. Use at least 6 characters.';
+    case 'unknown':
+    default:
+      return 'An unexpected error occurred. Please try again.';
+  }
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
  * First-run onboarding screen matching the high-fidelity mockup.
  * Displays a welcome header, 3-column option cards with CTA buttons,
  * 4-column benefit cards with descriptions, and a privacy footer.
+ *
+ * Wired to:
+ * - AppModeStore: sets mode to 'local' for "Start locally"
+ * - AuthService: presents sign-in form for "Sign in" option
+ * - SyncService: initiates transitionToSynced for "Enable sync" option
+ * - Persists onboarding-complete flag after successful completion
  */
-export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+export function OnboardingScreen({ onComplete, authService, syncService }: OnboardingScreenProps) {
+  const setMode = useAppModeStore((s) => s.setMode);
+  const setUserId = useAppModeStore((s) => s.setUserId);
+
+  // Sign-in form state
+  const [showSignInForm, setShowSignInForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  // ── "Start locally" handler (Task 6.1) ─────────────────────────────────────
+  const handleStartLocally = useCallback(() => {
+    setMode('local');
+    markOnboardingComplete();
+    onComplete('local');
+  }, [setMode, onComplete]);
+
+  // ── "Sign in" button handler (Task 6.2) ────────────────────────────────────
+  const handleSignInClick = useCallback(() => {
+    setShowSignInForm(true);
+    setAuthError(null);
+  }, []);
+
+  // ── Sign-in form submission (Task 6.2) ─────────────────────────────────────
+  const handleSignInSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!authService) return;
+      setAuthError(null);
+      setIsSubmitting(true);
+      try {
+        const result = await authService.signIn(email, password);
+        if (result.success) {
+          setUserId(result.user.uid);
+          setMode('synced');
+          markOnboardingComplete();
+          onComplete('signin');
+        } else {
+          setAuthError(authErrorMessage(result.error));
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [authService, email, password, setMode, setUserId, onComplete],
+  );
+
+  // ── "Enable sync" handler (Task 6.3) ───────────────────────────────────────
+  const handleEnableSync = useCallback(async () => {
+    setSyncError(null);
+    setIsSubmitting(true);
+    try {
+      if (syncService) {
+        const guestUserId = `guest-${Date.now()}`;
+        const guestWorkspaceId = `workspace-${guestUserId}`;
+        setUserId(guestUserId);
+        await syncService.transitionToSynced(guestUserId, guestWorkspaceId, [], 'fresh');
+      } else {
+        // Fallback: just set mode to synced if no sync service provided
+        setMode('synced');
+      }
+      markOnboardingComplete();
+      onComplete('sync');
+    } catch (err) {
+      setSyncError(
+        `Failed to enable sync: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [syncService, setMode, setUserId, onComplete]);
+
+  // ── Option click dispatcher ────────────────────────────────────────────────
+  const handleOptionClick = useCallback(
+    (key: 'local' | 'sync' | 'signin') => {
+      switch (key) {
+        case 'local':
+          handleStartLocally();
+          break;
+        case 'signin':
+          handleSignInClick();
+          break;
+        case 'sync':
+          void handleEnableSync();
+          break;
+      }
+    },
+    [handleStartLocally, handleSignInClick, handleEnableSync],
+  );
+
   return (
     <div className="flex min-h-full items-center justify-center bg-[var(--color-background)] p-8">
       <div className="w-full max-w-3xl space-y-10">
@@ -143,7 +281,8 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
                 variant="secondary"
                 size="sm"
                 className="mt-5 w-full"
-                onClick={() => onComplete(option.key)}
+                onClick={() => handleOptionClick(option.key)}
+                disabled={isSubmitting}
                 aria-label={option.title}
               >
                 {option.buttonLabel}
@@ -151,6 +290,87 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
             </Card>
           ))}
         </div>
+
+        {/* ── Sign-in Form (shown when "Sign in" is clicked) ────────── */}
+        {showSignInForm && (
+          <Card padding="lg" className="mx-auto max-w-sm">
+            <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-main)]">
+              Sign in to your account
+            </h3>
+            <form onSubmit={handleSignInSubmit} className="space-y-3">
+              <div>
+                <label
+                  htmlFor="onboarding-email"
+                  className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
+                >
+                  Email
+                </label>
+                <Input
+                  id="onboarding-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  aria-label="Email"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="onboarding-password"
+                  className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
+                >
+                  Password
+                </label>
+                <Input
+                  id="onboarding-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  aria-label="Password"
+                />
+              </div>
+
+              {authError && (
+                <p role="alert" className="text-xs text-red-600">
+                  {authError}
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="flex-1"
+                >
+                  {isSubmitting ? 'Signing in…' : 'Sign In'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setShowSignInForm(false);
+                    setAuthError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
+
+        {/* ── Sync Error ────────────────────────────────────────────── */}
+        {syncError && (
+          <p role="alert" className="text-center text-xs text-red-600">
+            {syncError}
+          </p>
+        )}
 
         {/* ── Benefit Cards (4-column) ──────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

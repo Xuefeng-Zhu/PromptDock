@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
 export interface SettingsStore {
   // State
   settings: UserSettings;
+  isLoading: boolean;
 
   // Actions
   loadSettings: () => Promise<void>;
@@ -30,12 +31,19 @@ export function createSettingsStore(repo: ISettingsRepository) {
   return create<SettingsStore>((set) => ({
     // ── Initial state ────────────────────────────────────────────────────────
     settings: { ...DEFAULT_SETTINGS },
+    isLoading: false,
 
     // ── Actions ──────────────────────────────────────────────────────────────
 
     async loadSettings() {
-      const settings = await repo.get();
-      set({ settings });
+      set({ isLoading: true });
+      try {
+        const settings = await repo.get();
+        set({ settings, isLoading: false });
+      } catch (err) {
+        set({ isLoading: false });
+        throw err;
+      }
     },
 
     async updateSettings(changes: Partial<UserSettings>) {

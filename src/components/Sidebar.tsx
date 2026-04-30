@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Home,
   Star,
@@ -24,24 +25,8 @@ export interface SidebarProps {
   archivedCount?: number;
   tagCounts?: Record<string, number>;
   onSettingsOpen?: () => void;
+  onCreateFolder?: (name: string) => void;
 }
-
-// ─── Tag Data (mock) ───────────────────────────────────────────────────────────
-
-const MOCK_TAGS = [
-  { name: 'Writing', count: 34 },
-  { name: 'Summarization', count: 16 },
-  { name: 'Ideation', count: 14 },
-  { name: 'Email', count: 12 },
-  { name: 'Code', count: 20 },
-];
-
-// ─── Workspace Data (mock) ─────────────────────────────────────────────────────
-
-const MOCK_WORKSPACES = [
-  { id: 'personal', name: 'Personal', subtitle: 'Default', color: 'bg-purple-500' },
-  { id: 'team', name: 'Team Workspace', subtitle: 'Invite only', color: 'bg-teal-500' },
-];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -50,12 +35,50 @@ export function Sidebar({
   activeItem,
   onItemSelect,
   promptCountByFolder,
-  totalPromptCount = 124,
-  favoriteCount = 12,
-  recentCount = 24,
-  archivedCount = 8,
+  totalPromptCount = 0,
+  favoriteCount = 0,
+  recentCount = 0,
+  archivedCount = 0,
+  tagCounts = {},
   onSettingsOpen,
+  onCreateFolder,
 }: SidebarProps) {
+  const [showFolderInput, setShowFolderInput] = useState(false);
+  const [folderInputValue, setFolderInputValue] = useState('');
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showFolderInput && folderInputRef.current) {
+      folderInputRef.current.focus();
+    }
+  }, [showFolderInput]);
+
+  const handleFolderInputSubmit = useCallback(() => {
+    const trimmed = folderInputValue.trim();
+    if (trimmed && onCreateFolder) {
+      onCreateFolder(trimmed);
+    }
+    setFolderInputValue('');
+    setShowFolderInput(false);
+  }, [folderInputValue, onCreateFolder]);
+
+  const handleFolderInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleFolderInputSubmit();
+      }
+      if (e.key === 'Escape') {
+        setFolderInputValue('');
+        setShowFolderInput(false);
+      }
+    },
+    [handleFolderInputSubmit],
+  );
+
+  const handleFolderPlusClick = useCallback(() => {
+    setShowFolderInput(true);
+  }, []);
   return (
     <nav
       className="flex h-full w-56 flex-col overflow-y-auto border-r pt-14"
@@ -107,7 +130,7 @@ export function Sidebar({
         </SidebarSection>
 
         {/* ── Folders ───────────────────────────────────────────────────── */}
-        <SidebarSection label="FOLDERS" actionIcon={<Plus className="h-3.5 w-3.5" />}>
+        <SidebarSection label="FOLDERS" actionIcon={<Plus className="h-3.5 w-3.5" />} onActionClick={handleFolderPlusClick}>
           {folders.map((folder) => (
             <SidebarItem
               key={folder.id}
@@ -120,6 +143,21 @@ export function Sidebar({
               count={promptCountByFolder[folder.id]}
             />
           ))}
+          {showFolderInput && (
+            <div className="px-2 py-1">
+              <input
+                ref={folderInputRef}
+                type="text"
+                value={folderInputValue}
+                onChange={(e) => setFolderInputValue(e.target.value)}
+                onKeyDown={handleFolderInputKeyDown}
+                onBlur={handleFolderInputSubmit}
+                placeholder="Folder name"
+                className="w-full rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm outline-none focus:border-[var(--color-primary)]"
+                aria-label="New folder name"
+              />
+            </div>
+          )}
           <button
             type="button"
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
@@ -130,16 +168,16 @@ export function Sidebar({
 
         {/* ── Tags ──────────────────────────────────────────────────────── */}
         <SidebarSection label="TAGS" actionIcon={<Plus className="h-3.5 w-3.5" />}>
-          {MOCK_TAGS.map((tag) => (
+          {Object.entries(tagCounts).map(([tag, count]) => (
             <SidebarItem
-              key={tag.name}
+              key={tag}
               icon={<Hash className="h-4 w-4" />}
               iconColor="text-[var(--color-text-muted)]"
-              label={tag.name}
-              itemKey={`tag-${tag.name.toLowerCase()}`}
-              isActive={activeItem === `tag-${tag.name.toLowerCase()}`}
+              label={tag}
+              itemKey={`tag-${tag.toLowerCase()}`}
+              isActive={activeItem === `tag-${tag.toLowerCase()}`}
               onSelect={onItemSelect}
-              count={tag.count}
+              count={count}
             />
           ))}
           <button
@@ -150,33 +188,6 @@ export function Sidebar({
           </button>
         </SidebarSection>
 
-        {/* ── Workspaces ────────────────────────────────────────────────── */}
-        <SidebarSection label="WORKSPACES" actionIcon={<Plus className="h-3.5 w-3.5" />}>
-          {MOCK_WORKSPACES.map((ws) => (
-            <button
-              key={ws.id}
-              type="button"
-              aria-selected={activeItem === ws.id}
-              onClick={() => onItemSelect(ws.id)}
-              className={[
-                'flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors duration-150',
-                activeItem === ws.id
-                  ? 'bg-[var(--color-primary)]/10 font-medium'
-                  : 'hover:bg-gray-100',
-              ].join(' ')}
-            >
-              <span
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white ${ws.color}`}
-              >
-                {ws.name.charAt(0)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-[var(--color-text-main)]">{ws.name}</p>
-                <p className="truncate text-[10px] text-[var(--color-text-muted)]">{ws.subtitle}</p>
-              </div>
-            </button>
-          ))}
-        </SidebarSection>
       </div>
 
       {/* ── Bottom Toolbar ──────────────────────────────────────────────── */}
@@ -214,9 +225,10 @@ interface SidebarSectionProps {
   label: string;
   children: React.ReactNode;
   actionIcon?: React.ReactNode;
+  onActionClick?: () => void;
 }
 
-function SidebarSection({ label, children, actionIcon }: SidebarSectionProps) {
+function SidebarSection({ label, children, actionIcon, onActionClick }: SidebarSectionProps) {
   return (
     <div className="px-3 pt-4 first:pt-2">
       <div className="mb-1 flex items-center justify-between px-2">
@@ -226,6 +238,7 @@ function SidebarSection({ label, children, actionIcon }: SidebarSectionProps) {
         {actionIcon && (
           <button
             type="button"
+            onClick={onActionClick}
             className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
             aria-label={`Add ${label.toLowerCase()}`}
           >

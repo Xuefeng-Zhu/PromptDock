@@ -1,15 +1,24 @@
-import { useReducer, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
-import { OnboardingScreen } from './OnboardingScreen';
+import { OnboardingScreen, isOnboardingComplete } from './OnboardingScreen';
 import { LibraryScreen } from './LibraryScreen';
 import { PromptEditor, extractVariables } from './PromptEditor';
 import { SettingsScreen } from './SettingsScreen';
 import { PromptInspector } from './PromptInspector';
 import { CommandPalette } from './CommandPalette';
 import { VariableFillModal } from './VariableFillModal';
-import { MOCK_PROMPTS, MOCK_FOLDERS, PROMPT_CATEGORY_MAP, CATEGORY_COLORS } from '../data/mock-data';
-import type { PromptRecipe, Folder } from '../types/index';
+import { ConflictCenter, ConflictBadge } from '../screens/ConflictCenter';
+import { usePromptStore } from '../stores/prompt-store';
+import { PROMPT_CATEGORY_MAP, CATEGORY_COLORS } from '../data/mock-data';
+import { ToastContainer } from './ToastContainer';
+import { useToastStore } from '../stores/toast-store';
+import { copyToClipboard, pasteToActiveApp } from '../utils/clipboard';
+import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
+import { readFolders, createFolder } from '../utils/folder-storage';
+import { getConflictService } from '../App';
+import type { ConflictService } from '../services/conflict-service';
+import type { PromptRecipe } from '../types/index';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,95 +26,10 @@ export type Screen =
   | { name: 'onboarding' }
   | { name: 'library' }
   | { name: 'editor'; promptId?: string }
-  | { name: 'settings' };
+  | { name: 'settings' }
+  | { name: 'conflicts' };
 
 export type FilterType = 'all' | 'favorites' | 'recent';
-
-export interface AppState {
-  screen: Screen;
-  selectedPromptId: string | null;
-  searchQuery: string;
-  activeFilter: FilterType;
-  activeSidebarItem: string;
-  commandPaletteOpen: boolean;
-  variableFillPromptId: string | null;
-  prompts: PromptRecipe[];
-  folders: Folder[];
-}
-
-export type AppAction =
-  | { type: 'NAVIGATE'; screen: Screen }
-  | { type: 'SELECT_PROMPT'; promptId: string | null }
-  | { type: 'SET_SEARCH'; query: string }
-  | { type: 'SET_FILTER'; filter: FilterType }
-  | { type: 'TOGGLE_FAVORITE'; promptId: string }
-  | { type: 'SET_SIDEBAR_ITEM'; item: string }
-  | { type: 'OPEN_COMMAND_PALETTE' }
-  | { type: 'CLOSE_COMMAND_PALETTE' }
-  | { type: 'OPEN_VARIABLE_FILL'; promptId: string }
-  | { type: 'CLOSE_VARIABLE_FILL' }
-  | { type: 'SAVE_PROMPT'; promptId: string; data: Partial<PromptRecipe> }
-  | { type: 'CREATE_PROMPT'; prompt: PromptRecipe };
-
-// ─── Reducer ───────────────────────────────────────────────────────────────────
-
-/**
- * Pure reducer function for all AppShell state transitions.
- * Exported separately for testability.
- */
-export function appReducer(state: AppState, action: AppAction): AppState {
-  switch (action.type) {
-    case 'NAVIGATE':
-      return { ...state, screen: action.screen };
-
-    case 'SELECT_PROMPT':
-      return { ...state, selectedPromptId: action.promptId };
-
-    case 'SET_SEARCH':
-      return { ...state, searchQuery: action.query };
-
-    case 'SET_FILTER':
-      return { ...state, activeFilter: action.filter };
-
-    case 'TOGGLE_FAVORITE': {
-      // TODO: replace with repository call for backend persistence
-      const updatedPrompts = state.prompts.map((p) =>
-        p.id === action.promptId ? { ...p, favorite: !p.favorite } : p,
-      );
-      return { ...state, prompts: updatedPrompts };
-    }
-
-    case 'SET_SIDEBAR_ITEM':
-      return { ...state, activeSidebarItem: action.item };
-
-    case 'OPEN_COMMAND_PALETTE':
-      return { ...state, commandPaletteOpen: true };
-
-    case 'CLOSE_COMMAND_PALETTE':
-      return { ...state, commandPaletteOpen: false };
-
-    case 'OPEN_VARIABLE_FILL':
-      return { ...state, variableFillPromptId: action.promptId };
-
-    case 'CLOSE_VARIABLE_FILL':
-      return { ...state, variableFillPromptId: null };
-
-    case 'SAVE_PROMPT': {
-      // TODO: replace with repository call for backend persistence
-      const savedPrompts = state.prompts.map((p) =>
-        p.id === action.promptId ? { ...p, ...action.data, updatedAt: new Date() } : p,
-      );
-      return { ...state, prompts: savedPrompts };
-    }
-
-    case 'CREATE_PROMPT':
-      // TODO: replace with repository call for backend persistence
-      return { ...state, prompts: [...state.prompts, action.prompt] };
-
-    default:
-      return state;
-  }
-}
 
 // ─── Filtering Logic ───────────────────────────────────────────────────────────
 
@@ -168,58 +92,72 @@ export function filterPrompts(
   return result;
 }
 
-// ─── Initial State ─────────────────────────────────────────────────────────────
-
-const initialState: AppState = {
-  screen: { name: 'onboarding' },
-  selectedPromptId: null,
-  searchQuery: '',
-  activeFilter: 'all',
-  activeSidebarItem: 'library',
-  commandPaletteOpen: false,
-  variableFillPromptId: null,
-  prompts: MOCK_PROMPTS,
-  folders: MOCK_FOLDERS,
-};
-
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface AppShellProps {
   children?: React.ReactNode;
-  /** Override initial state for testing */
-  initialStateOverride?: AppState;
-  /** Initial prompts to load — defaults to MOCK_PROMPTS if not provided */
-  prompts?: PromptRecipe[];
-  /** Initial folders to load — defaults to MOCK_FOLDERS if not provided */
-  folders?: Folder[];
-  // TODO: accept async functions for future backend wiring
-  /** Async callback for saving prompts — wired to backend in future */
-  onSavePrompt?: (data: Partial<PromptRecipe>) => Promise<void>;
-  /** Async callback for deleting prompts — wired to backend in future */
-  onDeletePrompt?: (promptId: string) => Promise<void>;
+  authService?: import('../services/interfaces').IAuthService;
+  syncService?: {
+    transitionToSynced: (
+      userId: string,
+      workspaceId: string,
+      localPrompts: never[],
+      migrationChoice: 'fresh',
+    ) => Promise<void>;
+  };
+  conflictService?: ConflictService;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * Root layout orchestrator. Manages all navigation and shared UI state via
- * useReducer. Renders TopBar, Sidebar, MainContentArea (switching between
- * screens), InspectorPanel (conditional on Library screen with selected
- * prompt), and modal overlays (CommandPalette, VariableFillModal).
+ * Root layout orchestrator. Reads prompt data from PromptStore and manages
+ * navigation via local useState. Renders TopBar, Sidebar, MainContentArea
+ * (switching between screens), InspectorPanel (conditional on Library screen
+ * with selected prompt), and modal overlays (CommandPalette, VariableFillModal).
  */
-export function AppShell({
-  initialStateOverride,
-  prompts: propPrompts,
-  folders: propFolders,
-  onSavePrompt: _onSavePrompt,
-  onDeletePrompt: _onDeletePrompt,
-}: AppShellProps) {
-  const resolvedInitialState = initialStateOverride ?? {
-    ...initialState,
-    prompts: propPrompts ?? MOCK_PROMPTS,
-    folders: propFolders ?? MOCK_FOLDERS,
-  };
-  const [state, dispatch] = useReducer(appReducer, resolvedInitialState);
+export function AppShell({ authService, syncService, conflictService: conflictServiceProp }: AppShellProps) {
+  // ── ConflictService resolution ─────────────────────────────────────────────
+  // Use the prop if provided (e.g., in tests), otherwise fall back to the global singleton.
+  const conflictService = conflictServiceProp ?? getConflictService();
+
+  // ── Subscribe to ConflictService for unresolved conflict count ─────────────
+  const unresolvedConflictCount = useSyncExternalStore(
+    useCallback(
+      (cb: () => void) => {
+        if (!conflictService) return () => {};
+        return conflictService.subscribe(cb);
+      },
+      [conflictService],
+    ),
+    () => conflictService?.getUnresolvedCount() ?? 0,
+  );
+
+  // ── PromptStore selectors ──────────────────────────────────────────────────
+
+  const prompts = usePromptStore((s) => s.prompts);
+  const searchQuery = usePromptStore((s) => s.searchQuery);
+  const setSearchQuery = usePromptStore((s) => s.setSearchQuery);
+  const toggleFavorite = usePromptStore((s) => s.toggleFavorite);
+  const updatePrompt = usePromptStore((s) => s.updatePrompt);
+  const createPrompt = usePromptStore((s) => s.createPrompt);
+  const archivePrompt = usePromptStore((s) => s.archivePrompt);
+  const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
+
+  // ── Toast store ────────────────────────────────────────────────────────────
+  const addToast = useToastStore((s) => s.addToast);
+
+  // ── Local navigation state (useState) ──────────────────────────────────────
+
+  const [screen, setScreen] = useState<Screen>(() => ({
+    name: isOnboardingComplete() ? 'library' : 'onboarding',
+  }));
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [variableFillPromptId, setVariableFillPromptId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeSidebarItem, setActiveSidebarItem] = useState('library');
+  const [userFolders, setUserFolders] = useState<import('../types/index').Folder[]>(() => readFolders());
 
   // ── Global ⌘K / Ctrl+K keyboard shortcut ──────────────────────────────────
 
@@ -227,8 +165,7 @@ export function AppShell({
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        // TODO: register via Tauri global shortcut plugin for system-wide access
-        dispatch({ type: 'OPEN_COMMAND_PALETTE' });
+        setCommandPaletteOpen(true);
       }
     }
 
@@ -236,30 +173,73 @@ export function AppShell({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // ── Computed: folders from prompts (derive from prompt data) ───────────────
+  // For now, derive unique folders from prompt folderId values.
+  // In a future task, folders will come from a dedicated store or repository.
+
+  const derivedFolders = useMemo(() => {
+    const folderMap = new Map<string, { id: string; name: string; createdAt: Date; updatedAt: Date }>();
+    // Include user-created folders first
+    for (const folder of userFolders) {
+      folderMap.set(folder.id, folder);
+    }
+    // Also include folders derived from prompt folderId values
+    for (const prompt of prompts) {
+      if (prompt.folderId && !folderMap.has(prompt.folderId)) {
+        folderMap.set(prompt.folderId, {
+          id: prompt.folderId,
+          name: prompt.folderId.replace('folder-', '').replace(/^\w/, (c) => c.toUpperCase()),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+    return Array.from(folderMap.values()).map((f) => ({
+      id: f.id,
+      name: f.name,
+      createdAt: f.createdAt,
+      updatedAt: f.updatedAt,
+    }));
+  }, [prompts, userFolders]);
+
   // ── Computed: filtered prompts ─────────────────────────────────────────────
 
   const filteredPrompts = useMemo(
     () =>
       filterPrompts(
-        state.prompts,
-        state.searchQuery,
-        state.activeFilter,
-        state.activeSidebarItem,
+        prompts,
+        searchQuery,
+        activeFilter,
+        activeSidebarItem,
       ),
-    [state.prompts, state.searchQuery, state.activeFilter, state.activeSidebarItem],
+    [prompts, searchQuery, activeFilter, activeSidebarItem],
   );
 
   // ── Computed: prompt count by folder ───────────────────────────────────────
 
   const promptCountByFolder = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const prompt of state.prompts) {
+    for (const prompt of prompts) {
       if (prompt.folderId && !prompt.archived) {
         counts[prompt.folderId] = (counts[prompt.folderId] ?? 0) + 1;
       }
     }
     return counts;
-  }, [state.prompts]);
+  }, [prompts]);
+
+  // ── Computed: sidebar filter counts ─────────────────────────────────────────
+
+  const sidebarFilterCounts = useMemo(
+    () => computeFilterCounts(prompts),
+    [prompts],
+  );
+
+  // ── Computed: sidebar tag counts ───────────────────────────────────────────
+
+  const sidebarTagCounts = useMemo(
+    () => computeTagCounts(prompts),
+    [prompts],
+  );
 
   // ── Computed: category color map (prompt ID → Tailwind class string) ───────
 
@@ -277,8 +257,8 @@ export function AppShell({
   // ── Computed: selected prompt object ───────────────────────────────────────
 
   const selectedPrompt = useMemo(
-    () => state.prompts.find((p) => p.id === state.selectedPromptId) ?? null,
-    [state.prompts, state.selectedPromptId],
+    () => prompts.find((p) => p.id === selectedPromptId) ?? null,
+    [prompts, selectedPromptId],
   );
 
   // ── Computed: selected prompt's folder ─────────────────────────────────────
@@ -286,9 +266,9 @@ export function AppShell({
   const selectedPromptFolder = useMemo(
     () =>
       selectedPrompt?.folderId
-        ? state.folders.find((f) => f.id === selectedPrompt.folderId)
+        ? derivedFolders.find((f) => f.id === selectedPrompt.folderId)
         : undefined,
-    [selectedPrompt, state.folders],
+    [selectedPrompt, derivedFolders],
   );
 
   // ── Computed: selected prompt's variables ──────────────────────────────────
@@ -301,20 +281,20 @@ export function AppShell({
   // ── Computed: editor prompt (for editor screen) ────────────────────────────
 
   const editorPrompt = useMemo(() => {
-    if (state.screen.name !== 'editor') return undefined;
-    const promptId = state.screen.promptId;
+    if (screen.name !== 'editor') return undefined;
+    const promptId = screen.promptId;
     if (!promptId) return undefined;
-    return state.prompts.find((p) => p.id === promptId);
-  }, [state.screen, state.prompts]);
+    return prompts.find((p) => p.id === promptId);
+  }, [screen, prompts]);
 
   // ── Computed: variable fill prompt and its variables ───────────────────────
 
   const variableFillPrompt = useMemo(
     () =>
-      state.variableFillPromptId
-        ? state.prompts.find((p) => p.id === state.variableFillPromptId) ?? null
+      variableFillPromptId
+        ? prompts.find((p) => p.id === variableFillPromptId) ?? null
         : null,
-    [state.prompts, state.variableFillPromptId],
+    [prompts, variableFillPromptId],
   );
 
   const variableFillVariables = useMemo(
@@ -325,99 +305,140 @@ export function AppShell({
   // ── Callbacks ──────────────────────────────────────────────────────────────
 
   const handleSearchChange = useCallback((query: string) => {
-    dispatch({ type: 'SET_SEARCH', query });
-  }, []);
+    setSearchQuery(query);
+  }, [setSearchQuery]);
 
   const handleCommandPaletteOpen = useCallback(() => {
-    dispatch({ type: 'OPEN_COMMAND_PALETTE' });
+    setCommandPaletteOpen(true);
   }, []);
 
   const handleSidebarItemSelect = useCallback((item: string) => {
-    dispatch({ type: 'SET_SIDEBAR_ITEM', item });
+    setActiveSidebarItem(item);
+  }, []);
+
+  const handleCreateFolder = useCallback((name: string) => {
+    const folder = createFolder(name);
+    setUserFolders((prev) => [...prev, folder]);
   }, []);
 
   // ── Navigation callbacks ───────────────────────────────────────────────────
 
   const handleOnboardingComplete = useCallback((_choice: 'local' | 'sync' | 'signin') => {
-    // TODO: wire to AuthService / AppModeProvider based on choice
-    dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
+    // Navigation to library is handled here; mode transitions and flag persistence
+    // are handled by OnboardingScreen itself (Tasks 6.1–6.4).
+    setScreen({ name: 'library' });
   }, []);
 
   const handleSelectPrompt = useCallback((id: string) => {
-    dispatch({ type: 'SELECT_PROMPT', promptId: id });
+    setSelectedPromptId(id);
   }, []);
 
   const handleToggleFavorite = useCallback((id: string) => {
-    dispatch({ type: 'TOGGLE_FAVORITE', promptId: id });
-  }, []);
+    toggleFavorite(id).catch((err: unknown) => {
+      addToast(`Failed to toggle favorite: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+  }, [toggleFavorite, addToast]);
 
   const handleFilterChange = useCallback((filter: FilterType) => {
-    dispatch({ type: 'SET_FILTER', filter });
+    setActiveFilter(filter);
   }, []);
 
   const handleNewPrompt = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', screen: { name: 'editor' } });
+    setScreen({ name: 'editor' });
   }, []);
 
   const handleEditorSave = useCallback((data: Partial<PromptRecipe>) => {
-    // TODO: replace with repository call for backend persistence
-    if (state.screen.name === 'editor' && state.screen.promptId) {
-      // Editing existing prompt
-      dispatch({ type: 'SAVE_PROMPT', promptId: state.screen.promptId, data });
-    } else {
-      // Creating new prompt
-      const newPrompt: PromptRecipe = {
-        id: `prompt-${Date.now()}`,
-        workspaceId: 'local',
-        title: (data.title as string) ?? 'Untitled',
-        description: (data.description as string) ?? '',
-        body: (data.body as string) ?? '',
-        tags: (data.tags as string[]) ?? [],
-        folderId: (data.folderId as string | null) ?? null,
-        favorite: (data.favorite as boolean) ?? false,
-        archived: false,
-        archivedAt: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUsedAt: null,
-        createdBy: 'local',
-        version: 1,
-      };
-      dispatch({ type: 'CREATE_PROMPT', prompt: newPrompt });
-    }
-    dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
-  }, [state.screen]);
+    const saveAction = async () => {
+      if (screen.name === 'editor' && screen.promptId) {
+        await updatePrompt(screen.promptId, data);
+      } else {
+        await createPrompt({
+          workspaceId: 'local',
+          title: (data.title as string) ?? 'Untitled',
+          description: (data.description as string) ?? '',
+          body: (data.body as string) ?? '',
+          tags: (data.tags as string[]) ?? [],
+          folderId: (data.folderId as string | null) ?? null,
+          favorite: (data.favorite as boolean) ?? false,
+          archived: false,
+          archivedAt: null,
+          lastUsedAt: null,
+          createdBy: 'local',
+          version: 1,
+        });
+      }
+      setScreen({ name: 'library' });
+    };
+
+    saveAction().catch((err: unknown) => {
+      addToast(`Failed to save prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+  }, [screen, updatePrompt, createPrompt, addToast]);
 
   const handleEditorCancel = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
+    setScreen({ name: 'library' });
   }, []);
 
   const handleSettingsBack = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
+    setScreen({ name: 'library' });
   }, []);
 
   const handleSettingsOpen = useCallback(() => {
-    dispatch({ type: 'NAVIGATE', screen: { name: 'settings' } });
+    setScreen({ name: 'settings' });
   }, []);
+
+  // ── Conflict resolution callbacks ──────────────────────────────────────────
+
+  const handleConflictBadgeClick = useCallback(() => {
+    setScreen({ name: 'conflicts' });
+  }, []);
+
+  const handleConflictBack = useCallback(() => {
+    setScreen({ name: 'library' });
+  }, []);
+
+  const handleConflictResolve = useCallback(
+    (promptId: string, resolvedVersion: PromptRecipe) => {
+      updatePrompt(promptId, resolvedVersion).catch((err: unknown) => {
+        addToast(`Failed to resolve conflict: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      });
+    },
+    [updatePrompt, addToast],
+  );
+
+  // ── Archive and Duplicate callbacks ────────────────────────────────────────
+
+  const handleArchivePrompt = useCallback((id: string) => {
+    archivePrompt(id).catch((err: unknown) => {
+      addToast(`Failed to archive prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+    if (selectedPromptId === id) {
+      setSelectedPromptId(null);
+    }
+  }, [archivePrompt, selectedPromptId, addToast]);
+
+  const handleDuplicatePrompt = useCallback((id: string) => {
+    duplicatePrompt(id).catch((err: unknown) => {
+      addToast(`Failed to duplicate prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+  }, [duplicatePrompt, addToast]);
 
   // ── Command Palette callbacks ──────────────────────────────────────────────
 
   const handleCommandPaletteClose = useCallback(() => {
-    dispatch({ type: 'CLOSE_COMMAND_PALETTE' });
+    setCommandPaletteOpen(false);
   }, []);
 
   const handleCommandPaletteSelect = useCallback((prompt: PromptRecipe) => {
     const variables = extractVariables(prompt.body);
-    dispatch({ type: 'CLOSE_COMMAND_PALETTE' });
+    setCommandPaletteOpen(false);
 
     if (variables.length > 0) {
       // Prompt has variables → open VariableFillModal
-      dispatch({ type: 'OPEN_VARIABLE_FILL', promptId: prompt.id });
+      setVariableFillPromptId(prompt.id);
     } else {
-      // No variables → copy body directly
-      // TODO: wire to Tauri clipboard write command for native clipboard access
-      navigator.clipboard?.writeText(prompt.body).catch(() => {
-        // Clipboard API may not be available in all contexts
+      // No variables → copy body directly via Tauri with browser fallback
+      copyToClipboard(prompt.body).catch(() => {
         console.log('Copy to clipboard:', prompt.body);
       });
     }
@@ -426,37 +447,39 @@ export function AppShell({
   // ── Variable Fill Modal callbacks ──────────────────────────────────────────
 
   const handleVariableFillCancel = useCallback(() => {
-    dispatch({ type: 'CLOSE_VARIABLE_FILL' });
+    setVariableFillPromptId(null);
   }, []);
 
   const handleVariableFillCopy = useCallback((renderedText: string) => {
-    // TODO: wire to Tauri clipboard write command for native clipboard access
-    navigator.clipboard?.writeText(renderedText).catch(() => {
+    // Copy rendered text via Tauri with browser fallback
+    copyToClipboard(renderedText).catch(() => {
       console.log('Copy to clipboard:', renderedText);
     });
   }, []);
 
   const handleVariableFillPaste = useCallback((renderedText: string) => {
-    // TODO: wire to Tauri clipboard paste command for native paste-into-app
-    console.log('Paste rendered text:', renderedText);
+    // Copy to clipboard and paste into active app via Tauri with fallback
+    pasteToActiveApp(renderedText).catch(() => {
+      console.log('Paste rendered text:', renderedText);
+    });
   }, []);
-
-  // TODO: replace with repository call for backend persistence
-  // TODO: wire to Tauri clipboard command for native clipboard access
-  // TODO: wire to AuthService for Firebase auth integration
 
   // ── Determine if Inspector should show ─────────────────────────────────────
 
   const showInspector =
-    state.screen.name === 'library' && selectedPrompt !== null;
+    screen.name === 'library' && selectedPrompt !== null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // Onboarding takes the full screen — no TopBar, Sidebar, or Inspector
-  if (state.screen.name === 'onboarding') {
+  if (screen.name === 'onboarding') {
     return (
       <div className="h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
-        <OnboardingScreen onComplete={handleOnboardingComplete} />
+        <OnboardingScreen
+          onComplete={handleOnboardingComplete}
+          authService={authService}
+          syncService={syncService}
+        />
       </div>
     );
   }
@@ -468,20 +491,36 @@ export function AppShell({
     >
       {/* Fixed top bar */}
       <TopBar
-        searchQuery={state.searchQuery}
+        searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}
         onSettingsOpen={handleSettingsOpen}
       />
 
+      {/* Conflict badge — shown in header area when unresolved conflicts exist */}
+      {unresolvedConflictCount > 0 && (
+        <div className="fixed top-0 right-32 z-50 flex h-14 items-center">
+          <ConflictBadge
+            count={unresolvedConflictCount}
+            onClick={handleConflictBadgeClick}
+          />
+        </div>
+      )}
+
       {/* Body: Sidebar + Main Content + Inspector */}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
-          folders={state.folders}
-          activeItem={state.activeSidebarItem}
+          folders={derivedFolders}
+          activeItem={activeSidebarItem}
           onItemSelect={handleSidebarItemSelect}
           promptCountByFolder={promptCountByFolder}
+          totalPromptCount={sidebarFilterCounts.total}
+          favoriteCount={sidebarFilterCounts.favorites}
+          recentCount={sidebarFilterCounts.recent}
+          archivedCount={sidebarFilterCounts.archived}
+          tagCounts={sidebarTagCounts}
           onSettingsOpen={handleSettingsOpen}
+          onCreateFolder={handleCreateFolder}
         />
 
         {/* Main Content Area */}
@@ -489,11 +528,11 @@ export function AppShell({
           className="flex flex-1 flex-col overflow-y-auto pt-14"
           style={{ color: 'var(--color-text-main)' }}
         >
-          {state.screen.name === 'library' && (
+          {screen.name === 'library' && (
             <LibraryScreen
               prompts={filteredPrompts}
-              selectedPromptId={state.selectedPromptId}
-              activeFilter={state.activeFilter}
+              selectedPromptId={selectedPromptId}
+              activeFilter={activeFilter}
               onSelectPrompt={handleSelectPrompt}
               onToggleFavorite={handleToggleFavorite}
               onFilterChange={handleFilterChange}
@@ -502,18 +541,26 @@ export function AppShell({
             />
           )}
 
-          {state.screen.name === 'editor' && (
+          {screen.name === 'editor' && (
             <PromptEditor
-              promptId={state.screen.promptId}
+              promptId={screen.promptId}
               prompt={editorPrompt}
-              folders={state.folders}
+              folders={derivedFolders}
               onSave={handleEditorSave}
               onCancel={handleEditorCancel}
             />
           )}
 
-          {state.screen.name === 'settings' && (
+          {screen.name === 'settings' && (
             <SettingsScreen onBack={handleSettingsBack} />
+          )}
+
+          {screen.name === 'conflicts' && conflictService && (
+            <ConflictCenter
+              conflictService={conflictService}
+              onResolve={handleConflictResolve}
+              onBack={handleConflictBack}
+            />
           )}
         </main>
 
@@ -531,8 +578,8 @@ export function AppShell({
 
       {/* CommandPalette modal overlay */}
       <CommandPalette
-        prompts={state.prompts}
-        isOpen={state.commandPaletteOpen}
+        prompts={prompts}
+        isOpen={commandPaletteOpen}
         onClose={handleCommandPaletteClose}
         onSelectPrompt={handleCommandPaletteSelect}
       />
@@ -547,6 +594,9 @@ export function AppShell({
           onPaste={handleVariableFillPaste}
         />
       )}
+
+      {/* Toast notifications */}
+      <ToastContainer />
     </div>
   );
 }

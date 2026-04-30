@@ -134,7 +134,6 @@ prompt-dock/
 │   │   ├── workspace-repository.ts   # Workspace management
 │   │   └── settings-repository.ts    # User settings
 │   ├── screens/                  # Application screens
-│   │   ├── MainLibraryScreen.tsx # Main prompt library view
 │   │   ├── PromptEditor.tsx      # Prompt create/edit form
 │   │   ├── QuickLauncherWindow.tsx   # Global hotkey overlay
 │   │   ├── SettingsScreen.tsx    # App settings and account

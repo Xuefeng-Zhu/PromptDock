@@ -4,14 +4,33 @@ import type { LocalStorageBackend } from './local-storage-backend';
 
 // ─── PromptRepository ──────────────────────────────────────────────────────────
 // Implements IPromptRepository by delegating to LocalStorageBackend in Local Mode.
+// When a Firestore delegate is set (synced mode), all operations are forwarded
+// to the FirestoreBackend instead.
 // Maintains an in-memory cache of prompts and persists to the backend on every
 // mutation.
 
 export class PromptRepository implements IPromptRepository {
   private prompts: PromptRecipe[] = [];
   private loaded = false;
+  private firestoreDelegate: IPromptRepository | null = null;
 
   constructor(private readonly backend: LocalStorageBackend) {}
+
+  /**
+   * Set a Firestore backend delegate for synced mode.
+   * When set, all operations are forwarded to the delegate.
+   * Pass null to revert to local-only mode.
+   */
+  setFirestoreDelegate(delegate: IPromptRepository | null): void {
+    this.firestoreDelegate = delegate;
+  }
+
+  /**
+   * Check if a Firestore delegate is currently active.
+   */
+  hasFirestoreDelegate(): boolean {
+    return this.firestoreDelegate !== null;
+  }
 
   /**
    * Ensure the in-memory cache is populated from the backend.
@@ -33,6 +52,10 @@ export class PromptRepository implements IPromptRepository {
   async create(
     recipe: Omit<PromptRecipe, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<PromptRecipe> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.create(recipe);
+    }
+
     await this.ensureLoaded();
 
     const now = new Date();
@@ -51,11 +74,19 @@ export class PromptRepository implements IPromptRepository {
   }
 
   async getById(id: string): Promise<PromptRecipe | null> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.getById(id);
+    }
+
     await this.ensureLoaded();
     return this.prompts.find((p) => p.id === id) ?? null;
   }
 
   async getAll(workspaceId: string): Promise<PromptRecipe[]> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.getAll(workspaceId);
+    }
+
     await this.ensureLoaded();
     return this.prompts.filter((p) => p.workspaceId === workspaceId);
   }
@@ -64,6 +95,10 @@ export class PromptRepository implements IPromptRepository {
     id: string,
     changes: Partial<PromptRecipe>,
   ): Promise<PromptRecipe> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.update(id, changes);
+    }
+
     await this.ensureLoaded();
 
     const index = this.prompts.findIndex((p) => p.id === id);
@@ -86,6 +121,10 @@ export class PromptRepository implements IPromptRepository {
   }
 
   async softDelete(id: string): Promise<void> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.softDelete(id);
+    }
+
     await this.ensureLoaded();
 
     const index = this.prompts.findIndex((p) => p.id === id);
@@ -104,6 +143,10 @@ export class PromptRepository implements IPromptRepository {
   }
 
   async restore(id: string): Promise<void> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.restore(id);
+    }
+
     await this.ensureLoaded();
 
     const index = this.prompts.findIndex((p) => p.id === id);
@@ -122,6 +165,10 @@ export class PromptRepository implements IPromptRepository {
   }
 
   async duplicate(id: string): Promise<PromptRecipe> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.duplicate(id);
+    }
+
     await this.ensureLoaded();
 
     const original = this.prompts.find((p) => p.id === id);
@@ -150,6 +197,10 @@ export class PromptRepository implements IPromptRepository {
   }
 
   async toggleFavorite(id: string): Promise<PromptRecipe> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.toggleFavorite(id);
+    }
+
     await this.ensureLoaded();
 
     const index = this.prompts.findIndex((p) => p.id === id);

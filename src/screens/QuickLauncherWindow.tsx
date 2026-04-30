@@ -4,6 +4,7 @@ import { SearchEngine } from '../services/search-engine';
 import { VariableParser } from '../services/variable-parser';
 import { VariableFillModal } from '../components/VariableFillModal';
 import { usePromptStore } from '../stores/prompt-store';
+import { copyToClipboard, pasteToActiveApp } from '../utils/clipboard';
 import type { PromptRecipe } from '../types/index';
 
 // ─── Singleton instances ───────────────────────────────────────────────────────
@@ -44,8 +45,8 @@ export function QuickLauncherWindow() {
     setHighlightIndex(0);
   }, [results]);
 
-  // ── Close on Escape ──────────────────────────────────────────────────────
-  const handleClose = useCallback(async () => {
+  // ── Hide window helper ─────────────────────────────────────────────────
+  const hideWindow = useCallback(async () => {
     setQuery('');
     setSelectedPrompt(null);
     setHighlightIndex(0);
@@ -56,6 +57,7 @@ export function QuickLauncherWindow() {
     }
   }, []);
 
+  // ── Close on Escape ──────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -63,52 +65,25 @@ export function QuickLauncherWindow() {
           // If variable fill modal is open, close it first
           setSelectedPrompt(null);
         } else {
-          handleClose();
+          hideWindow();
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPrompt, handleClose]);
+  }, [selectedPrompt, hideWindow]);
 
   // ── Copy to clipboard and close ──────────────────────────────────────────
   const copyAndClose = useCallback(async (text: string) => {
-    try {
-      await invoke('copy_to_clipboard', { text });
-    } catch {
-      // Fallback: ignore if not in Tauri runtime
-    }
-    setQuery('');
-    setSelectedPrompt(null);
-    setHighlightIndex(0);
-    try {
-      await invoke('toggle_quick_launcher');
-    } catch {
-      // Silently ignore
-    }
-  }, []);
+    await copyToClipboard(text);
+    await hideWindow();
+  }, [hideWindow]);
 
   // ── Paste into active app ────────────────────────────────────────────────
-  const pasteToApp = useCallback(async (text: string) => {
-    try {
-      await invoke('copy_to_clipboard', { text });
-    } catch {
-      // Ignore
-    }
-    setQuery('');
-    setSelectedPrompt(null);
-    setHighlightIndex(0);
-    try {
-      await invoke('toggle_quick_launcher');
-    } catch {
-      // Ignore
-    }
-    try {
-      await invoke('paste_to_active_app');
-    } catch {
-      // Paste failed — text is already on clipboard as fallback
-    }
-  }, []);
+  const pasteAndClose = useCallback(async (text: string) => {
+    await pasteToActiveApp(text);
+    await hideWindow();
+  }, [hideWindow]);
 
   // ── Handle prompt selection ──────────────────────────────────────────────
   const handleSelectPrompt = useCallback(
@@ -145,21 +120,19 @@ export function QuickLauncherWindow() {
 
   // If a prompt with variables is selected, show the variable fill modal inline
   if (selectedPrompt) {
+    const variables = variableParser.parse(selectedPrompt.body);
     return (
       <div className="flex h-screen flex-col bg-white dark:bg-gray-800">
         <VariableFillModal
-          body={selectedPrompt.body}
-          title={selectedPrompt.title}
+          prompt={selectedPrompt}
+          variables={variables}
           onCopy={(text) => {
-            void invoke('copy_to_clipboard', { text }).catch(() => {});
-          }}
-          onPaste={(text) => {
-            void pasteToApp(text);
-          }}
-          onCopyAndClose={(text) => {
             void copyAndClose(text);
           }}
-          onClose={() => setSelectedPrompt(null)}
+          onPaste={(text) => {
+            void pasteAndClose(text);
+          }}
+          onCancel={() => setSelectedPrompt(null)}
         />
       </div>
     );

@@ -17,6 +17,7 @@
     "@tauri-apps/plugin-global-shortcut": "2.2.0",
     "@tauri-apps/plugin-store": "2.2.0",
     "firebase": "^10.14.1",
+    "lucide-react": "^0.468.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "zustand": "5.0.5"
@@ -24,10 +25,13 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.1.5",
     "@tauri-apps/cli": "2.5.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "18.3.1",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.4.1",
     "fast-check": "4.1.1",
+    "jsdom": "^29.1.0",
     "tailwindcss": "4.1.5",
     "typescript": "5.8.3",
     "vite": "6.3.4",

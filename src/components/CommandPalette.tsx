@@ -1,0 +1,291 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search } from 'lucide-react';
+import type { PromptRecipe } from '../types/index';
+
+// ─── Exported Utility Functions ────────────────────────────────────────────────
+
+/**
+ * Clamps an index after applying a delta, keeping it within [0, listLength - 1].
+ * Returns 0 if listLength is 0.
+ */
+export function clampIndex(current: number, delta: number, listLength: number): number {
+  if (listLength <= 0) return 0;
+  const next = current + delta;
+  if (next < 0) return 0;
+  if (next >= listLength) return listLength - 1;
+  return next;
+}
+
+/**
+ * Filters prompts for the command palette by case-insensitive substring match
+ * against title, description, and tags.
+ */
+export function filterCommandPaletteResults(
+  prompts: PromptRecipe[],
+  query: string,
+): PromptRecipe[] {
+  if (query.trim() === '') return prompts;
+  const q = query.toLowerCase();
+  return prompts.filter(
+    (p) =>
+      p.title.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.tags.some((tag) => tag.toLowerCase().includes(q)),
+  );
+}
+
+// ─── Props ─────────────────────────────────────────────────────────────────────
+
+export interface CommandPaletteProps {
+  prompts: PromptRecipe[];
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectPrompt: (prompt: PromptRecipe) => void;
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────────
+
+/**
+ * Modal command palette overlay triggered by ⌘K.
+ * Provides rapid prompt search with keyboard navigation (↑↓ Enter Esc).
+ * Uses a <dialog> element with role="dialog" and aria-modal="true".
+ * Saves and restores focus to the previously focused element on close.
+ */
+export function CommandPalette({
+  prompts,
+  isOpen,
+  onClose,
+  onSelectPrompt,
+}: CommandPaletteProps) {
+  const [query, setQuery] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const resultsListRef = useRef<HTMLUListElement>(null);
+
+  const filtered = filterCommandPaletteResults(prompts, query);
+
+  // ── Save previous focus on open, restore on close ──────────────────────────
+
+  useEffect(() => {
+    if (isOpen) {
+      // Save the currently focused element before the palette opens
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+
+      // Auto-focus the search input
+      // Use a small timeout to ensure the dialog is rendered before focusing
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 0);
+
+      return () => clearTimeout(timer);
+    } else {
+      // Restore focus to the previously focused element
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
+    }
+  }, [isOpen]);
+
+  // ── Reset query and highlight when opening ─────────────────────────────────
+
+  useEffect(() => {
+    if (isOpen) {
+      setQuery('');
+      setHighlightedIndex(0);
+    }
+  }, [isOpen]);
+
+  // ── Clamp highlighted index when filtered results change ───────────────────
+
+  useEffect(() => {
+    setHighlightedIndex((prev) => clampIndex(prev, 0, filtered.length));
+  }, [filtered.length]);
+
+  // ── Scroll highlighted item into view ──────────────────────────────────────
+
+  useEffect(() => {
+    if (!resultsListRef.current) return;
+    const items = resultsListRef.current.children;
+    if (items[highlightedIndex]) {
+      (items[highlightedIndex] as HTMLElement).scrollIntoView({ block: 'nearest' });
+    }
+  }, [highlightedIndex]);
+
+  // ── Keyboard handler ───────────────────────────────────────────────────────
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setHighlightedIndex((prev) => clampIndex(prev, 1, filtered.length));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setHighlightedIndex((prev) => clampIndex(prev, -1, filtered.length));
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (filtered.length > 0 && filtered[highlightedIndex]) {
+            onSelectPrompt(filtered[highlightedIndex]);
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    },
+    [filtered, highlightedIndex, onSelectPrompt, onClose],
+  );
+
+  // ── Backdrop click handler ─────────────────────────────────────────────────
+
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Only close if clicking the backdrop itself, not the dialog content
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
+  // ── Don't render when closed ───────────────────────────────────────────────
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] animate-[fadeIn_150ms_ease-out]"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
+      onClick={handleBackdropClick}
+      data-testid="command-palette-backdrop"
+    >
+      <dialog
+        ref={dialogRef}
+        open
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        className="relative m-0 flex w-full max-w-lg flex-col overflow-hidden rounded-xl border shadow-2xl animate-[slideDown_150ms_ease-out]"
+        style={{
+          backgroundColor: 'var(--color-panel)',
+          borderColor: 'var(--color-border)',
+          color: 'var(--color-text-main)',
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        {/* Search input */}
+        <div
+          className="flex items-center gap-3 border-b px-4 py-3"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <Search
+            className="h-5 w-5 shrink-0"
+            style={{ color: 'var(--color-text-muted)' }}
+            aria-hidden="true"
+          />
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search prompts…"
+            aria-label="Search prompts"
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-placeholder)]"
+            style={{ color: 'var(--color-text-main)' }}
+          />
+        </div>
+
+        {/* Results list */}
+        <ul
+          ref={resultsListRef}
+          role="listbox"
+          aria-label="Search results"
+          className="max-h-72 overflow-y-auto py-1"
+        >
+          {filtered.length === 0 ? (
+            <li
+              className="px-4 py-6 text-center text-sm"
+              style={{ color: 'var(--color-text-muted)' }}
+            >
+              No prompts found
+            </li>
+          ) : (
+            filtered.map((prompt, index) => (
+              <li
+                key={prompt.id}
+                role="option"
+                aria-selected={index === highlightedIndex}
+                className={[
+                  'flex cursor-pointer flex-col gap-0.5 px-4 py-2.5 transition-colors',
+                  index === highlightedIndex
+                    ? 'bg-[var(--color-primary-light)]'
+                    : 'hover:bg-gray-50',
+                ].join(' ')}
+                onClick={() => onSelectPrompt(prompt)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+              >
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-main)' }}
+                >
+                  {prompt.title}
+                </span>
+                <span
+                  className="truncate text-xs"
+                  style={{ color: 'var(--color-text-muted)' }}
+                >
+                  {prompt.description}
+                </span>
+                {prompt.tags.length > 0 && (
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {prompt.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full px-1.5 py-0.5 text-[10px]"
+                        style={{
+                          backgroundColor: 'var(--color-primary-light)',
+                          color: 'var(--color-text-muted)',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
+
+        {/* Keyboard shortcut hints */}
+        <div
+          className="flex items-center gap-4 border-t px-4 py-2 text-xs"
+          style={{
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-muted)',
+          }}
+        >
+          <span className="flex items-center gap-1">
+            <kbd className="rounded border px-1 py-0.5 text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}>↑↓</kbd>
+            navigate
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="rounded border px-1 py-0.5 text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}>Enter</kbd>
+            select
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="rounded border px-1 py-0.5 text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}>Esc</kbd>
+            close
+          </span>
+        </div>
+      </dialog>
+    </div>
+  );
+}

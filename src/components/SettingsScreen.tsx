@@ -1,0 +1,678 @@
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  ArrowLeft,
+  User,
+  Cloud,
+  Palette,
+  Keyboard,
+  Settings2,
+  Download,
+  Upload,
+  Info,
+  HardDrive,
+  CloudOff,
+  CheckCircle2,
+  Sun,
+  Moon,
+  Monitor,
+  BadgeCheck,
+} from 'lucide-react';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Toggle } from './ui/Toggle';
+
+// ─── Props ─────────────────────────────────────────────────────────────────────
+
+export interface SettingsScreenProps {
+  onBack: () => void;
+}
+
+// ─── Section IDs ───────────────────────────────────────────────────────────────
+
+type SectionId =
+  | 'account-sync'
+  | 'appearance'
+  | 'hotkey'
+  | 'default-behavior'
+  | 'import-export'
+  | 'about';
+
+interface NavItem {
+  id: SectionId;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { id: 'account-sync', label: 'Account & Sync', icon: <User size={18} /> },
+  { id: 'appearance', label: 'Appearance', icon: <Palette size={18} /> },
+  { id: 'hotkey', label: 'Hotkey', icon: <Keyboard size={18} /> },
+  { id: 'default-behavior', label: 'Default Behavior', icon: <Settings2 size={18} /> },
+  { id: 'import-export', label: 'Import/Export', icon: <Download size={18} /> },
+  { id: 'about', label: 'About', icon: <Info size={18} /> },
+];
+
+// ─── Sync State Types ──────────────────────────────────────────────────────────
+
+type SyncState = 'off' | 'guest' | 'signed-in';
+type ThemeOption = 'light' | 'dark' | 'system';
+type DensityOption = 'comfortable' | 'compact';
+type DefaultAction = 'copy' | 'paste';
+
+// ─── AccountCard ───────────────────────────────────────────────────────────────
+
+function AccountCard() {
+  return (
+    <Card padding="lg">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        Account
+      </h3>
+      <div className="flex items-center gap-4">
+        {/* Avatar placeholder */}
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)]">
+          <User size={24} className="text-[var(--color-primary)]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          {/* TODO: Wire to AuthService for real user data */}
+          <p className="text-sm font-medium text-[var(--color-text-main)]">
+            user@example.com
+          </p>
+          <div className="mt-1 flex items-center gap-1.5">
+            <BadgeCheck size={14} className="text-green-600" />
+            <span className="text-xs text-green-600">Verified</span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── SyncCard ──────────────────────────────────────────────────────────────────
+
+interface SyncCardProps {
+  syncState: SyncState;
+  onSyncStateChange: (state: SyncState) => void;
+}
+
+interface SyncOption {
+  key: SyncState;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+const SYNC_OPTIONS: SyncOption[] = [
+  {
+    key: 'off',
+    icon: <HardDrive size={20} />,
+    title: 'Sync off',
+    description: 'Local only — your data stays on this device.',
+  },
+  {
+    key: 'guest',
+    icon: <CloudOff size={20} />,
+    title: 'Guest cloud',
+    description: 'Anonymous sync — no account required.',
+  },
+  {
+    key: 'signed-in',
+    icon: <Cloud size={20} />,
+    title: 'Signed in',
+    description: 'Full sync with your account across devices.',
+  },
+];
+
+function SyncCard({ syncState, onSyncStateChange }: SyncCardProps) {
+  return (
+    <Card padding="lg">
+      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        Sync
+      </h3>
+      <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+        Sign-in is optional. PromptDock works fully offline in local-only mode.
+      </p>
+      <div className="space-y-3">
+        {SYNC_OPTIONS.map((option) => {
+          const isActive = syncState === option.key;
+          return (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => onSyncStateChange(option.key)}
+              aria-pressed={isActive}
+              className={[
+                'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
+                isActive
+                  ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]'
+                  : 'border-[var(--color-border)] bg-[var(--color-panel)] hover:bg-gray-50',
+              ].join(' ')}
+            >
+              <div
+                className={[
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  isActive
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : 'bg-gray-100 text-[var(--color-text-muted)]',
+                ].join(' ')}
+              >
+                {option.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className={[
+                    'text-sm font-medium',
+                    isActive
+                      ? 'text-[var(--color-primary)]'
+                      : 'text-[var(--color-text-main)]',
+                  ].join(' ')}
+                >
+                  {option.title}
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {option.description}
+                </p>
+              </div>
+              {isActive && (
+                <CheckCircle2
+                  size={18}
+                  className="shrink-0 text-[var(--color-primary)]"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+// ─── AppearanceCard ────────────────────────────────────────────────────────────
+
+interface AppearanceCardProps {
+  theme: ThemeOption;
+  onThemeChange: (theme: ThemeOption) => void;
+  density: DensityOption;
+  onDensityChange: (density: DensityOption) => void;
+}
+
+interface ThemeItem {
+  key: ThemeOption;
+  icon: React.ReactNode;
+  label: string;
+}
+
+const THEME_OPTIONS: ThemeItem[] = [
+  { key: 'light', icon: <Sun size={20} />, label: 'Light' },
+  { key: 'dark', icon: <Moon size={20} />, label: 'Dark' },
+  { key: 'system', icon: <Monitor size={20} />, label: 'System' },
+];
+
+function AppearanceCard({
+  theme,
+  onThemeChange,
+  density,
+  onDensityChange,
+}: AppearanceCardProps) {
+  return (
+    <Card padding="lg">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        Appearance
+      </h3>
+
+      {/* Theme selection */}
+      <fieldset>
+        <legend className="mb-3 text-sm font-medium text-[var(--color-text-main)]">
+          Theme
+        </legend>
+        <div className="grid grid-cols-3 gap-3">
+          {THEME_OPTIONS.map((option) => {
+            const isActive = theme === option.key;
+            return (
+              <label
+                key={option.key}
+                className={[
+                  'flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-4 transition-colors',
+                  'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]',
+                  isActive
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]'
+                    : 'border-[var(--color-border)] bg-[var(--color-panel)] hover:bg-gray-50',
+                ].join(' ')}
+              >
+                <input
+                  type="radio"
+                  name="theme"
+                  value={option.key}
+                  checked={isActive}
+                  onChange={() => onThemeChange(option.key)}
+                  className="sr-only"
+                />
+                <span
+                  className={
+                    isActive
+                      ? 'text-[var(--color-primary)]'
+                      : 'text-[var(--color-text-muted)]'
+                  }
+                >
+                  {option.icon}
+                </span>
+                <span
+                  className={[
+                    'text-xs font-medium',
+                    isActive
+                      ? 'text-[var(--color-primary)]'
+                      : 'text-[var(--color-text-main)]',
+                  ].join(' ')}
+                >
+                  {option.label}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      {/* Density control */}
+      <div className="mt-5">
+        <p className="mb-3 text-sm font-medium text-[var(--color-text-main)]">
+          Density
+        </p>
+        <Toggle
+          checked={density === 'compact'}
+          onChange={(checked) =>
+            onDensityChange(checked ? 'compact' : 'comfortable')
+          }
+          label="Compact mode"
+        />
+      </div>
+    </Card>
+  );
+}
+
+// ─── HotkeyCard ────────────────────────────────────────────────────────────────
+
+interface HotkeyCardProps {
+  hotkey: string;
+  onHotkeyChange: (hotkey: string) => void;
+}
+
+function HotkeyCard({ hotkey, onHotkeyChange }: HotkeyCardProps) {
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!isCapturing) return;
+      e.preventDefault();
+
+      const parts: string[] = [];
+      if (e.metaKey) parts.push('⌘');
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+
+      // Only capture if a non-modifier key is pressed
+      const modifierKeys = new Set([
+        'Meta',
+        'Control',
+        'Alt',
+        'Shift',
+      ]);
+      if (!modifierKeys.has(e.key)) {
+        parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+        onHotkeyChange(parts.join('+'));
+        setIsCapturing(false);
+      }
+    },
+    [isCapturing, onHotkeyChange],
+  );
+
+  return (
+    <Card padding="lg">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        Hotkey
+      </h3>
+      <p className="mb-3 text-xs text-[var(--color-text-muted)]">
+        Set a global keyboard shortcut to open PromptDock from anywhere.
+      </p>
+      {/* TODO: Wire to Tauri global shortcut plugin for actual registration */}
+      <div className="flex items-center gap-3">
+        <Input
+          value={isCapturing ? 'Press a key combination…' : hotkey}
+          readOnly
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsCapturing(true)}
+          onBlur={() => setIsCapturing(false)}
+          className={[
+            'max-w-xs font-mono text-center',
+            isCapturing
+              ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/20'
+              : '',
+          ].join(' ')}
+          aria-label="Global hotkey combination"
+          placeholder="Click to set hotkey"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onHotkeyChange('');
+            setIsCapturing(false);
+          }}
+          aria-label="Clear hotkey"
+        >
+          Clear
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+// ─── DefaultBehaviorCard ───────────────────────────────────────────────────────
+
+interface DefaultBehaviorCardProps {
+  defaultAction: DefaultAction;
+  onDefaultActionChange: (action: DefaultAction) => void;
+}
+
+function DefaultBehaviorCard({
+  defaultAction,
+  onDefaultActionChange,
+}: DefaultBehaviorCardProps) {
+  const options: { key: DefaultAction; label: string; description: string }[] = [
+    {
+      key: 'copy',
+      label: 'Copy to Clipboard',
+      description: 'Copy the prompt text to your clipboard.',
+    },
+    {
+      key: 'paste',
+      label: 'Paste into Active App',
+      description: 'Paste directly into the focused application.',
+    },
+  ];
+
+  return (
+    <Card padding="lg">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        Default Behavior
+      </h3>
+      <fieldset>
+        <legend className="mb-3 text-sm font-medium text-[var(--color-text-main)]">
+          When selecting a prompt
+        </legend>
+        <div className="space-y-2">
+          {options.map((opt) => {
+            const isActive = defaultAction === opt.key;
+            return (
+              <label
+                key={opt.key}
+                className={[
+                  'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors',
+                  'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]',
+                  isActive
+                    ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]'
+                    : 'border-[var(--color-border)] bg-[var(--color-panel)] hover:bg-gray-50',
+                ].join(' ')}
+              >
+                <input
+                  type="radio"
+                  name="defaultAction"
+                  value={opt.key}
+                  checked={isActive}
+                  onChange={() => onDefaultActionChange(opt.key)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-[var(--color-text-main)]">
+                    {opt.label}
+                  </span>
+                  <span className="block text-xs text-[var(--color-text-muted)]">
+                    {opt.description}
+                  </span>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+    </Card>
+  );
+}
+
+// ─── ImportExportCard ──────────────────────────────────────────────────────────
+
+function ImportExportCard() {
+  return (
+    <Card padding="lg">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        Import / Export
+      </h3>
+      <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+        Back up your prompt library or import prompts from a JSON file.
+      </p>
+      {/* TODO: Wire to import/export service for actual file operations */}
+      <div className="flex gap-3">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            // TODO: Wire to export service
+          }}
+          aria-label="Export prompts to JSON file"
+        >
+          <Upload size={16} className="mr-2" />
+          Export
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            // TODO: Wire to import service
+          }}
+          aria-label="Import prompts from JSON file"
+        >
+          <Download size={16} className="mr-2" />
+          Import
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+// ─── AboutCard ─────────────────────────────────────────────────────────────────
+
+function AboutCard() {
+  return (
+    <Card padding="lg">
+      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        About
+      </h3>
+      <div className="space-y-2 text-sm text-[var(--color-text-main)]">
+        <p>
+          <span className="font-medium">PromptDock</span>{' '}
+          <span className="text-[var(--color-text-muted)]">v1.0.0</span>
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          A desktop prompt recipe manager built with Tauri, React, and TypeScript.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          © {new Date().getFullYear()} PromptDock. All rights reserved.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+// ─── SettingsScreen ────────────────────────────────────────────────────────────
+
+/**
+ * Redesigned settings screen with a two-column layout:
+ * - Left column: navigation with section links
+ * - Right column: setting cards for each section
+ *
+ * Uses local state for all settings values (mock data, not persisted).
+ * Integration points are marked with TODO comments.
+ */
+export function SettingsScreen({ onBack }: SettingsScreenProps) {
+  // ── Local mock state ───────────────────────────────────────────────────────
+  // TODO: Replace with settings store / repository persistence
+  const [syncState, setSyncState] = useState<SyncState>('off');
+  const [theme, setTheme] = useState<ThemeOption>('system');
+  const [density, setDensity] = useState<DensityOption>('comfortable');
+  const [hotkey, setHotkey] = useState('⌘+Shift+P');
+  const [defaultAction, setDefaultAction] = useState<DefaultAction>('copy');
+  const [activeSection, setActiveSection] = useState<SectionId>('account-sync');
+
+  // ── Section refs for scroll-to behavior ────────────────────────────────────
+  const sectionRefs = useRef<Record<SectionId, HTMLElement | null>>({
+    'account-sync': null,
+    appearance: null,
+    hotkey: null,
+    'default-behavior': null,
+    'import-export': null,
+    about: null,
+  });
+
+  const scrollToSection = useCallback((id: SectionId) => {
+    setActiveSection(id);
+    const el = sectionRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
+
+  const setSectionRef = useCallback(
+    (id: SectionId) => (el: HTMLElement | null) => {
+      sectionRefs.current[id] = el;
+    },
+    [],
+  );
+
+  return (
+    <div className="flex h-full flex-col bg-[var(--color-background)]">
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <header className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6 py-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          aria-label="Go back"
+        >
+          <ArrowLeft size={18} className="mr-1.5" />
+          Back
+        </Button>
+        <h1 className="text-lg font-bold text-[var(--color-text-main)]">
+          Settings
+        </h1>
+      </header>
+
+      {/* ── Two-column layout ───────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left nav column */}
+        <nav
+          className="w-56 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] p-4"
+          aria-label="Settings navigation"
+        >
+          <ul className="space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection(item.id)}
+                    aria-selected={isActive}
+                    className={[
+                      'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
+                      isActive
+                        ? 'bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)]',
+                    ].join(' ')}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Right content column */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto max-w-2xl space-y-6">
+            {/* Account & Sync */}
+            <section
+              ref={setSectionRef('account-sync')}
+              id="settings-account-sync"
+              aria-label="Account and Sync settings"
+            >
+              <AccountCard />
+              <div className="mt-4">
+                <SyncCard
+                  syncState={syncState}
+                  onSyncStateChange={setSyncState}
+                />
+              </div>
+            </section>
+
+            {/* Appearance */}
+            <section
+              ref={setSectionRef('appearance')}
+              id="settings-appearance"
+              aria-label="Appearance settings"
+            >
+              <AppearanceCard
+                theme={theme}
+                onThemeChange={setTheme}
+                density={density}
+                onDensityChange={setDensity}
+              />
+            </section>
+
+            {/* Hotkey */}
+            <section
+              ref={setSectionRef('hotkey')}
+              id="settings-hotkey"
+              aria-label="Hotkey settings"
+            >
+              <HotkeyCard hotkey={hotkey} onHotkeyChange={setHotkey} />
+            </section>
+
+            {/* Default Behavior */}
+            <section
+              ref={setSectionRef('default-behavior')}
+              id="settings-default-behavior"
+              aria-label="Default behavior settings"
+            >
+              <DefaultBehaviorCard
+                defaultAction={defaultAction}
+                onDefaultActionChange={setDefaultAction}
+              />
+            </section>
+
+            {/* Import/Export */}
+            <section
+              ref={setSectionRef('import-export')}
+              id="settings-import-export"
+              aria-label="Import and export settings"
+            >
+              <ImportExportCard />
+            </section>
+
+            {/* About */}
+            <section
+              ref={setSectionRef('about')}
+              id="settings-about"
+              aria-label="About PromptDock"
+            >
+              <AboutCard />
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

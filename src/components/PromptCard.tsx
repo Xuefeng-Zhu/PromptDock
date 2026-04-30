@@ -1,185 +1,196 @@
-import { useState } from 'react';
+import { Star, Check, FileText, Pencil, Lightbulb, Code, Mail, ClipboardList } from 'lucide-react';
 import type { PromptRecipe } from '../types/index';
+import { TagPill } from './TagPill';
+import { IconTile } from './IconTile';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface PromptCardProps {
   prompt: PromptRecipe;
-  onEdit: (id: string) => void;
-  onDuplicate: (id: string) => void;
+  categoryColor: string;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
   onToggleFavorite: (id: string) => void;
-  onArchive: (id: string) => void;
-  onCopy: (id: string) => void;
-  onPaste: (id: string) => void;
 }
+
+// ─── Icon Mapping ──────────────────────────────────────────────────────────────
+
+const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
+  FileText: <FileText className="h-4 w-4" />,
+  Pencil: <Pencil className="h-4 w-4" />,
+  Lightbulb: <Lightbulb className="h-4 w-4" />,
+  Code: <Code className="h-4 w-4" />,
+  Mail: <Mail className="h-4 w-4" />,
+  ClipboardList: <ClipboardList className="h-4 w-4" />,
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function formatRelativeTime(date: Date | null): string {
+/**
+ * Converts a Date to a human-readable relative time string.
+ * Returns strings like "just now", "2 minutes ago", "3 days ago", "2 weeks ago", etc.
+ */
+export function formatRelativeTime(date: Date | null): string {
   if (!date) return 'Never used';
+
   const now = Date.now();
   const diff = now - date.getTime();
   const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return 'Just now';
+
+  if (seconds < 60) return 'just now';
+
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return date.toLocaleDateString();
+  if (days < 7) return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+
+  const years = Math.floor(days / 365);
+  return `${years} ${years === 1 ? 'year' : 'years'} ago`;
 }
 
+/**
+ * Truncates text to a maximum length, appending an ellipsis if truncated.
+ */
 function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trimEnd() + '…';
 }
 
+/**
+ * Resolves a category icon name to a React node.
+ * Falls back to FileText if the icon name is not recognized.
+ */
+function getCategoryIcon(iconName: string): React.ReactNode {
+  return CATEGORY_ICON_MAP[iconName] ?? <FileText className="h-4 w-4" />;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * Displays a single PromptRecipe as a card with title, description preview,
- * tags, favorite indicator, last-used timestamp, and action buttons.
+ * Redesigned prompt card for the library grid.
+ *
+ * Displays a colored IconTile, title, truncated description, TagPills,
+ * relative timestamp, and a favorite star toggle. Supports selected state
+ * with a blue border and checkmark indicator, and hover shadow elevation.
+ *
+ * The `categoryColor` prop is a space-separated Tailwind class string
+ * like "bg-purple-100 text-purple-600" applied to the IconTile.
  */
 export function PromptCard({
   prompt,
-  onEdit,
-  onDuplicate,
+  categoryColor,
+  isSelected,
+  onSelect,
   onToggleFavorite,
-  onArchive,
-  onCopy,
-  onPaste,
 }: PromptCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Parse the icon name from the categoryColor — the CATEGORY_COLORS data
+  // includes an `icon` field, but PromptCard receives only the color string.
+  // The parent (PromptGrid) should ideally pass the icon name too, but for now
+  // we infer a default icon from the color family.
+  const iconNode = resolveIconFromColor(categoryColor);
 
   return (
     <div
-      className="group relative rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+      role="option"
+      aria-selected={isSelected}
+      className={[
+        'relative rounded-xl border bg-[var(--color-panel)] p-4 cursor-pointer',
+        'transition-all duration-200 ease-in-out',
+        'shadow-sm hover:shadow-md',
+        isSelected
+          ? 'border-[#2563EB] ring-1 ring-[#2563EB]'
+          : 'border-[var(--color-border)]',
+      ].join(' ')}
+      onClick={() => onSelect(prompt.id)}
       data-testid={`prompt-card-${prompt.id}`}
     >
-      {/* Header row: title + favorite */}
-      <div className="flex items-start justify-between gap-2">
-        <button
-          className="flex-1 text-left"
-          onClick={() => onEdit(prompt.id)}
-          aria-label={`Edit ${prompt.title}`}
+      {/* Selected checkmark indicator */}
+      {isSelected && (
+        <div
+          className="absolute top-2 right-2 flex items-center justify-center h-5 w-5 rounded-full bg-[#2563EB] text-white"
+          aria-hidden="true"
         >
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug">
+          <Check className="h-3 w-3" />
+        </div>
+      )}
+
+      {/* Header: IconTile + Title */}
+      <div className="flex items-start gap-3">
+        <IconTile icon={iconNode} color={categoryColor} />
+
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-[var(--color-text-main)] leading-snug truncate">
             {prompt.title}
           </h3>
-        </button>
 
-        <button
-          onClick={() => onToggleFavorite(prompt.id)}
-          className="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-          aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          {prompt.favorite ? (
-            <span className="text-yellow-500" aria-hidden="true">★</span>
-          ) : (
-            <span className="text-gray-400 dark:text-gray-500" aria-hidden="true">☆</span>
+          {/* Truncated description */}
+          {prompt.description && (
+            <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed line-clamp-2">
+              {truncate(prompt.description, 120)}
+            </p>
           )}
-        </button>
+        </div>
       </div>
-
-      {/* Description preview */}
-      {prompt.description && (
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-          {truncate(prompt.description, 120)}
-        </p>
-      )}
 
       {/* Tags */}
       {prompt.tags.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {prompt.tags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-            >
-              {tag}
-            </span>
+            <TagPill key={tag} tag={tag} />
           ))}
         </div>
       )}
 
-      {/* Footer: last used + actions */}
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+      {/* Footer: relative timestamp + favorite star */}
+      <div className="mt-3 pt-2 border-t border-[var(--color-border)] flex items-center justify-between">
+        <span className="text-[11px] text-[var(--color-text-placeholder)]">
           {formatRelativeTime(prompt.lastUsedAt)}
         </span>
-
-        {/* Action buttons — visible on hover or when menu is open */}
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100"
-          style={menuOpen ? { opacity: 1 } : undefined}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(prompt.id);
+          }}
+          className="shrink-0 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
+          aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
         >
-          <button
-            onClick={() => onCopy(prompt.id)}
-            className="rounded p-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            aria-label="Copy prompt"
-            title="Copy"
-          >
-            📋
-          </button>
-          <button
-            onClick={() => onPaste(prompt.id)}
-            className="rounded p-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            aria-label="Paste prompt"
-            title="Paste"
-          >
-            📌
-          </button>
-
-          {/* More actions menu */}
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="rounded p-1 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-              aria-label="More actions"
-              aria-expanded={menuOpen}
-              title="More"
-            >
-              ⋯
-            </button>
-
-            {menuOpen && (
-              <div
-                className="absolute right-0 top-full z-10 mt-1 w-36 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
-                role="menu"
-              >
-                <button
-                  role="menuitem"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                  onClick={() => { onEdit(prompt.id); setMenuOpen(false); }}
-                >
-                  Edit
-                </button>
-                <button
-                  role="menuitem"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                  onClick={() => { onDuplicate(prompt.id); setMenuOpen(false); }}
-                >
-                  Duplicate
-                </button>
-                <button
-                  role="menuitem"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                  onClick={() => { onToggleFavorite(prompt.id); setMenuOpen(false); }}
-                >
-                  {prompt.favorite ? 'Unfavorite' : 'Favorite'}
-                </button>
-                <button
-                  role="menuitem"
-                  className="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                  onClick={() => { onArchive(prompt.id); setMenuOpen(false); }}
-                >
-                  Archive
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+          <Star
+            className={[
+              'h-4 w-4 transition-colors',
+              prompt.favorite
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-[var(--color-text-placeholder)]',
+            ].join(' ')}
+          />
+        </button>
       </div>
     </div>
   );
+}
+
+// ─── Internal Helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Resolves a lucide-react icon node from the categoryColor string.
+ * Maps known Tailwind color families to their corresponding icons.
+ */
+function resolveIconFromColor(categoryColor: string): React.ReactNode {
+  if (categoryColor.includes('purple')) return getCategoryIcon('FileText');
+  if (categoryColor.includes('green')) return getCategoryIcon('Pencil');
+  if (categoryColor.includes('amber')) return getCategoryIcon('Lightbulb');
+  if (categoryColor.includes('blue')) return getCategoryIcon('Code');
+  if (categoryColor.includes('rose')) return getCategoryIcon('Mail');
+  if (categoryColor.includes('teal')) return getCategoryIcon('ClipboardList');
+  return getCategoryIcon('FileText');
 }

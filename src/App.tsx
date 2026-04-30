@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LocalStorageBackend } from './repositories/local-storage-backend';
+import { BrowserStorageBackend } from './repositories/browser-storage-backend';
+import type { IStorageBackend } from './repositories/interfaces';
 import { PromptRepository } from './repositories/prompt-repository';
 import { SettingsRepository } from './repositories/settings-repository';
 import { initPromptStore } from './stores/prompt-store';
@@ -35,8 +37,14 @@ export function getSyncService(): SyncService | null {
 async function initializeApp(): Promise<void> {
   if (initialized) return;
 
-  // 1. Initialize the local storage backend
-  const backend = new LocalStorageBackend();
+  // 1. Pick the right storage backend based on runtime environment
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  let backend: IStorageBackend;
+  if (isTauri) {
+    backend = new LocalStorageBackend();
+  } else {
+    backend = new BrowserStorageBackend();
+  }
   await backend.initialize();
 
   // 2. Create repositories

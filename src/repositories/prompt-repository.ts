@@ -1,9 +1,8 @@
 import type { PromptRecipe } from '../types/index';
-import type { IPromptRepository } from './interfaces';
-import type { LocalStorageBackend } from './local-storage-backend';
+import type { IPromptRepository, IStorageBackend } from './interfaces';
 
 // ─── PromptRepository ──────────────────────────────────────────────────────────
-// Implements IPromptRepository by delegating to LocalStorageBackend in Local Mode.
+// Implements IPromptRepository by delegating to an IStorageBackend in Local Mode.
 // When a Firestore delegate is set (synced mode), all operations are forwarded
 // to the FirestoreBackend instead.
 // Maintains an in-memory cache of prompts and persists to the backend on every
@@ -14,7 +13,7 @@ export class PromptRepository implements IPromptRepository {
   private loaded = false;
   private firestoreDelegate: IPromptRepository | null = null;
 
-  constructor(private readonly backend: LocalStorageBackend) {}
+  constructor(private readonly backend: IStorageBackend) {}
 
   /**
    * Set a Firestore backend delegate for synced mode.

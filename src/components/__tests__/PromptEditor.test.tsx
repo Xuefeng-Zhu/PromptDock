@@ -21,10 +21,12 @@ describe('PromptEditor', () => {
   it('renders breadcrumb with Library link', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Library')).toBeDefined();
-    expect(screen.getByText('New Prompt')).toBeDefined();
+    // "New Prompt" appears in both breadcrumb and heading
+    const newPromptElements = screen.getAllByText('New Prompt');
+    expect(newPromptElements.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows "Edit Prompt" breadcrumb when editing an existing prompt', () => {
+  it('shows "Edit Prompt" heading when editing an existing prompt', () => {
     render(<PromptEditor {...defaultProps} promptId="prompt-summarize" prompt={MOCK_PROMPTS[0]} />);
     expect(screen.getByText('Edit Prompt')).toBeDefined();
   });
@@ -33,18 +35,36 @@ describe('PromptEditor', () => {
     render(<PromptEditor {...defaultProps} />);
     const bodyTextarea = screen.getByLabelText('Body');
     fireEvent.change(bodyTextarea, { target: { value: 'hello world' } });
-    // 2 words, 11 chars
     expect(screen.getByText(/2 words/)).toBeDefined();
-    expect(screen.getByText(/11 chars/)).toBeDefined();
+    expect(screen.getByText(/11 characters/)).toBeDefined();
   });
 
-  it('renders the Live Preview panel', () => {
+  it('renders the Insert variable button', () => {
     render(<PromptEditor {...defaultProps} />);
-    expect(screen.getByText('Live Preview')).toBeDefined();
+    expect(screen.getByText('Insert variable')).toBeDefined();
   });
 
-  it('renders the Tips card', () => {
+  it('renders Formatting help link', () => {
     render(<PromptEditor {...defaultProps} />);
-    expect(screen.getByText('Tips')).toBeDefined();
+    expect(screen.getByText('Formatting help')).toBeDefined();
+  });
+
+  it('renders action buttons including Save', () => {
+    render(<PromptEditor {...defaultProps} />);
+    expect(screen.getByText('Save')).toBeDefined();
+  });
+
+  it('shows Duplicate, Archive, Copy buttons when editing', () => {
+    render(<PromptEditor {...defaultProps} promptId="prompt-summarize" prompt={MOCK_PROMPTS[0]} />);
+    expect(screen.getByText('Duplicate')).toBeDefined();
+    expect(screen.getByText('Archive')).toBeDefined();
+    expect(screen.getByText('Copy')).toBeDefined();
+  });
+
+  it('shows metadata footer when editing', () => {
+    render(<PromptEditor {...defaultProps} promptId="prompt-summarize" prompt={MOCK_PROMPTS[0]} />);
+    expect(screen.getByText(/Created/)).toBeDefined();
+    expect(screen.getByText(/Updated/)).toBeDefined();
+    expect(screen.getByText(/Last used/)).toBeDefined();
   });
 });

@@ -16,46 +16,46 @@ describe('PromptInspector', () => {
     expect(screen.getByText(/Condense long text/)).toBeDefined();
   });
 
-  it('renders the folder name', () => {
+  it('renders tags with # prefix', () => {
     render(
       <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
     );
+    expect(screen.getByText('#summarization')).toBeDefined();
+    expect(screen.getByText('#writing')).toBeDefined();
+  });
+
+  it('renders metadata rows', () => {
+    render(
+      <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
+    );
+    expect(screen.getByText('Last used')).toBeDefined();
+    expect(screen.getByText('Created')).toBeDefined();
+    expect(screen.getByText('Updated')).toBeDefined();
+    expect(screen.getByText('Folder')).toBeDefined();
     expect(screen.getByText('Writing')).toBeDefined();
   });
 
-  it('renders tags', () => {
+  it('renders the prompt body section with Copy button', () => {
     render(
       <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
     );
-    expect(screen.getByText('summarization')).toBeDefined();
-    expect(screen.getByText('writing')).toBeDefined();
-  });
-
-  it('renders created and last used dates', () => {
-    render(
-      <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
-    );
-    expect(screen.getByText(/Created/)).toBeDefined();
-    expect(screen.getByText(/Last used/)).toBeDefined();
-  });
-
-  it('renders the body preview', () => {
-    render(
-      <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
-    );
-    expect(screen.getByText('Body Preview')).toBeDefined();
-    // The body contains the template text
+    expect(screen.getByText('Prompt')).toBeDefined();
+    expect(screen.getByText('Copy')).toBeDefined();
     expect(screen.getByText(/Summarize the following text/)).toBeDefined();
   });
 
-  it('renders the variable list when variables are provided', () => {
+  it('renders collapsible Variables section when variables exist', () => {
     render(
       <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={['audience', 'text', 'format']} />
     );
-    expect(screen.getByText('Variables')).toBeDefined();
-    // VariableList renders variables with {{}} wrapper
-    expect(screen.getByText('{{audience}}')).toBeDefined();
-    expect(screen.getByText('{{text}}')).toBeDefined();
-    expect(screen.getByText('{{format}}')).toBeDefined();
+    expect(screen.getByText('Variables (3)')).toBeDefined();
+  });
+
+  it('renders favorite star and more options buttons', () => {
+    render(
+      <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
+    );
+    expect(screen.getByRole('button', { name: /favorites/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'More options' })).toBeDefined();
   });
 });

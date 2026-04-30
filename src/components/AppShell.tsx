@@ -481,6 +481,7 @@ export function AppShell({
           activeItem={state.activeSidebarItem}
           onItemSelect={handleSidebarItemSelect}
           promptCountByFolder={promptCountByFolder}
+          onSettingsOpen={handleSettingsOpen}
         />
 
         {/* Main Content Area */}

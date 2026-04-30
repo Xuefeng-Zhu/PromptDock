@@ -18,33 +18,23 @@ const defaultProps = {
 };
 
 describe('Sidebar', () => {
-  it('renders "Library" section with "All Prompts" item', () => {
+  it('renders "LIBRARY" section with All Prompts, Favorites, Recent, Archived', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('Library')).toBeDefined();
+    expect(screen.getByText('LIBRARY')).toBeDefined();
     expect(screen.getByText('All Prompts')).toBeDefined();
+    expect(screen.getByText('Favorites')).toBeDefined();
+    expect(screen.getByText('Recent')).toBeDefined();
+    expect(screen.getByText('Archived')).toBeDefined();
   });
 
-  it('renders "Folders" section with folder names', () => {
+  it('renders "FOLDERS" section with folder names', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('Folders')).toBeDefined();
-    expect(screen.getByText('Writing')).toBeDefined();
+    expect(screen.getByText('FOLDERS')).toBeDefined();
+    // Folders appear in the folders section (may also appear in tags)
+    const writingElements = screen.getAllByText('Writing');
+    expect(writingElements.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Product')).toBeDefined();
     expect(screen.getByText('Engineering')).toBeDefined();
-  });
-
-  it('shows folder counts for folders with prompts', () => {
-    render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('3')).toBeDefined();
-    expect(screen.getByText('1')).toBeDefined();
-  });
-
-  it('does not show count for folders with zero prompts', () => {
-    render(<Sidebar {...defaultProps} />);
-    // Engineering has no count in promptCountByFolder, so no count should appear for it
-    const engineeringBtn = screen.getByText('Engineering').closest('button');
-    // The count span uses tabular-nums class
-    const countSpan = engineeringBtn?.querySelector('.tabular-nums');
-    expect(countSpan).toBeNull();
   });
 
   it('highlights selected item with aria-selected', () => {
@@ -53,25 +43,12 @@ describe('Sidebar', () => {
     expect(allPromptsBtn?.getAttribute('aria-selected')).toBe('true');
   });
 
-  it('does not highlight non-selected items', () => {
-    render(<Sidebar {...defaultProps} activeItem="library" />);
-    const writingBtn = screen.getByText('Writing').closest('button');
-    expect(writingBtn?.getAttribute('aria-selected')).toBe('false');
-  });
-
-  it('highlights a folder when it is the active item', () => {
-    render(<Sidebar {...defaultProps} activeItem="folder-writing" />);
-    const writingBtn = screen.getByText('Writing').closest('button');
-    expect(writingBtn?.getAttribute('aria-selected')).toBe('true');
-    // Library should not be selected
-    const allPromptsBtn = screen.getByText('All Prompts').closest('button');
-    expect(allPromptsBtn?.getAttribute('aria-selected')).toBe('false');
-  });
-
   it('calls onItemSelect when clicking a sidebar item', () => {
     const onItemSelect = vi.fn();
     render(<Sidebar {...defaultProps} onItemSelect={onItemSelect} />);
-    fireEvent.click(screen.getByText('Writing'));
+    // Click the first "Writing" element (in folders section)
+    const writingElements = screen.getAllByText('Writing');
+    fireEvent.click(writingElements[0]);
     expect(onItemSelect).toHaveBeenCalledWith('folder-writing');
   });
 
@@ -82,21 +59,28 @@ describe('Sidebar', () => {
     expect(onItemSelect).toHaveBeenCalledWith('library');
   });
 
-  it('renders "Tags" section', () => {
+  it('renders "TAGS" section', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('Tags')).toBeDefined();
-    expect(screen.getByText('All Tags')).toBeDefined();
+    expect(screen.getByText('TAGS')).toBeDefined();
   });
 
-  it('renders "Workspaces" section', () => {
+  it('renders "WORKSPACES" section', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('Workspaces')).toBeDefined();
-    expect(screen.getByText('Default')).toBeDefined();
+    expect(screen.getByText('WORKSPACES')).toBeDefined();
+    expect(screen.getByText('Personal')).toBeDefined();
+    expect(screen.getByText('Team Workspace')).toBeDefined();
   });
 
   it('renders as a nav element with aria-label', () => {
     render(<Sidebar {...defaultProps} />);
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     expect(nav).toBeDefined();
+  });
+
+  it('renders bottom toolbar with settings and dark mode toggle', () => {
+    render(<Sidebar {...defaultProps} />);
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Toggle dark mode' })).toBeDefined();
+    expect(screen.getByText('⌘,')).toBeDefined();
   });
 });

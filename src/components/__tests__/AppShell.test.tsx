@@ -68,7 +68,9 @@ describe('AppShell', () => {
 
   it('renders sidebar folder items from mock data', () => {
     render(<AppShell initialStateOverride={testState} />);
-    expect(screen.getByText('Writing')).toBeDefined();
+    // "Writing" appears in both Folders and Tags sections
+    const writingElements = screen.getAllByText('Writing');
+    expect(writingElements.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Product')).toBeDefined();
     expect(screen.getByText('Engineering')).toBeDefined();
     expect(screen.getByText('Work')).toBeDefined();

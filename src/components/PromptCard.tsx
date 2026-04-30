@@ -124,35 +124,14 @@ export function PromptCard({
         </div>
       )}
 
-      {/* Header: IconTile + Title + Favorite */}
+      {/* Header: IconTile + Title */}
       <div className="flex items-start gap-3">
         <IconTile icon={iconNode} color={categoryColor} />
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-main)] leading-snug truncate">
-              {prompt.title}
-            </h3>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite(prompt.id);
-              }}
-              className="shrink-0 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
-              aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              <Star
-                className={[
-                  'h-4 w-4 transition-colors',
-                  prompt.favorite
-                    ? 'fill-yellow-400 text-yellow-400'
-                    : 'text-[var(--color-text-placeholder)]',
-                ].join(' ')}
-              />
-            </button>
-          </div>
+          <h3 className="text-sm font-semibold text-[var(--color-text-main)] leading-snug truncate">
+            {prompt.title}
+          </h3>
 
           {/* Truncated description */}
           {prompt.description && (
@@ -172,11 +151,29 @@ export function PromptCard({
         </div>
       )}
 
-      {/* Footer: relative timestamp */}
-      <div className="mt-3 pt-2 border-t border-[var(--color-border)]">
+      {/* Footer: relative timestamp + favorite star */}
+      <div className="mt-3 pt-2 border-t border-[var(--color-border)] flex items-center justify-between">
         <span className="text-[11px] text-[var(--color-text-placeholder)]">
           {formatRelativeTime(prompt.lastUsedAt)}
         </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(prompt.id);
+          }}
+          className="shrink-0 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
+          aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Star
+            className={[
+              'h-4 w-4 transition-colors',
+              prompt.favorite
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-[var(--color-text-placeholder)]',
+            ].join(' ')}
+          />
+        </button>
       </div>
     </div>
   );

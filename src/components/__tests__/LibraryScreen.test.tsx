@@ -23,10 +23,12 @@ describe('LibraryScreen', () => {
 
   it('renders the prompt count', () => {
     render(<LibraryScreen {...defaultProps} />);
-    expect(screen.getByText('6 prompts')).toBeDefined();
+    // Count appears in both header and status bar
+    const countElements = screen.getAllByText('6 prompts');
+    expect(countElements.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders filter chips', () => {
+  it('renders filter chips with icons', () => {
     render(<LibraryScreen {...defaultProps} />);
     expect(screen.getByText('All')).toBeDefined();
     expect(screen.getByText('Favorites')).toBeDefined();
@@ -49,5 +51,10 @@ describe('LibraryScreen', () => {
     render(<LibraryScreen {...defaultProps} />);
     expect(screen.getByRole('button', { name: 'Grid view' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'List view' })).toBeDefined();
+  });
+
+  it('renders bottom status bar with sort indicator', () => {
+    render(<LibraryScreen {...defaultProps} />);
+    expect(screen.getByText(/Sorted by Last used/)).toBeDefined();
   });
 });

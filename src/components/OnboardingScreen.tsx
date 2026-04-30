@@ -1,15 +1,17 @@
 import React from 'react';
 import {
-  Rocket,
-  HardDrive,
+  Terminal,
+  Monitor,
   Cloud,
-  LogIn,
-  BookOpen,
-  Variable,
-  ClipboardPaste,
+  UserCircle,
+  FileText,
+  Braces,
+  ClipboardCopy,
   WifiOff,
+  Lock,
 } from 'lucide-react';
 import { Card } from './ui/Card';
+import { Button } from './ui/Button';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -24,26 +26,33 @@ interface OptionItem {
   icon: React.ReactNode;
   title: string;
   description: string;
+  buttonLabel: string;
 }
 
 const OPTIONS: OptionItem[] = [
   {
     key: 'local',
-    icon: <HardDrive size={24} />,
+    icon: <Monitor size={28} />,
     title: 'Start locally',
-    description: 'Keep everything on this device. No account needed.',
+    description:
+      'Keep everything on this device. Your prompts stay private and never leave your computer.',
+    buttonLabel: 'Start locally',
   },
   {
     key: 'sync',
-    icon: <Cloud size={24} />,
+    icon: <Cloud size={28} />,
     title: 'Enable sync',
-    description: 'Sync prompts across devices with cloud storage.',
+    description:
+      'Use a guest cloud account to sync your prompts. Add email later, anytime.',
+    buttonLabel: 'Enable sync',
   },
   {
     key: 'signin',
-    icon: <LogIn size={24} />,
+    icon: <UserCircle size={28} />,
     title: 'Sign in',
-    description: 'Already have an account? Pick up where you left off.',
+    description:
+      'Sign in to your account to sync across devices and access everywhere.',
+    buttonLabel: 'Sign in',
   },
 ];
 
@@ -51,92 +60,116 @@ const OPTIONS: OptionItem[] = [
 
 interface BenefitItem {
   icon: React.ReactNode;
+  iconColor: string;
   title: string;
+  description: string;
 }
 
 const BENEFITS: BenefitItem[] = [
-  { icon: <BookOpen size={20} />, title: 'Store prompt recipes' },
-  { icon: <Variable size={20} />, title: 'Fill variables' },
-  { icon: <ClipboardPaste size={20} />, title: 'Paste anywhere' },
-  { icon: <WifiOff size={20} />, title: 'Works offline' },
+  {
+    icon: <FileText size={24} />,
+    iconColor: 'text-[var(--color-primary)]',
+    title: 'Store prompt recipes',
+    description: 'Organize and reuse your best prompts.',
+  },
+  {
+    icon: <Braces size={24} />,
+    iconColor: 'text-amber-600',
+    title: 'Fill variables',
+    description: 'Use variables to adapt prompts in seconds.',
+  },
+  {
+    icon: <ClipboardCopy size={24} />,
+    iconColor: 'text-green-600',
+    title: 'Paste anywhere',
+    description: 'Copy with one click and use in any app.',
+  },
+  {
+    icon: <WifiOff size={24} />,
+    iconColor: 'text-rose-500',
+    title: 'Works offline',
+    description: 'Access your prompts even without internet.',
+  },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * First-run onboarding screen. Displays a welcome card with the PromptDock
- * logo, three setup option cards, four benefit cards, and a privacy footer.
- * All option cards call `onComplete` with the chosen mode.
+ * First-run onboarding screen matching the high-fidelity mockup.
+ * Displays a welcome header, 3-column option cards with CTA buttons,
+ * 4-column benefit cards with descriptions, and a privacy footer.
  */
 export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   return (
     <div className="flex min-h-full items-center justify-center bg-[var(--color-background)] p-8">
-      <div className="w-full max-w-xl space-y-8">
-        {/* ── Welcome Card ──────────────────────────────────────────── */}
-        <Card padding="lg" className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-primary-light)]">
-            <Rocket size={28} className="text-[var(--color-primary)]" />
+      <div className="w-full max-w-3xl space-y-10">
+        {/* ── Welcome Header ────────────────────────────────────────── */}
+        <div className="text-center">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-primary)]">
+            <Terminal size={32} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-[var(--color-text-main)]">
             Welcome to PromptDock
           </h1>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Your personal prompt recipe manager. Choose how to get started.
+          <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">
+            Your prompt recipe manager
           </p>
-        </Card>
+        </div>
 
-        {/* ── Option Cards ──────────────────────────────────────────── */}
-        <div className="space-y-3">
+        {/* ── Get Started Section ───────────────────────────────────── */}
+        <div className="text-center">
+          <h2 className="text-base font-semibold text-[var(--color-text-main)]">
+            Get started
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            Choose how you'd like to use PromptDock
+          </p>
+        </div>
+
+        {/* ── Option Cards (3-column) ───────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {OPTIONS.map((option) => (
-            <button
-              key={option.key}
-              type="button"
-              className="w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)] rounded-xl"
-              onClick={() => onComplete(option.key)}
-              aria-label={option.title}
-            >
-              <Card
-                padding="md"
-                className="flex items-center gap-4 transition-shadow hover:shadow-md cursor-pointer"
+            <Card key={option.key} padding="lg" className="flex flex-col items-center text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary-light)]">
+                <span className="text-[var(--color-primary)]">{option.icon}</span>
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+                {option.title}
+              </h3>
+              <p className="mt-2 flex-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
+                {option.description}
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-5 w-full"
+                onClick={() => onComplete(option.key)}
+                aria-label={option.title}
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-light)]">
-                  <span className="text-[var(--color-primary)]">
-                    {option.icon}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text-main)]">
-                    {option.title}
-                  </p>
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    {option.description}
-                  </p>
-                </div>
-              </Card>
-            </button>
+                {option.buttonLabel}
+              </Button>
+            </Card>
           ))}
         </div>
 
-        {/* ── Benefit Cards ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* ── Benefit Cards (4-column) ──────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {BENEFITS.map((benefit) => (
-            <Card
-              key={benefit.title}
-              padding="sm"
-              className="flex items-center gap-3"
-            >
-              <span className="text-[var(--color-primary)]">
-                {benefit.icon}
-              </span>
-              <span className="text-xs font-medium text-[var(--color-text-main)]">
+            <Card key={benefit.title} padding="md" className="flex flex-col items-start">
+              <span className={`mb-3 ${benefit.iconColor}`}>{benefit.icon}</span>
+              <h4 className="text-xs font-semibold text-[var(--color-text-main)]">
                 {benefit.title}
-              </span>
+              </h4>
+              <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+                {benefit.description}
+              </p>
             </Card>
           ))}
         </div>
 
         {/* ── Footer ────────────────────────────────────────────────── */}
-        <p className="text-center text-xs text-[var(--color-text-muted)]">
+        <p className="flex items-center justify-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+          <Lock size={12} />
           Private by design. You're in control.
         </p>
       </div>

@@ -7,23 +7,10 @@ const defaultProps = {
   searchQuery: '',
   onSearchChange: vi.fn(),
   onCommandPaletteOpen: vi.fn(),
+  onSettingsOpen: vi.fn(),
 };
 
 describe('TopBar', () => {
-  it('renders three traffic light circles', () => {
-    const { container } = render(<TopBar {...defaultProps} />);
-    const circles = container.querySelectorAll('span.rounded-full');
-    expect(circles.length).toBe(3);
-  });
-
-  it('renders traffic lights with correct colors', () => {
-    const { container } = render(<TopBar {...defaultProps} />);
-    const circles = container.querySelectorAll('span.rounded-full');
-    expect(circles[0].className).toContain('bg-[#FF5F57]');
-    expect(circles[1].className).toContain('bg-[#FEBC2E]');
-    expect(circles[2].className).toContain('bg-[#28C840]');
-  });
-
   it('renders "PromptDock" title', () => {
     render(<TopBar {...defaultProps} />);
     expect(screen.getByText('PromptDock')).toBeDefined();

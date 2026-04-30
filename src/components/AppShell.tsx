@@ -43,7 +43,9 @@ export type AppAction =
   | { type: 'OPEN_COMMAND_PALETTE' }
   | { type: 'CLOSE_COMMAND_PALETTE' }
   | { type: 'OPEN_VARIABLE_FILL'; promptId: string }
-  | { type: 'CLOSE_VARIABLE_FILL' };
+  | { type: 'CLOSE_VARIABLE_FILL' }
+  | { type: 'SAVE_PROMPT'; promptId: string; data: Partial<PromptRecipe> }
+  | { type: 'CREATE_PROMPT'; prompt: PromptRecipe };
 
 // ─── Reducer ───────────────────────────────────────────────────────────────────
 
@@ -87,6 +89,18 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'CLOSE_VARIABLE_FILL':
       return { ...state, variableFillPromptId: null };
+
+    case 'SAVE_PROMPT': {
+      // TODO: replace with repository call for backend persistence
+      const savedPrompts = state.prompts.map((p) =>
+        p.id === action.promptId ? { ...p, ...action.data, updatedAt: new Date() } : p,
+      );
+      return { ...state, prompts: savedPrompts };
+    }
+
+    case 'CREATE_PROMPT':
+      // TODO: replace with repository call for backend persistence
+      return { ...state, prompts: [...state.prompts, action.prompt] };
 
     default:
       return state;
@@ -157,7 +171,7 @@ export function filterPrompts(
 // ─── Initial State ─────────────────────────────────────────────────────────────
 
 const initialState: AppState = {
-  screen: { name: 'library' },
+  screen: { name: 'onboarding' },
   selectedPromptId: null,
   searchQuery: '',
   activeFilter: 'all',
@@ -174,6 +188,10 @@ export interface AppShellProps {
   children?: React.ReactNode;
   /** Override initial state for testing */
   initialStateOverride?: AppState;
+  /** Initial prompts to load — defaults to MOCK_PROMPTS if not provided */
+  prompts?: PromptRecipe[];
+  /** Initial folders to load — defaults to MOCK_FOLDERS if not provided */
+  folders?: Folder[];
   // TODO: accept async functions for future backend wiring
   /** Async callback for saving prompts — wired to backend in future */
   onSavePrompt?: (data: Partial<PromptRecipe>) => Promise<void>;
@@ -191,10 +209,17 @@ export interface AppShellProps {
  */
 export function AppShell({
   initialStateOverride,
+  prompts: propPrompts,
+  folders: propFolders,
   onSavePrompt: _onSavePrompt,
   onDeletePrompt: _onDeletePrompt,
 }: AppShellProps) {
-  const [state, dispatch] = useReducer(appReducer, initialStateOverride ?? initialState);
+  const resolvedInitialState = initialStateOverride ?? {
+    ...initialState,
+    prompts: propPrompts ?? MOCK_PROMPTS,
+    folders: propFolders ?? MOCK_FOLDERS,
+  };
+  const [state, dispatch] = useReducer(appReducer, resolvedInitialState);
 
   // ── Global ⌘K / Ctrl+K keyboard shortcut ──────────────────────────────────
 
@@ -336,9 +361,32 @@ export function AppShell({
 
   const handleEditorSave = useCallback((data: Partial<PromptRecipe>) => {
     // TODO: replace with repository call for backend persistence
-    console.log('Save prompt:', data);
+    if (state.screen.name === 'editor' && state.screen.promptId) {
+      // Editing existing prompt
+      dispatch({ type: 'SAVE_PROMPT', promptId: state.screen.promptId, data });
+    } else {
+      // Creating new prompt
+      const newPrompt: PromptRecipe = {
+        id: `prompt-${Date.now()}`,
+        workspaceId: 'local',
+        title: (data.title as string) ?? 'Untitled',
+        description: (data.description as string) ?? '',
+        body: (data.body as string) ?? '',
+        tags: (data.tags as string[]) ?? [],
+        folderId: (data.folderId as string | null) ?? null,
+        favorite: (data.favorite as boolean) ?? false,
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastUsedAt: null,
+        createdBy: 'local',
+        version: 1,
+      };
+      dispatch({ type: 'CREATE_PROMPT', prompt: newPrompt });
+    }
     dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
-  }, []);
+  }, [state.screen]);
 
   const handleEditorCancel = useCallback(() => {
     dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
@@ -346,6 +394,10 @@ export function AppShell({
 
   const handleSettingsBack = useCallback(() => {
     dispatch({ type: 'NAVIGATE', screen: { name: 'library' } });
+  }, []);
+
+  const handleSettingsOpen = useCallback(() => {
+    dispatch({ type: 'NAVIGATE', screen: { name: 'settings' } });
   }, []);
 
   // ── Command Palette callbacks ──────────────────────────────────────────────
@@ -400,6 +452,15 @@ export function AppShell({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  // Onboarding takes the full screen — no TopBar, Sidebar, or Inspector
+  if (state.screen.name === 'onboarding') {
+    return (
+      <div className="h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex h-screen flex-col"
@@ -410,6 +471,7 @@ export function AppShell({
         searchQuery={state.searchQuery}
         onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}
+        onSettingsOpen={handleSettingsOpen}
       />
 
       {/* Body: Sidebar + Main Content + Inspector */}
@@ -426,10 +488,6 @@ export function AppShell({
           className="flex flex-1 flex-col overflow-y-auto pt-14"
           style={{ color: 'var(--color-text-main)' }}
         >
-          {state.screen.name === 'onboarding' && (
-            <OnboardingScreen onComplete={handleOnboardingComplete} />
-          )}
-
           {state.screen.name === 'library' && (
             <LibraryScreen
               prompts={filteredPrompts}

@@ -108,17 +108,14 @@ export function VariableFillModal({
         return;
       }
 
-      // ⌘V / Ctrl+V → Paste
-      if (isMeta && e.key === 'v' && isComplete) {
-        e.preventDefault();
-        // TODO: Wire to Tauri clipboard paste command
-        onPaste(renderedText);
-      }
+      // Note: ⌘V / Ctrl+V is NOT intercepted here to avoid blocking
+      // normal paste behavior into the variable input fields.
+      // The Paste button is available as a click target instead.
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isComplete, renderedText, onCancel, onPaste]);
+  }, [isComplete, onCancel]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleValueChange = useCallback((variableName: string, value: string) => {

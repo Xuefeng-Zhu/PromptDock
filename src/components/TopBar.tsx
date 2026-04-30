@@ -8,6 +8,7 @@ export interface TopBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onCommandPaletteOpen: () => void;
+  onSettingsOpen: () => void;
   syncStatus?: SyncStatus;
 }
 
@@ -33,6 +34,7 @@ export function TopBar({
   searchQuery,
   onSearchChange,
   onCommandPaletteOpen,
+  onSettingsOpen,
   syncStatus,
 }: TopBarProps) {
   return (
@@ -43,13 +45,6 @@ export function TopBar({
         borderColor: 'var(--color-border)',
       }}
     >
-      {/* macOS traffic light placeholders */}
-      <div className="flex items-center gap-1.5" aria-hidden="true">
-        <span className="inline-block h-3 w-3 rounded-full bg-[#FF5F57]" />
-        <span className="inline-block h-3 w-3 rounded-full bg-[#FEBC2E]" />
-        <span className="inline-block h-3 w-3 rounded-full bg-[#28C840]" />
-      </div>
-
       {/* App title */}
       <span
         className="text-sm font-semibold whitespace-nowrap"
@@ -112,6 +107,7 @@ export function TopBar({
         <button
           type="button"
           aria-label="Account"
+          onClick={onSettingsOpen}
           className="rounded-lg p-2 transition-colors hover:bg-gray-100"
           style={{ color: 'var(--color-text-muted)' }}
         >

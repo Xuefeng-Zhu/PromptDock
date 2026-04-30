@@ -9,19 +9,23 @@ describe('OnboardingScreen', () => {
     expect(screen.getByText('Welcome to PromptDock')).toBeDefined();
   });
 
-  it('renders 3 option cards', () => {
+  it('renders 3 option cards with titles and CTA buttons', () => {
     render(<OnboardingScreen onComplete={() => {}} />);
-    expect(screen.getByText('Start locally')).toBeDefined();
-    expect(screen.getByText('Enable sync')).toBeDefined();
-    expect(screen.getByText('Sign in')).toBeDefined();
+    expect(screen.getByText('Get started')).toBeDefined();
+    // Each option has a heading and a button
+    expect(screen.getAllByText('Start locally').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Enable sync').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Sign in').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders 4 benefit cards', () => {
+  it('renders 4 benefit cards with descriptions', () => {
     render(<OnboardingScreen onComplete={() => {}} />);
     expect(screen.getByText('Store prompt recipes')).toBeDefined();
     expect(screen.getByText('Fill variables')).toBeDefined();
     expect(screen.getByText('Paste anywhere')).toBeDefined();
     expect(screen.getByText('Works offline')).toBeDefined();
+    // Each benefit has a description
+    expect(screen.getByText('Organize and reuse your best prompts.')).toBeDefined();
   });
 
   it('calls onComplete with "local" when Start locally is clicked', () => {

@@ -1,47 +1,61 @@
-import { useState, useMemo, useCallback, type ChangeEvent } from 'react';
-import { VariableParser } from '../services/variable-parser';
-import { PromptRenderer } from '../services/prompt-renderer';
-import type { RenderResult } from '../types/index';
-
-// ─── Singleton instances ───────────────────────────────────────────────────────
-
-const variableParser = new VariableParser();
-const promptRenderer = new PromptRenderer(variableParser);
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Check, Copy, ClipboardPaste, X } from 'lucide-react';
+import { Input } from './ui/Input';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import type { PromptRecipe } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface VariableFillModalProps {
-  /** The prompt template body containing {{variable_name}} placeholders. */
-  body: string;
-  /** Optional prompt title for display in the modal header. */
-  title?: string;
-  /** Called when the user clicks "Copy". Receives the rendered text. */
-  onCopy?: (text: string) => void;
-  /** Called when the user clicks "Paste into Active App". Receives the rendered text. */
-  onPaste?: (text: string) => void;
-  /** Called when the user clicks "Copy & Close". Receives the rendered text. */
-  onCopyAndClose?: (text: string) => void;
-  /** Called when the user closes the modal without action. */
-  onClose?: () => void;
+  prompt: PromptRecipe;
+  variables: string[];
+  onCancel: () => void;
+  onCopy: (renderedText: string) => void;
+  onPaste: (renderedText: string) => void;
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Renders a prompt body by replacing all {{variable_name}} placeholders
+ * with the corresponding values from the values map.
+ * Returns the body with unfilled variables left as-is.
+ */
+function renderBody(body: string, values: Record<string, string>): string {
+  return body.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => {
+    return values[name] || `{{${name}}}`;
+  });
+}
+
+/**
+ * Checks whether all variables have been filled with non-empty values.
+ */
+function allVariablesFilled(
+  variables: string[],
+  values: Record<string, string>,
+): boolean {
+  return variables.every((v) => (values[v] ?? '').trim().length > 0);
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * Variable Fill Modal — displays input fields for each detected variable in a
- * prompt template, shows a rendered preview, and provides Copy / Paste / Copy & Close actions.
+ * Redesigned Variable Fill Modal — displays input fields for each detected
+ * variable in a prompt template, shows a live rendered preview, and provides
+ * Cancel / Paste / Copy action buttons with keyboard shortcut hints.
+ *
+ * Uses a <dialog> element with role="dialog" and aria-modal="true".
+ * Auto-focuses the first variable input on open.
+ * Closes on Escape key or backdrop click.
  */
 export function VariableFillModal({
-  body,
-  title,
+  prompt,
+  variables,
+  onCancel,
   onCopy,
   onPaste,
-  onCopyAndClose,
-  onClose,
 }: VariableFillModalProps) {
-  // ── Extract variables from the template ────────────────────────────────────
-  const variables = useMemo(() => variableParser.parse(body), [body]);
-
   // ── Variable values state ──────────────────────────────────────────────────
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -51,168 +65,266 @@ export function VariableFillModal({
     return initial;
   });
 
-  const handleValueChange = useCallback(
-    (variableName: string, value: string) => {
-      setValues((prev) => ({ ...prev, [variableName]: value }));
-    },
-    [],
+  // ── "Copied!" success state ────────────────────────────────────────────────
+  const [copied, setCopied] = useState(false);
+
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // ── Computed values ────────────────────────────────────────────────────────
+  const isComplete = useMemo(
+    () => allVariablesFilled(variables, values),
+    [variables, values],
   );
 
-  // ── Render preview ─────────────────────────────────────────────────────────
-  const renderResult: RenderResult = useMemo(
-    () => promptRenderer.render(body, values),
-    [body, values],
+  const renderedText = useMemo(
+    () => renderBody(prompt.body, values),
+    [prompt.body, values],
   );
 
-  const isComplete = renderResult.success;
-  const previewText = renderResult.success ? renderResult.text : '';
+  // ── Auto-focus first input on mount ────────────────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      firstInputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // ── Action handlers ────────────────────────────────────────────────────────
+  // ── Keyboard handler (Escape to close, ⌘↵ to copy, ⌘V to paste) ──────────
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+        return;
+      }
+
+      const isMeta = e.metaKey || e.ctrlKey;
+
+      // ⌘↵ / Ctrl+Enter → Copy final prompt
+      if (isMeta && e.key === 'Enter' && isComplete) {
+        e.preventDefault();
+        handleCopy();
+        return;
+      }
+
+      // ⌘V / Ctrl+V → Paste
+      if (isMeta && e.key === 'v' && isComplete) {
+        e.preventDefault();
+        // TODO: Wire to Tauri clipboard paste command
+        onPaste(renderedText);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isComplete, renderedText, onCancel, onPaste]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleValueChange = useCallback((variableName: string, value: string) => {
+    setValues((prev) => ({ ...prev, [variableName]: value }));
+  }, []);
+
   const handleCopy = useCallback(() => {
-    if (isComplete) onCopy?.(previewText);
-  }, [isComplete, previewText, onCopy]);
+    if (!isComplete) return;
+
+    // TODO: Wire to Tauri clipboard write command
+    onCopy(renderedText);
+
+    // Show "Copied!" success state for ~2 seconds
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  }, [isComplete, renderedText, onCopy]);
 
   const handlePaste = useCallback(() => {
-    if (isComplete) onPaste?.(previewText);
-  }, [isComplete, previewText, onPaste]);
+    if (!isComplete) return;
+    // TODO: Wire to Tauri clipboard paste command
+    onPaste(renderedText);
+  }, [isComplete, renderedText, onPaste]);
 
-  const handleCopyAndClose = useCallback(() => {
-    if (isComplete) onCopyAndClose?.(previewText);
-  }, [isComplete, previewText, onCopyAndClose]);
+  // ── Backdrop click handler ─────────────────────────────────────────────────
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        onCancel();
+      }
+    },
+    [onCancel],
+  );
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title ? `Fill variables for ${title}` : 'Fill template variables'}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] animate-[fadeIn_150ms_ease-out]"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
+      onClick={handleBackdropClick}
+      data-testid="variable-fill-backdrop"
     >
-      <div className="mx-4 flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white shadow-xl dark:bg-gray-800">
+      <dialog
+        ref={dialogRef}
+        open
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Fill variables for ${prompt.title}`}
+        className="relative m-0 flex w-full max-w-xl flex-col overflow-hidden rounded-xl border shadow-2xl animate-[slideDown_150ms_ease-out]"
+        style={{
+          backgroundColor: 'var(--color-panel)',
+          borderColor: 'var(--color-border)',
+          color: 'var(--color-text-main)',
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            {title ? `Fill Variables — ${title}` : 'Fill Variables'}
-          </h2>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              aria-label="Close modal"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-          )}
+        <div
+          className="flex items-center justify-between border-b px-5 py-4"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <div>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-main)' }}>
+              {prompt.title}
+            </h2>
+            <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Fill in the variables below to complete your prompt
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-lg p-1.5 transition-colors hover:bg-gray-100"
+            style={{ color: 'var(--color-text-muted)' }}
+            aria-label="Close variable fill modal"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4" style={{ maxHeight: '60vh' }}>
           {/* Variable inputs */}
-          {variables.length > 0 ? (
+          {variables.length > 0 && (
             <fieldset>
-              <legend className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Template Variables
-              </legend>
+              <legend className="sr-only">Template Variables</legend>
               <div className="space-y-3">
-                {variables.map((varName) => (
-                  <div key={varName}>
-                    <label
-                      htmlFor={`var-${varName}`}
-                      className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-400"
-                    >
-                      {varName}
-                    </label>
-                    <input
-                      id={`var-${varName}`}
-                      type="text"
-                      value={values[varName] ?? ''}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        handleValueChange(varName, e.target.value)
-                      }
-                      placeholder={`Enter value for ${varName}`}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
-                      aria-label={`Value for variable ${varName}`}
-                    />
-                  </div>
+                {variables.map((varName, index) => (
+                  <Input
+                    key={varName}
+                    ref={index === 0 ? firstInputRef : undefined}
+                    label={varName}
+                    value={values[varName] ?? ''}
+                    onChange={(e) => handleValueChange(varName, e.target.value)}
+                    placeholder={`Enter value for ${varName}`}
+                    aria-label={`Value for variable ${varName}`}
+                  />
                 ))}
               </div>
             </fieldset>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              This template has no variables.
-            </p>
           )}
 
-          {/* Rendered preview */}
+          {/* Live preview */}
           <div className="mt-5">
-            <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <h3
+              className="mb-2 text-sm font-medium"
+              style={{ color: 'var(--color-text-main)' }}
+            >
               Preview
             </h3>
-            <div
-              className="min-h-[80px] rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-sm text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200"
-              aria-live="polite"
-              aria-label="Rendered prompt preview"
-            >
-              {isComplete ? (
-                <pre className="whitespace-pre-wrap">{previewText}</pre>
-              ) : (
-                <p className="italic text-gray-400 dark:text-gray-500">
-                  Fill in all variables to see the preview.
-                  {!renderResult.success && renderResult.missingVariables.length > 0 && (
-                    <span className="block mt-1">
-                      Missing: {renderResult.missingVariables.join(', ')}
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
+            <Card padding="sm" className="max-h-48 overflow-y-auto">
+              <pre
+                className="whitespace-pre-wrap text-sm"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  color: isComplete
+                    ? 'var(--color-text-main)'
+                    : 'var(--color-text-muted)',
+                }}
+                aria-live="polite"
+                aria-label="Rendered prompt preview"
+              >
+                {renderedText}
+              </pre>
+            </Card>
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-3 dark:border-gray-700">
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={!isComplete}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-            aria-label="Copy rendered prompt to clipboard"
-          >
-            Copy
-          </button>
-          <button
-            type="button"
-            onClick={handlePaste}
-            disabled={!isComplete}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-            aria-label="Paste rendered prompt into active application"
-          >
-            Paste into Active App
-          </button>
-          <button
-            type="button"
-            onClick={handleCopyAndClose}
-            disabled={!isComplete}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Copy rendered prompt and close modal"
-          >
-            Copy &amp; Close
-          </button>
+        <div
+          className="flex items-center justify-between border-t px-5 py-3"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          {/* Floating hint */}
+          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            Built for speed. Use ⌘V to paste anywhere.
+          </p>
+
+          <div className="flex items-center gap-2">
+            {/* Cancel */}
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              <X className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Cancel
+              <kbd
+                className="ml-1.5 rounded border px-1 py-0.5 text-[10px] font-mono"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-background)',
+                }}
+              >
+                Esc
+              </kbd>
+            </Button>
+
+            {/* Paste */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handlePaste}
+              disabled={!isComplete}
+            >
+              <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Paste
+              <kbd
+                className="ml-1.5 rounded border px-1 py-0.5 text-[10px] font-mono"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-background)',
+                }}
+              >
+                ⌘V
+              </kbd>
+            </Button>
+
+            {/* Copy final prompt */}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleCopy}
+              disabled={!isComplete}
+              className={copied ? 'bg-green-600 hover:bg-green-700' : ''}
+            >
+              {copied ? (
+                <>
+                  <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  Copy final prompt
+                  <kbd
+                    className="ml-1.5 rounded border px-1 py-0.5 text-[10px] font-mono"
+                    style={{
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    }}
+                  >
+                    ⌘↵
+                  </kbd>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

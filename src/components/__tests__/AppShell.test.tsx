@@ -303,6 +303,43 @@ describe('AppShell', () => {
       expect(screen.queryByText('Settings')).toBeNull();
     });
 
+    it('keeps the editor open when sidebar navigation would discard unsaved changes', async () => {
+      await renderOnLibraryScreen();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('New Prompt'));
+      });
+
+      const titleInput = screen.getByLabelText(/title/i);
+      await act(async () => {
+        fireEvent.change(titleInput, { target: { value: 'Unsaved draft' } });
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Favorites'));
+      });
+
+      expect(screen.getByDisplayValue('Unsaved draft')).toBeDefined();
+      expect(screen.getByText('Save or cancel your prompt changes before leaving the editor.')).toBeDefined();
+    });
+
+    it('allows sidebar navigation from the editor when no prompt changes are pending', async () => {
+      await renderOnLibraryScreen();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('New Prompt'));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Favorites'));
+      });
+
+      const headings = screen.getAllByText('All Prompts');
+      const h1 = headings.find((el) => el.tagName === 'H1');
+      expect(h1).toBeDefined();
+      expect(screen.queryByLabelText(/title/i)).toBeNull();
+    });
+
     it('updates the theme when the sidebar theme toggle is clicked', async () => {
       await renderOnLibraryScreen();
 

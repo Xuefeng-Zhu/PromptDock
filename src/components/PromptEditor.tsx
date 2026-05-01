@@ -64,6 +64,7 @@ export interface PromptEditorProps {
   folders: Folder[];
   onSave: (data: Partial<PromptRecipe>) => void;
   onCancel: () => void;
+  onDirtyChange?: (isDirty: boolean) => void;
   onDuplicate?: () => void;
   onArchive?: () => void;
   onCopy?: () => void;
@@ -132,6 +133,11 @@ function formatRelativeShort(date: Date | null): string {
   return formatDate(date);
 }
 
+function areTagsEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((tag, index) => tag === right[index]);
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -145,6 +151,7 @@ export function PromptEditor({
   folders,
   onSave,
   onCancel,
+  onDirtyChange,
   onDuplicate,
   onArchive,
   onCopy,
@@ -185,6 +192,25 @@ export function PromptEditor({
     () => folders.find((f) => f.id === folderId),
     [folders, folderId],
   );
+
+  const hasUnsavedChanges = useMemo(() => {
+    const initialTags = prompt?.tags ?? [];
+    return (
+      title !== (prompt?.title ?? '') ||
+      description !== (prompt?.description ?? '') ||
+      body !== (prompt?.body ?? '') ||
+      folderId !== (prompt?.folderId ?? null) ||
+      favorite !== (prompt?.favorite ?? false) ||
+      !areTagsEqual(tags, initialTags) ||
+      tagInput.trim().length > 0
+    );
+  }, [body, description, favorite, folderId, prompt, tagInput, tags, title]);
+
+  useEffect(() => {
+    onDirtyChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onDirtyChange]);
+
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
   // ── Tag management ─────────────────────────────────────────────────────────
   const handleAddTag = useCallback(() => {

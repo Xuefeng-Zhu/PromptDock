@@ -185,6 +185,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [activeSidebarItem, setActiveSidebarItem] = useState('library');
   const [userFolders, setUserFolders] = useState<import('../types/index').Folder[]>(() => readFolders());
+  const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
 
   // ── Global ⌘K / Ctrl+K keyboard shortcut ──────────────────────────────────
 
@@ -346,13 +347,22 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     setCommandPaletteOpen(true);
   }, []);
 
+  const blockIfEditorHasUnsavedChanges = useCallback(() => {
+    if (screen.name !== 'editor' || !editorHasUnsavedChanges) return false;
+
+    addToast('Save or cancel your prompt changes before leaving the editor.', 'info');
+    return true;
+  }, [addToast, editorHasUnsavedChanges, screen.name]);
+
   const handleSidebarItemSelect = useCallback((item: string) => {
+    if (blockIfEditorHasUnsavedChanges()) return;
+
     setActiveSidebarItem(item);
     setScreen({ name: 'library' });
     if (item === 'library' || item === 'favorites' || item === 'recent' || item === 'archived') {
       setActiveFilter('all');
     }
-  }, []);
+  }, [blockIfEditorHasUnsavedChanges]);
 
   const handleCreateFolder = useCallback((name: string) => {
     const folder = createFolder(name);
@@ -429,14 +439,18 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   }, []);
 
   const handleSettingsOpen = useCallback(() => {
+    if (blockIfEditorHasUnsavedChanges()) return;
+
     setScreen({ name: 'settings' });
-  }, []);
+  }, [blockIfEditorHasUnsavedChanges]);
 
   // ── Conflict resolution callbacks ──────────────────────────────────────────
 
   const handleConflictBadgeClick = useCallback(() => {
+    if (blockIfEditorHasUnsavedChanges()) return;
+
     setScreen({ name: 'conflicts' });
-  }, []);
+  }, [blockIfEditorHasUnsavedChanges]);
 
   const handleConflictBack = useCallback(() => {
     setScreen({ name: 'library' });
@@ -637,6 +651,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
               folders={derivedFolders}
               onSave={handleEditorSave}
               onCancel={handleEditorCancel}
+              onDirtyChange={setEditorHasUnsavedChanges}
               onDuplicate={screen.promptId ? () => {
                 handleDuplicatePrompt(screen.promptId!);
                 setScreen({ name: 'library' });

@@ -14,9 +14,6 @@ import { countWords, countChars } from '../PromptEditor';
 
 // ─── Arbitraries ───────────────────────────────────────────────────────────────
 
-/** Arbitrary non-empty string with various whitespace patterns */
-const nonEmptyStringArb = fc.string({ minLength: 1, maxLength: 200 });
-
 /** Arbitrary string that may be empty */
 const anyStringArb = fc.string({ maxLength: 200 });
 

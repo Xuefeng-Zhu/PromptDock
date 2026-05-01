@@ -12,7 +12,6 @@ import { SyncService } from '../sync-service';
 import { ConflictService } from '../conflict-service';
 import { PromptRepository } from '../../repositories/prompt-repository';
 import { createPromptStore } from '../../stores/prompt-store';
-import { createAppModeStore } from '../../stores/app-mode-store';
 import type { AppModeStore } from '../../stores/app-mode-store';
 import type { PromptStore } from '../../stores/prompt-store';
 import type { PromptRecipe } from '../../types/index';

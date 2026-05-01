@@ -9,8 +9,9 @@ import {
   Plus,
   Settings,
   Moon,
+  Sun,
 } from 'lucide-react';
-import type { Folder } from '../types/index';
+import type { Folder, UserSettings } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -25,9 +26,9 @@ export interface SidebarProps {
   archivedCount?: number;
   tagCounts?: Record<string, number>;
   onSettingsOpen?: () => void;
+  onToggleTheme?: () => void;
   onCreateFolder?: (name: string) => void;
-  onMoreFolders?: () => void;
-  onMoreTags?: () => void;
+  theme?: UserSettings['theme'];
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -43,9 +44,9 @@ export function Sidebar({
   archivedCount = 0,
   tagCounts = {},
   onSettingsOpen,
+  onToggleTheme,
   onCreateFolder,
-  onMoreFolders,
-  onMoreTags,
+  theme = 'system',
 }: SidebarProps) {
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [folderInputValue, setFolderInputValue] = useState('');
@@ -162,17 +163,10 @@ export function Sidebar({
               />
             </div>
           )}
-          <button
-            type="button"
-            onClick={onMoreFolders}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-          >
-            More…
-          </button>
         </SidebarSection>
 
         {/* ── Tags ──────────────────────────────────────────────────────── */}
-        <SidebarSection label="TAGS" actionIcon={<Plus className="h-3.5 w-3.5" />}>
+        <SidebarSection label="TAGS">
           {Object.entries(tagCounts).map(([tag, count]) => (
             <SidebarItem
               key={tag}
@@ -185,13 +179,6 @@ export function Sidebar({
               count={count}
             />
           ))}
-          <button
-            type="button"
-            onClick={onMoreTags}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-          >
-            More…
-          </button>
         </SidebarSection>
 
       </div>
@@ -215,10 +202,11 @@ export function Sidebar({
         {/* Dark mode toggle */}
         <button
           type="button"
+          onClick={onToggleTheme}
           className="rounded-lg p-2 text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)] transition-colors"
-          aria-label="Toggle dark mode"
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          <Moon className="h-4 w-4" />
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>
     </nav>
@@ -241,7 +229,7 @@ function SidebarSection({ label, children, actionIcon, onActionClick }: SidebarS
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
           {label}
         </span>
-        {actionIcon && (
+        {actionIcon && onActionClick && (
           <button
             type="button"
             onClick={onActionClick}

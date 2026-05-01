@@ -42,8 +42,45 @@
   --radius-xl: 1rem;
 }
 
-/* Future dark theme placeholder */
-/* .dark { --color-background: #0F172A; --color-panel: #1E293B; ... } */
+.light {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Primary */
+  --color-primary: #60A5FA;
+  --color-primary-hover: #93C5FD;
+  --color-primary-light: #1E3A5F;
+
+  /* Surfaces */
+  --color-background: #0F172A;
+  --color-panel: #111827;
+  --color-border: #334155;
+
+  /* Text */
+  --color-text-main: #E5E7EB;
+  --color-text-muted: #94A3B8;
+  --color-text-placeholder: #64748B;
+
+  /* Category colors */
+  --color-cat-purple: #3B2559;
+  --color-cat-green: #123B2A;
+  --color-cat-amber: #4A3412;
+  --color-cat-blue: #17345C;
+  --color-cat-rose: #4A1F2A;
+  --color-cat-teal: #123F3C;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+}
 
 /* Global focus ring for keyboard navigation */
 :focus-visible {

@@ -11,6 +11,7 @@ export interface PromptGridProps {
   onSelectPrompt: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   categoryColorMap: Record<string, string>;
+  viewMode?: 'grid' | 'list';
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ export function PromptGrid({
   onSelectPrompt,
   onToggleFavorite,
   categoryColorMap,
+  viewMode = 'grid',
 }: PromptGridProps) {
   if (prompts.length === 0) {
     return (
@@ -41,9 +43,14 @@ export function PromptGrid({
 
   return (
     <div
-      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      className={
+        viewMode === 'grid'
+          ? 'grid grid-cols-1 gap-4 md:grid-cols-2'
+          : 'flex flex-col gap-2'
+      }
       role="listbox"
       aria-label="Prompt list"
+      data-view-mode={viewMode}
     >
       {prompts.map((prompt) => (
         <PromptCard
@@ -53,6 +60,7 @@ export function PromptGrid({
           isSelected={prompt.id === selectedPromptId}
           onSelect={onSelectPrompt}
           onToggleFavorite={onToggleFavorite}
+          viewMode={viewMode}
         />
       ))}
     </div>

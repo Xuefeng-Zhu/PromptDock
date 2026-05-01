@@ -90,6 +90,18 @@ export class PromptRepository implements IPromptRepository {
     return this.prompts.filter((p) => p.workspaceId === workspaceId);
   }
 
+  async reloadAll(workspaceId: string): Promise<PromptRecipe[]> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.reloadAll
+        ? this.firestoreDelegate.reloadAll(workspaceId)
+        : this.firestoreDelegate.getAll(workspaceId);
+    }
+
+    this.prompts = await this.backend.readPrompts();
+    this.loaded = true;
+    return this.prompts.filter((p) => p.workspaceId === workspaceId);
+  }
+
   async update(
     id: string,
     changes: Partial<PromptRecipe>,

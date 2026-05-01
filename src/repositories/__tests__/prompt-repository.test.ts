@@ -159,6 +159,20 @@ describe('PromptRepository', () => {
       const result = await repo.getAll('local');
       expect(result).toEqual([]);
     });
+
+    it('reloadAll should refresh cached prompts from the backend', async () => {
+      const first = makePromptRecipe({ id: 'first', title: 'First' });
+      const second = makePromptRecipe({ id: 'second', title: 'Second' });
+      (backend.readPrompts as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce([first])
+        .mockResolvedValueOnce([second]);
+
+      await repo.getAll('local');
+      const result = await repo.reloadAll('local');
+
+      expect(result.map((p) => p.id)).toEqual(['second']);
+      expect(backend.readPrompts).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('update', () => {

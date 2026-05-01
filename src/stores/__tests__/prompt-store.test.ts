@@ -133,6 +133,21 @@ describe('PromptStore', () => {
       await store.getState().loadPrompts();
       expect(store.getState().prompts).toHaveLength(2);
     });
+
+    it('should prefer reloadAll when the repository supports cache refreshes', async () => {
+      const refreshed = makePrompt({ id: 'fresh', title: 'Fresh Prompt' });
+      const refreshableRepo = {
+        ...createMockRepo([p1]),
+        reloadAll: vi.fn(async () => [refreshed]),
+      };
+      store = createPromptStore(refreshableRepo);
+
+      await store.getState().loadPrompts();
+
+      expect(refreshableRepo.reloadAll).toHaveBeenCalledWith('local');
+      expect(refreshableRepo.getAll).not.toHaveBeenCalled();
+      expect(store.getState().prompts).toEqual([refreshed]);
+    });
   });
 
   // ── createPrompt ───────────────────────────────────────────────────────────

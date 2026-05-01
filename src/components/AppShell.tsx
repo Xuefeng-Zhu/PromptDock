@@ -10,6 +10,7 @@ import { CommandPalette } from './CommandPalette';
 import { VariableFillModal } from './VariableFillModal';
 import { ConflictCenter, ConflictBadge } from '../screens/ConflictCenter';
 import { usePromptStore } from '../stores/prompt-store';
+import { useSettingsStore } from '../stores/settings-store';
 import { PROMPT_CATEGORY_MAP, CATEGORY_COLORS } from '../data/mock-data';
 import { ToastContainer } from './ToastContainer';
 import { useToastStore } from '../stores/toast-store';
@@ -33,13 +34,28 @@ export type FilterType = 'all' | 'favorites' | 'recent';
 
 // ─── Filtering Logic ───────────────────────────────────────────────────────────
 
+const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const TOP_LEVEL_SIDEBAR_ITEMS = new Set([
+  'library',
+  'favorites',
+  'recent',
+  'archived',
+  'tags',
+  'workspaces',
+]);
+
+function isRecentPrompt(prompt: PromptRecipe, referenceDate: Date = new Date()): boolean {
+  if (!prompt.lastUsedAt) return false;
+  return prompt.lastUsedAt.getTime() > referenceDate.getTime() - RECENT_WINDOW_MS;
+}
+
 /**
  * Standalone search and filter function for prompts.
  * Exported separately for testability and property-based testing.
  *
  * Filtering pipeline:
- * 1. Exclude archived prompts
- * 2. Apply sidebar folder filter (if a folder is selected)
+ * 1. Apply sidebar library/folder/tag filter
+ * 2. Exclude archived prompts unless the archived sidebar item is selected
  * 3. Apply search query (case-insensitive substring match on title, description, tags)
  * 4. Apply filter chip ("all", "favorites", "recent")
  */
@@ -49,15 +65,19 @@ export function filterPrompts(
   activeFilter: FilterType,
   activeSidebarItem: string,
 ): PromptRecipe[] {
-  let result = prompts.filter((p) => !p.archived);
+  const showingArchived = activeSidebarItem === 'archived';
+  let result = prompts.filter((p) => p.archived === showingArchived);
 
-  // Sidebar folder filtering
-  if (
-    activeSidebarItem !== 'library' &&
-    activeSidebarItem !== 'tags' &&
-    activeSidebarItem !== 'workspaces'
-  ) {
-    // activeSidebarItem is a folderId
+  if (activeSidebarItem === 'favorites') {
+    result = result.filter((p) => p.favorite === true);
+  } else if (activeSidebarItem === 'recent') {
+    result = result.filter((p) => isRecentPrompt(p));
+  } else if (activeSidebarItem.startsWith('tag-')) {
+    const selectedTag = activeSidebarItem.slice(4);
+    result = result.filter((p) =>
+      p.tags.some((tag) => tag.toLowerCase() === selectedTag),
+    );
+  } else if (!TOP_LEVEL_SIDEBAR_ITEMS.has(activeSidebarItem)) {
     result = result.filter((p) => p.folderId === activeSidebarItem);
   }
 
@@ -78,7 +98,7 @@ export function filterPrompts(
       result = result.filter((p) => p.favorite === true);
       break;
     case 'recent':
-      result = [...result].sort((a, b) => {
+      result = result.filter((p) => isRecentPrompt(p)).sort((a, b) => {
         const aTime = a.lastUsedAt ? a.lastUsedAt.getTime() : 0;
         const bTime = b.lastUsedAt ? b.lastUsedAt.getTime() : 0;
         return bTime - aTime;
@@ -146,6 +166,11 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const loadPrompts = usePromptStore((s) => s.loadPrompts);
 
+  // ── SettingsStore selectors ────────────────────────────────────────────────
+
+  const theme = useSettingsStore((s) => s.settings.theme);
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
+
   // ── Toast store ────────────────────────────────────────────────────────────
   const addToast = useToastStore((s) => s.addToast);
 
@@ -160,6 +185,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [activeSidebarItem, setActiveSidebarItem] = useState('library');
   const [userFolders, setUserFolders] = useState<import('../types/index').Folder[]>(() => readFolders());
+  const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
 
   // ── Global ⌘K / Ctrl+K keyboard shortcut ──────────────────────────────────
 
@@ -216,6 +242,13 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
       ),
     [prompts, searchQuery, activeFilter, activeSidebarItem],
   );
+
+  useEffect(() => {
+    if (screen.name !== 'library' || selectedPromptId === null) return;
+    if (!filteredPrompts.some((prompt) => prompt.id === selectedPromptId)) {
+      setSelectedPromptId(null);
+    }
+  }, [screen.name, selectedPromptId, filteredPrompts]);
 
   // ── Computed: prompt count by folder ───────────────────────────────────────
 
@@ -314,14 +347,34 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     setCommandPaletteOpen(true);
   }, []);
 
+  const blockIfEditorHasUnsavedChanges = useCallback(() => {
+    if (screen.name !== 'editor' || !editorHasUnsavedChanges) return false;
+
+    addToast('Save or cancel your prompt changes before leaving the editor.', 'info');
+    return true;
+  }, [addToast, editorHasUnsavedChanges, screen.name]);
+
   const handleSidebarItemSelect = useCallback((item: string) => {
+    if (blockIfEditorHasUnsavedChanges()) return;
+
     setActiveSidebarItem(item);
-  }, []);
+    setScreen({ name: 'library' });
+    if (item === 'library' || item === 'favorites' || item === 'recent' || item === 'archived') {
+      setActiveFilter('all');
+    }
+  }, [blockIfEditorHasUnsavedChanges]);
 
   const handleCreateFolder = useCallback((name: string) => {
     const folder = createFolder(name);
     setUserFolders((prev) => [...prev, folder]);
   }, []);
+
+  const handleToggleTheme = useCallback(() => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    updateSettings({ theme: nextTheme }).catch((err: unknown) => {
+      addToast(`Failed to update theme: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+  }, [theme, updateSettings, addToast]);
 
   // ── Navigation callbacks ───────────────────────────────────────────────────
 
@@ -386,14 +439,18 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   }, []);
 
   const handleSettingsOpen = useCallback(() => {
+    if (blockIfEditorHasUnsavedChanges()) return;
+
     setScreen({ name: 'settings' });
-  }, []);
+  }, [blockIfEditorHasUnsavedChanges]);
 
   // ── Conflict resolution callbacks ──────────────────────────────────────────
 
   const handleConflictBadgeClick = useCallback(() => {
+    if (blockIfEditorHasUnsavedChanges()) return;
+
     setScreen({ name: 'conflicts' });
-  }, []);
+  }, [blockIfEditorHasUnsavedChanges]);
 
   const handleConflictBack = useCallback(() => {
     setScreen({ name: 'library' });
@@ -454,24 +511,6 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     });
   }, [loadPrompts, addToast]);
 
-  // ── Lower-priority stub button handlers ────────────────────────────────────
-
-  const handleFiltersClick = useCallback(() => {
-    addToast('Advanced filters coming soon', 'info');
-  }, [addToast]);
-
-  const handleNewPromptOptions = useCallback(() => {
-    addToast('Import from JSON coming soon', 'info');
-  }, [addToast]);
-
-  const handleMoreFolders = useCallback(() => {
-    addToast('More folders coming soon', 'info');
-  }, [addToast]);
-
-  const handleMoreTags = useCallback(() => {
-    addToast('More tags coming soon', 'info');
-  }, [addToast]);
-
   // ── Command Palette callbacks ──────────────────────────────────────────────
 
   const handleCommandPaletteClose = useCallback(() => {
@@ -486,12 +525,15 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
       // Prompt has variables → open VariableFillModal
       setVariableFillPromptId(prompt.id);
     } else {
-      // No variables → copy body directly via Tauri with browser fallback
-      copyToClipboard(prompt.body).catch(() => {
-        console.log('Copy to clipboard:', prompt.body);
-      });
+      copyToClipboard(prompt.body)
+        .then(() => {
+          addToast('Prompt copied to clipboard', 'success');
+        })
+        .catch((err: unknown) => {
+          addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        });
     }
-  }, []);
+  }, [addToast]);
 
   // ── Variable Fill Modal callbacks ──────────────────────────────────────────
 
@@ -499,19 +541,25 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     setVariableFillPromptId(null);
   }, []);
 
-  const handleVariableFillCopy = useCallback((renderedText: string) => {
-    // Copy rendered text via Tauri with browser fallback
-    copyToClipboard(renderedText).catch(() => {
-      console.log('Copy to clipboard:', renderedText);
-    });
-  }, []);
+  const handleVariableFillCopy = useCallback(async (renderedText: string) => {
+    try {
+      await copyToClipboard(renderedText);
+      addToast('Prompt copied to clipboard', 'success');
+    } catch (err) {
+      addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      throw err;
+    }
+  }, [addToast]);
 
-  const handleVariableFillPaste = useCallback((renderedText: string) => {
-    // Copy to clipboard and paste into active app via Tauri with fallback
-    pasteToActiveApp(renderedText).catch(() => {
-      console.log('Paste rendered text:', renderedText);
-    });
-  }, []);
+  const handleVariableFillPaste = useCallback(async (renderedText: string) => {
+    try {
+      await pasteToActiveApp(renderedText);
+      addToast('Prompt copied for pasting', 'success');
+    } catch (err) {
+      addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      throw err;
+    }
+  }, [addToast]);
 
   // ── Determine if Inspector should show ─────────────────────────────────────
 
@@ -558,7 +606,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
       )}
 
       {/* Body: Sidebar + Main Content + Inspector */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           folders={derivedFolders}
           activeItem={activeSidebarItem}
@@ -570,14 +618,17 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           archivedCount={sidebarFilterCounts.archived}
           tagCounts={sidebarTagCounts}
           onSettingsOpen={handleSettingsOpen}
+          onToggleTheme={handleToggleTheme}
           onCreateFolder={handleCreateFolder}
-          onMoreFolders={handleMoreFolders}
-          onMoreTags={handleMoreTags}
+          theme={theme}
         />
 
         {/* Main Content Area */}
         <main
-          className="flex flex-1 flex-col overflow-y-auto pt-14"
+          className={[
+            'flex min-h-0 flex-1 flex-col pt-14',
+            screen.name === 'settings' ? 'overflow-hidden' : 'overflow-y-auto',
+          ].join(' ')}
           style={{ color: 'var(--color-text-main)' }}
         >
           {screen.name === 'library' && (
@@ -589,8 +640,6 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
               onToggleFavorite={handleToggleFavorite}
               onFilterChange={handleFilterChange}
               onNewPrompt={handleNewPrompt}
-              onFiltersClick={handleFiltersClick}
-              onNewPromptOptions={handleNewPromptOptions}
               categoryColorMap={categoryColorMap}
             />
           )}
@@ -602,6 +651,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
               folders={derivedFolders}
               onSave={handleEditorSave}
               onCancel={handleEditorCancel}
+              onDirtyChange={setEditorHasUnsavedChanges}
               onDuplicate={screen.promptId ? () => {
                 handleDuplicatePrompt(screen.promptId!);
                 setScreen({ name: 'library' });

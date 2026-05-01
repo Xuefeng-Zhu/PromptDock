@@ -236,7 +236,12 @@ describe('OnboardingScreen — Enable sync (Task 6.3)', () => {
 
     expect(syncService.transitionToSynced).toHaveBeenCalledTimes(1);
     // Verify it was called with a guest userId, workspaceId, empty prompts, and 'fresh'
-    const call = syncService.transitionToSynced.mock.calls[0];
+    const call = syncService.transitionToSynced.mock.calls[0] as unknown as [
+      string,
+      string,
+      never[],
+      'fresh',
+    ];
     expect(call[0]).toMatch(/^guest-/); // guest userId
     expect(call[1]).toMatch(/^workspace-guest-/); // guest workspaceId
     expect(call[2]).toEqual([]); // empty local prompts

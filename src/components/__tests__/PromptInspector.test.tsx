@@ -114,6 +114,41 @@ describe('PromptInspector', () => {
       expect(screen.queryByRole('menu')).toBeNull();
     });
 
+    it('calls onEdit with prompt id when "Add tag" is clicked', () => {
+      const onEdit = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onEdit={onEdit}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(onEdit).toHaveBeenCalledWith(mockPrompt.id);
+    });
+
+    it('calls onEdit with prompt id and closes dropdown when "Move to folder" is clicked', () => {
+      const onEdit = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onEdit={onEdit}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to folder' }));
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(onEdit).toHaveBeenCalledWith(mockPrompt.id);
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
     it('calls onDuplicate with prompt id and closes dropdown when "Duplicate" is clicked', () => {
       const onDuplicate = vi.fn();
       render(

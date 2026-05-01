@@ -160,17 +160,20 @@ vi.mock('../../utils/hotkey', () => ({
 
 // ─── Mock Tauri dialog/fs modules (dynamic imports in SettingsScreen) ──────────
 
-const mockSaveFile = vi.fn(async () => true);
-const mockOpenFile = vi.fn(async () => null);
+const mockSaveFile = vi.fn(
+  async (_content: string, _defaultName: string): Promise<boolean> => true,
+);
+const mockOpenFile = vi.fn(async (): Promise<string | null> => null);
 
 vi.mock('../../utils/file-dialog', () => ({
-  saveFile: (...args: unknown[]) => mockSaveFile(...args),
-  openFile: (...args: unknown[]) => mockOpenFile(...args),
+  saveFile: (content: string, defaultName: string) => mockSaveFile(content, defaultName),
+  openFile: () => mockOpenFile(),
 }));
 
 // jsdom doesn't implement scrollIntoView
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  HTMLElement.prototype.scrollTo = vi.fn();
 });
 
 beforeEach(() => {
@@ -238,6 +241,28 @@ describe('SettingsScreen', () => {
     expect(aboutNavButton).toBeDefined();
     fireEvent.click(aboutNavButton!);
     expect(aboutNavButton!.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('scrolls the settings content pane when a nav section is clicked', () => {
+    const scrollToSpy = vi.spyOn(HTMLElement.prototype, 'scrollTo');
+    render(<SettingsScreen onBack={() => {}} />);
+
+    const nav = screen.getByRole('navigation', { name: 'Settings navigation' });
+    const aboutNavButton = Array.from(nav.querySelectorAll('button')).find(btn =>
+      btn.textContent?.includes('About'),
+    );
+
+    fireEvent.click(aboutNavButton!);
+
+    expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+
+  it('keeps settings content in a dedicated scroll pane', () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const scrollPane = screen.getByTestId('settings-scroll-pane');
+
+    expect(scrollPane.className).toContain('min-h-0');
+    expect(scrollPane.className).toContain('overflow-y-scroll');
   });
 });
 
@@ -368,9 +393,37 @@ describe('SettingsScreen + hotkey registration', () => {
       fireEvent.click(clearButton);
     });
 
-    // registerHotkey is called with '' which is a no-op inside the utility,
-    // but the SettingsScreen still invokes it after updating the store.
+    // SettingsScreen still delegates the empty combo so the utility can
+    // unregister the native shortcut in Tauri.
     expect(mockRegisterHotkey).toHaveBeenCalledWith('');
+  });
+
+  it('captures hotkeys using Tauri-compatible modifier names', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyInput = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.focus(hotkeyInput);
+    });
+
+    await waitFor(() => {
+      expect((hotkeyInput as HTMLInputElement).value).toBe('Press a key combination…');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(hotkeyInput, {
+        key: 'p',
+        metaKey: true,
+        shiftKey: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRegisterHotkey).toHaveBeenCalledWith('CommandOrControl+Shift+P');
+    });
+    expect(mockRepo.update).toHaveBeenCalledWith({
+      hotkeyCombo: 'CommandOrControl+Shift+P',
+    });
   });
 
   it('does not display an error when registerHotkey succeeds', async () => {

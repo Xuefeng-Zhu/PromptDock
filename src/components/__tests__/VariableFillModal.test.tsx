@@ -95,7 +95,7 @@ describe('VariableFillModal', () => {
     expect(pasteButton.hasAttribute('disabled')).toBe(false);
   });
 
-  it('calls onCopy with rendered text when Copy button is clicked', () => {
+  it('calls onCopy with rendered text when Copy button is clicked', async () => {
     const onCopy = vi.fn();
     render(<VariableFillModal {...defaultProps} onCopy={onCopy} />);
     // Fill all variables
@@ -112,7 +112,9 @@ describe('VariableFillModal', () => {
     const copyButton = screen.getByRole('button', {
       name: /Copy final prompt/i,
     });
-    fireEvent.click(copyButton);
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
     expect(onCopy).toHaveBeenCalledTimes(1);
     const renderedText = onCopy.mock.calls[0][0] as string;
     expect(renderedText).toContain('developers');
@@ -150,7 +152,7 @@ describe('VariableFillModal', () => {
       vi.useRealTimers();
     });
 
-    it('shows "Copied!" success state after copy and reverts after 2 seconds', () => {
+    it('shows "Copied!" success state after copy and reverts after 2 seconds', async () => {
       render(<VariableFillModal {...defaultProps} />);
       // Fill all variables
       fireEvent.change(screen.getByLabelText('Value for variable audience'), {
@@ -166,7 +168,9 @@ describe('VariableFillModal', () => {
       const copyButton = screen.getByRole('button', {
         name: /Copy final prompt/i,
       });
-      fireEvent.click(copyButton);
+      await act(async () => {
+        fireEvent.click(copyButton);
+      });
 
       // Should now show "Copied!" text
       expect(screen.getByText('Copied!')).toBeDefined();
@@ -181,6 +185,35 @@ describe('VariableFillModal', () => {
       expect(
         screen.getByRole('button', { name: /Copy final prompt/i }),
       ).toBeDefined();
+    });
+
+    it('does not show "Copied!" when copy fails', async () => {
+      const onCopy = vi.fn(async () => {
+        throw new Error('copy failed');
+      });
+
+      render(<VariableFillModal {...defaultProps} onCopy={onCopy} />);
+
+      fireEvent.change(screen.getByLabelText('Value for variable audience'), {
+        target: { value: 'devs' },
+      });
+      fireEvent.change(screen.getByLabelText('Value for variable text'), {
+        target: { value: 'content' },
+      });
+      fireEvent.change(screen.getByLabelText('Value for variable format'), {
+        target: { value: 'list' },
+      });
+
+      const copyButton = screen.getByRole('button', {
+        name: /Copy final prompt/i,
+      });
+
+      await act(async () => {
+        fireEvent.click(copyButton);
+      });
+
+      expect(screen.queryByText('Copied!')).toBeNull();
+      expect(onCopy).toHaveBeenCalledTimes(1);
     });
   });
 

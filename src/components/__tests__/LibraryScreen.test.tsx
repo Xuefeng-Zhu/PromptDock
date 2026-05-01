@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { LibraryScreen } from '../LibraryScreen';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 import type { PromptRecipe } from '../../types/index';
@@ -34,7 +34,6 @@ describe('LibraryScreen', () => {
     expect(screen.getByText('All')).toBeDefined();
     expect(screen.getByText('Favorites')).toBeDefined();
     expect(screen.getByText('Recent')).toBeDefined();
-    expect(screen.getByText('Filters')).toBeDefined();
   });
 
   it('renders the New Prompt button', () => {
@@ -54,9 +53,71 @@ describe('LibraryScreen', () => {
     expect(screen.getByRole('button', { name: 'List view' })).toBeDefined();
   });
 
+  it('switches the prompt list between grid and list layouts', () => {
+    render(<LibraryScreen {...defaultProps} />);
+    const promptList = screen.getByRole('listbox', { name: 'Prompt list' });
+    expect(promptList.getAttribute('data-view-mode')).toBe('grid');
+
+    fireEvent.click(screen.getByRole('button', { name: 'List view' }));
+
+    expect(promptList.getAttribute('data-view-mode')).toBe('list');
+    expect(screen.getByRole('button', { name: 'List view' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('renders bottom status bar with sort indicator', () => {
     render(<LibraryScreen {...defaultProps} />);
     expect(screen.getByText(/Sorted by Last used/)).toBeDefined();
+  });
+
+  it('opens the sort menu and sorts prompts by title', () => {
+    const prompts: PromptRecipe[] = [
+      {
+        id: 'p-z',
+        workspaceId: 'local',
+        title: 'Zulu Prompt',
+        description: '',
+        body: 'Zulu',
+        tags: [],
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        lastUsedAt: new Date('2024-01-03'),
+        createdBy: 'local',
+        version: 1,
+      },
+      {
+        id: 'p-a',
+        workspaceId: 'local',
+        title: 'Alpha Prompt',
+        description: '',
+        body: 'Alpha',
+        tags: [],
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        lastUsedAt: new Date('2024-01-02'),
+        createdBy: 'local',
+        version: 1,
+      },
+    ];
+
+    render(<LibraryScreen {...defaultProps} prompts={prompts} />);
+
+    let cards = screen.getAllByRole('option');
+    expect(within(cards[0]).getByText('Zulu Prompt')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /Sorted by Last used/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Title' }));
+
+    expect(screen.getByRole('button', { name: /Sorted by Title/ })).toBeDefined();
+    cards = screen.getAllByRole('option');
+    expect(within(cards[0]).getByText('Alpha Prompt')).toBeDefined();
   });
 
   // ── Consolidated library screen tests (Task 10.5) ──────────────────────────

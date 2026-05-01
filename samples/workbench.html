@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptDock | Workbench Sample</title>
+    <meta
+      name="description"
+      content="A calmer product-led landing page direction for PromptDock."
+    />
+    <link rel="icon" href="../assets/promptdock-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="sample-styles.css" />
+  </head>
+  <body class="workbench-page">
+    <header class="sample-header light-header" aria-label="Primary">
+      <a class="mini-brand" href="../">
+        <img src="../assets/promptdock-icon.svg" alt="" />
+        <span>PromptDock</span>
+      </a>
+      <nav aria-label="Site navigation">
+        <a href="#library">Library</a>
+        <a href="#flow">Flow</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/Xuefeng-Zhu/PromptDock">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="workbench-hero" aria-label="PromptDock overview">
+        <div class="desk-scene" aria-hidden="true">
+          <div class="app-window">
+            <div class="window-bar">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="app-layout">
+              <aside>
+                <b>Library</b>
+                <i></i>
+                <i></i>
+                <i></i>
+              </aside>
+              <section>
+                <div class="search-pill"></div>
+                <div class="recipe-row active"></div>
+                <div class="recipe-row"></div>
+                <div class="recipe-row short"></div>
+              </section>
+              <section class="preview-pane">
+                <div class="prompt-line"></div>
+                <div class="prompt-line wide"></div>
+                <div class="token-row">
+                  <span>{{topic}}</span>
+                  <span>{{tone}}</span>
+                </div>
+              </section>
+            </div>
+          </div>
+          <div class="launcher-pop">
+            <span>CommandOrControl+Shift+P</span>
+            <b>Find a recipe...</b>
+            <i></i>
+          </div>
+        </div>
+
+        <div class="hero-text light-text">
+          <p class="eyebrow">Local-first prompt workbench</p>
+          <h1>Keep the prompts that actually work.</h1>
+          <p>
+            PromptDock stores reusable recipes, asks for the variables that changed,
+            and moves the finished prompt into the app where you are working.
+          </p>
+          <div class="hero-actions">
+            <a class="dark-button" href="https://github.com/Xuefeng-Zhu/PromptDock">View project</a>
+            <a class="line-button" href="#install">Run locally</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="proof-strip" id="library">
+        <article>
+          <span>01</span>
+          <strong>Recipe library</strong>
+          <p>Save prompt bodies with folders, tags, favorites, and archive state.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <strong>Variable fill</strong>
+          <p>Extract placeholders and preview the rendered prompt before it leaves the app.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <strong>Desktop launcher</strong>
+          <p>Open search from a global hotkey and paste into the active app.</p>
+        </article>
+      </section>
+
+      <section class="editorial-section" id="flow">
+        <div>
+          <p class="eyebrow">Small surface, fast motion</p>
+          <h2>A focused tool for repeated prompt work.</h2>
+        </div>
+        <div class="editorial-copy">
+          <p>
+            This direction treats PromptDock like a calm productivity app: more air,
+            clearer product UI, and less marketing drama.
+          </p>
+          <p>
+            It is a better fit if you want the page to feel practical, trustworthy,
+            and close to the desktop app itself.
+          </p>
+        </div>
+      </section>
+
+      <section class="install-band" id="install">
+        <div>
+          <p class="eyebrow">Start local</p>
+          <h2>Clone and run the browser build.</h2>
+        </div>
+        <pre><code>git clone https://github.com/Xuefeng-Zhu/PromptDock.git
+cd PromptDock
+npm install
+npm run dev</code></pre>
+      </section>
+    </main>
+  </body>
+</html>

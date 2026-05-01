@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptDock | Command Sample</title>
+    <meta
+      name="description"
+      content="A sharper quick-launch focused landing page direction for PromptDock."
+    />
+    <link rel="icon" href="../assets/promptdock-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="sample-styles.css" />
+  </head>
+  <body class="command-page">
+    <header class="sample-header dark-header" aria-label="Primary">
+      <a class="mini-brand" href="../">
+        <img src="../assets/promptdock-icon.svg" alt="" />
+        <span>PromptDock</span>
+      </a>
+      <nav aria-label="Site navigation">
+        <a href="#launcher">Launcher</a>
+        <a href="#systems">Systems</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/Xuefeng-Zhu/PromptDock">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="command-hero" aria-label="PromptDock quick launcher">
+        <div class="console-scene" aria-hidden="true">
+          <div class="grid-plane"></div>
+          <div class="floating-command">
+            <div class="command-input">
+              <span>PromptDock</span>
+              <b>Summarize research notes</b>
+            </div>
+            <div class="command-result selected">
+              <strong>Weekly synthesis</strong>
+              <small>{{audience}} {{tone}} {{source}}</small>
+            </div>
+            <div class="command-result">
+              <strong>Code review pass</strong>
+              <small>{{diff}} {{risk_level}}</small>
+            </div>
+            <div class="command-result">
+              <strong>Launch checklist</strong>
+              <small>{{release}} {{owner}}</small>
+            </div>
+          </div>
+          <div class="paste-card">
+            <span>Rendered</span>
+            <p>Paste into active app</p>
+          </div>
+        </div>
+
+        <div class="hero-text dark-text">
+          <p class="eyebrow">Prompt recipes at keyboard speed</p>
+          <h1>Launch the right prompt without breaking focus.</h1>
+          <p>
+            Keep a searchable recipe deck behind one shortcut. Pick a prompt,
+            fill the variables, and paste the rendered result where the work lives.
+          </p>
+          <div class="hero-actions">
+            <a class="bright-button" href="https://github.com/Xuefeng-Zhu/PromptDock">Open GitHub</a>
+            <a class="ghost-button" href="#launcher">See flow</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="command-strip" id="launcher">
+        <div>
+          <span>Global hotkey</span>
+          <strong>CommandOrControl+Shift+P</strong>
+        </div>
+        <div>
+          <span>Template syntax</span>
+          <strong>{{variable}}</strong>
+        </div>
+        <div>
+          <span>Runtime</span>
+          <strong>Tauri plus browser fallback</strong>
+        </div>
+      </section>
+
+      <section class="systems-section" id="systems">
+        <div>
+          <p class="eyebrow">Built for flow</p>
+          <h2>A landing page that sells the quick launcher first.</h2>
+          <p>
+            This direction is higher contrast, more technical, and more kinetic.
+            It puts the keyboard-driven workflow in the first impression.
+          </p>
+        </div>
+        <div class="systems-grid">
+          <article>
+            <b>Find</b>
+            <p>Search titles, prompt bodies, folders, and tags.</p>
+          </article>
+          <article>
+            <b>Fill</b>
+            <p>PromptDock opens the variable modal only when values are needed.</p>
+          </article>
+          <article>
+            <b>Paste</b>
+            <p>Use desktop commands when Tauri is present, with browser fallback.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="install-band command-install" id="install">
+        <div>
+          <p class="eyebrow">Try the app</p>
+          <h2>Run PromptDock from source.</h2>
+        </div>
+        <pre><code>npm install
+npm run dev
+npm run tauri dev</code></pre>
+      </section>
+    </main>
+  </body>
+</html>

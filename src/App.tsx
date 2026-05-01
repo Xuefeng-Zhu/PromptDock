@@ -23,6 +23,7 @@ let initialized = false;
 let syncServiceInstance: SyncService | null = null;
 let conflictServiceInstance: ConflictService | null = null;
 let promptRepoInstance: PromptRepository | null = null;
+let authServiceInstance: AuthService | null = null;
 
 /** Get the shared ConflictService instance (available after initialization). */
 export function getConflictService(): ConflictService | null {
@@ -32,6 +33,11 @@ export function getConflictService(): ConflictService | null {
 /** Get the shared SyncService instance (available after sync mode activation). */
 export function getSyncService(): SyncService | null {
   return syncServiceInstance;
+}
+
+/** Get the shared AuthService instance (available after initialization). */
+export function getAuthService(): AuthService | null {
+  return authServiceInstance;
 }
 
 async function initializeApp(): Promise<void> {
@@ -100,6 +106,25 @@ async function initializeApp(): Promise<void> {
       if (firestoreBackend) {
         promptRepo.setFirestoreDelegate(firestoreBackend);
       }
+
+      // Trigger the sync transition: migrate local prompts and start snapshot listeners
+      const userId = state.userId ?? '';
+      const workspaceId = userId; // default workspace = user ID
+      const currentPrompts = promptStore.getState().prompts;
+      syncServiceInstance.transitionToSynced(
+        userId,
+        workspaceId,
+        currentPrompts,
+        'migrate',
+      ).then(() => {
+        // Wire PromptRepository to FirestoreBackend after transition completes
+        const fb = syncServiceInstance?.getFirestoreBackend();
+        if (fb) {
+          promptRepo.setFirestoreDelegate(fb);
+        }
+      }).catch((err) => {
+        console.error('Failed to transition to synced mode:', err);
+      });
     } else if (state.mode === 'local' && syncServiceInstance) {
       // Teardown SyncService when transitioning back to local mode
       syncServiceInstance.dispose();
@@ -111,8 +136,8 @@ async function initializeApp(): Promise<void> {
 
   // 9. Restore auth session — if a valid user exists, transition to synced mode
   try {
-    const authService = new AuthService();
-    const result = await authService.restoreSession();
+    authServiceInstance = new AuthService();
+    const result = await authServiceInstance.restoreSession();
     if (result && result.success) {
       const appMode = appModeStore.getState();
       appMode.setUserId(result.user.uid);
@@ -223,7 +248,10 @@ function App() {
     <AppModeProvider>
       <ThemeManager />
       <ErrorBoundary>
-        <AppShell />
+        <AppShell
+          authService={authServiceInstance ?? undefined}
+          syncService={syncServiceInstance ?? undefined}
+        />
       </ErrorBoundary>
     </AppModeProvider>
   );

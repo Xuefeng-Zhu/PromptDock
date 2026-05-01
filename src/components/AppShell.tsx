@@ -143,6 +143,8 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const archivePrompt = usePromptStore((s) => s.archivePrompt);
   const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
+  const deletePrompt = usePromptStore((s) => s.deletePrompt);
+  const loadPrompts = usePromptStore((s) => s.loadPrompts);
 
   // ── Toast store ────────────────────────────────────────────────────────────
   const addToast = useToastStore((s) => s.addToast);
@@ -423,6 +425,53 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     });
   }, [duplicatePrompt, addToast]);
 
+  const handleDeletePrompt = useCallback((id: string) => {
+    deletePrompt(id).catch((err: unknown) => {
+      addToast(`Failed to delete prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+    if (selectedPromptId === id) {
+      setSelectedPromptId(null);
+    }
+  }, [deletePrompt, selectedPromptId, addToast]);
+
+  const handleEditPrompt = useCallback((id: string) => {
+    setScreen({ name: 'editor', promptId: id });
+  }, []);
+
+  const handleCopyPromptBody = useCallback((body: string) => {
+    copyToClipboard(body)
+      .then(() => {
+        addToast('Prompt body copied to clipboard', 'success');
+      })
+      .catch((err: unknown) => {
+        addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      });
+  }, [addToast]);
+
+  const handleSync = useCallback(() => {
+    loadPrompts().catch((err: unknown) => {
+      addToast(`Failed to sync prompts: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    });
+  }, [loadPrompts, addToast]);
+
+  // ── Lower-priority stub button handlers ────────────────────────────────────
+
+  const handleFiltersClick = useCallback(() => {
+    addToast('Advanced filters coming soon', 'info');
+  }, [addToast]);
+
+  const handleNewPromptOptions = useCallback(() => {
+    addToast('Import from JSON coming soon', 'info');
+  }, [addToast]);
+
+  const handleMoreFolders = useCallback(() => {
+    addToast('More folders coming soon', 'info');
+  }, [addToast]);
+
+  const handleMoreTags = useCallback(() => {
+    addToast('More tags coming soon', 'info');
+  }, [addToast]);
+
   // ── Command Palette callbacks ──────────────────────────────────────────────
 
   const handleCommandPaletteClose = useCallback(() => {
@@ -495,6 +544,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
         onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}
         onSettingsOpen={handleSettingsOpen}
+        onSync={handleSync}
       />
 
       {/* Conflict badge — shown in header area when unresolved conflicts exist */}
@@ -521,6 +571,8 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           tagCounts={sidebarTagCounts}
           onSettingsOpen={handleSettingsOpen}
           onCreateFolder={handleCreateFolder}
+          onMoreFolders={handleMoreFolders}
+          onMoreTags={handleMoreTags}
         />
 
         {/* Main Content Area */}
@@ -537,6 +589,8 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
               onToggleFavorite={handleToggleFavorite}
               onFilterChange={handleFilterChange}
               onNewPrompt={handleNewPrompt}
+              onFiltersClick={handleFiltersClick}
+              onNewPromptOptions={handleNewPromptOptions}
               categoryColorMap={categoryColorMap}
             />
           )}
@@ -548,11 +602,22 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
               folders={derivedFolders}
               onSave={handleEditorSave}
               onCancel={handleEditorCancel}
+              onDuplicate={screen.promptId ? () => {
+                handleDuplicatePrompt(screen.promptId!);
+                setScreen({ name: 'library' });
+              } : undefined}
+              onArchive={screen.promptId ? () => {
+                handleArchivePrompt(screen.promptId!);
+                setScreen({ name: 'library' });
+              } : undefined}
+              onCopy={screen.promptId && editorPrompt ? () => {
+                handleCopyPromptBody(editorPrompt!.body);
+              } : undefined}
             />
           )}
 
           {screen.name === 'settings' && (
-            <SettingsScreen onBack={handleSettingsBack} />
+            <SettingsScreen onBack={handleSettingsBack} authService={authService} />
           )}
 
           {screen.name === 'conflicts' && conflictService && (
@@ -571,6 +636,12 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
               prompt={selectedPrompt}
               folder={selectedPromptFolder}
               variables={selectedPromptVariables}
+              onToggleFavorite={handleToggleFavorite}
+              onEdit={handleEditPrompt}
+              onDuplicate={handleDuplicatePrompt}
+              onArchive={handleArchivePrompt}
+              onDelete={handleDeletePrompt}
+              onCopyBody={handleCopyPromptBody}
             />
           </div>
         )}

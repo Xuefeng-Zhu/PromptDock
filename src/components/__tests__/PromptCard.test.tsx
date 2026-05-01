@@ -34,11 +34,33 @@ describe('PromptCard', () => {
     expect(onSelect).toHaveBeenCalledWith(mockPrompt.id);
   });
 
+  it('calls onSelect when the focused card receives Enter or Space', () => {
+    const onSelect = vi.fn();
+    render(<PromptCard {...defaultProps} onSelect={onSelect} />);
+    const card = screen.getByRole('option');
+
+    expect(card.getAttribute('tabindex')).toBe('0');
+    fireEvent.keyDown(card, { key: 'Enter' });
+    fireEvent.keyDown(card, { key: ' ' });
+
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenNthCalledWith(1, mockPrompt.id);
+    expect(onSelect).toHaveBeenNthCalledWith(2, mockPrompt.id);
+  });
+
   it('calls onToggleFavorite when the star button is clicked', () => {
     const onToggleFavorite = vi.fn();
-    render(<PromptCard {...defaultProps} onToggleFavorite={onToggleFavorite} />);
+    const onSelect = vi.fn();
+    render(
+      <PromptCard
+        {...defaultProps}
+        onSelect={onSelect}
+        onToggleFavorite={onToggleFavorite}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: /favorites/i }));
     expect(onToggleFavorite).toHaveBeenCalledWith(mockPrompt.id);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it('shows selected state with aria-selected', () => {

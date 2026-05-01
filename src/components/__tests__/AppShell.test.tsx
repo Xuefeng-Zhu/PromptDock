@@ -210,10 +210,12 @@ describe('AppShell', () => {
         fireEvent.click(newPromptBtn);
       });
 
-      // We should now be on the editor screen — fill in the title and save
+      // We should now be on the editor screen — fill in required fields and save
       const titleInput = screen.getByLabelText(/title/i);
+      const bodyInput = screen.getByLabelText(/body/i);
       await act(async () => {
         fireEvent.change(titleInput, { target: { value: 'My New Prompt' } });
+        fireEvent.change(bodyInput, { target: { value: 'Prompt body' } });
       });
 
       // Click save

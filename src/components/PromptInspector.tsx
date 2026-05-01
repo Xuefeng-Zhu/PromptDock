@@ -13,7 +13,7 @@ export interface PromptInspectorProps {
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
   onDelete?: (id: string) => void;
-  onCopyBody?: (body: string) => void;
+  onCopyBody?: (body: string, promptId?: string) => void;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ export function PromptInspector({ prompt, folder, variables, onToggleFavorite, o
               type="button"
               className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)] transition-colors"
               aria-label="Copy prompt body"
-              onClick={() => onCopyBody?.(prompt.body)}
+              onClick={() => onCopyBody?.(prompt.body, prompt.id)}
             >
               <Copy className="h-3 w-3" />
               Copy

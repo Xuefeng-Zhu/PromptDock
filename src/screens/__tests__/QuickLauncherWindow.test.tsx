@@ -22,6 +22,7 @@ const { mockCopyToClipboard, mockPasteToActiveApp } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn(() => Promise.resolve()),
   mockPasteToActiveApp: vi.fn(async (_text: string, beforePaste?: () => Promise<void>) => {
     await beforePaste?.();
+    return { copied: true, pasted: true };
   }),
 }));
 
@@ -144,6 +145,7 @@ describe('QuickLauncherWindow', () => {
     mockPasteToActiveApp.mockImplementation(
       async (_text: string, beforePaste?: () => Promise<void>) => {
         await beforePaste?.();
+        return { copied: true, pasted: true };
       },
     );
   });
@@ -174,7 +176,7 @@ describe('QuickLauncherWindow', () => {
 
   describe('12.2 — prompt selection uses copyToClipboard()', () => {
     it('calls copyToClipboard when selecting a prompt without variables', async () => {
-      await setupStore();
+      const store = await setupStore();
       render(<QuickLauncherWindow />);
 
       const promptButton = screen.getByText('Simple Prompt');
@@ -183,6 +185,10 @@ describe('QuickLauncherWindow', () => {
       });
 
       expect(mockCopyToClipboard).toHaveBeenCalledWith('Just plain text content');
+      await waitFor(() => {
+        expect(store.getState().prompts.find((p) => p.id === 'prompt-no-vars')?.lastUsedAt)
+          .toBeInstanceOf(Date);
+      });
     });
 
     it('shows an error and keeps the window open when copying fails', async () => {

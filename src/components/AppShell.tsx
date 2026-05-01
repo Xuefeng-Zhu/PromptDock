@@ -11,13 +11,16 @@ import { VariableFillModal } from './VariableFillModal';
 import { ConflictCenter, ConflictBadge } from '../screens/ConflictCenter';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
+import { useAppModeStore } from '../stores/app-mode-store';
 import { PROMPT_CATEGORY_MAP, CATEGORY_COLORS } from '../data/mock-data';
 import { ToastContainer } from './ToastContainer';
 import { useToastStore } from '../stores/toast-store';
 import { copyToClipboard, pasteToActiveApp } from '../utils/clipboard';
+import { hideMainWindow } from '../utils/window';
 import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
 import { readFolders, createFolder } from '../utils/folder-storage';
 import { getConflictService } from '../App';
+import { SearchEngine } from '../services/search-engine';
 import type { ConflictService } from '../services/conflict-service';
 import type { PromptRecipe } from '../types/index';
 
@@ -43,6 +46,7 @@ const TOP_LEVEL_SIDEBAR_ITEMS = new Set([
   'tags',
   'workspaces',
 ]);
+const librarySearchEngine = new SearchEngine();
 
 function isRecentPrompt(prompt: PromptRecipe, referenceDate: Date = new Date()): boolean {
   if (!prompt.lastUsedAt) return false;
@@ -83,13 +87,10 @@ export function filterPrompts(
 
   // Search filtering: case-insensitive substring match against title, description, and tags
   if (searchQuery.trim() !== '') {
-    const query = searchQuery.toLowerCase();
-    result = result.filter(
-      (p) =>
-        p.title.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query) ||
-        p.tags.some((tag) => tag.toLowerCase().includes(query)),
-    );
+    result = librarySearchEngine.search(result, searchQuery, {
+      includeArchived: showingArchived,
+      fields: ['title', 'tags', 'description'],
+    });
   }
 
   // Filter chip logic
@@ -165,11 +166,13 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const loadPrompts = usePromptStore((s) => s.loadPrompts);
+  const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
 
   // ── SettingsStore selectors ────────────────────────────────────────────────
 
   const theme = useSettingsStore((s) => s.settings.theme);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
+  const syncStatus = useAppModeStore((s) => s.syncStatus);
 
   // ── Toast store ────────────────────────────────────────────────────────────
   const addToast = useToastStore((s) => s.addToast);
@@ -402,8 +405,8 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     setScreen({ name: 'editor' });
   }, []);
 
-  const handleEditorSave = useCallback((data: Partial<PromptRecipe>) => {
-    const saveAction = async () => {
+  const handleEditorSave = useCallback(async (data: Partial<PromptRecipe>) => {
+    try {
       if (screen.name === 'editor' && screen.promptId) {
         await updatePrompt(screen.promptId, data);
       } else {
@@ -422,12 +425,12 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           version: 1,
         });
       }
+      setEditorHasUnsavedChanges(false);
       setScreen({ name: 'library' });
-    };
-
-    saveAction().catch((err: unknown) => {
+    } catch (err) {
       addToast(`Failed to save prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
-    });
+      throw err;
+    }
   }, [screen, updatePrompt, createPrompt, addToast]);
 
   const handleEditorCancel = useCallback(() => {
@@ -495,15 +498,20 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     setScreen({ name: 'editor', promptId: id });
   }, []);
 
-  const handleCopyPromptBody = useCallback((body: string) => {
+  const handleCopyPromptBody = useCallback((body: string, promptId?: string) => {
     copyToClipboard(body)
       .then(() => {
+        if (promptId) {
+          void markPromptUsed(promptId).catch((err: unknown) => {
+            console.error('Failed to update last used timestamp:', err);
+          });
+        }
         addToast('Prompt body copied to clipboard', 'success');
       })
       .catch((err: unknown) => {
         addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
       });
-  }, [addToast]);
+  }, [addToast, markPromptUsed]);
 
   const handleSync = useCallback(() => {
     loadPrompts().catch((err: unknown) => {
@@ -527,13 +535,16 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     } else {
       copyToClipboard(prompt.body)
         .then(() => {
+          void markPromptUsed(prompt.id).catch((err: unknown) => {
+            console.error('Failed to update last used timestamp:', err);
+          });
           addToast('Prompt copied to clipboard', 'success');
         })
         .catch((err: unknown) => {
           addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
         });
     }
-  }, [addToast]);
+  }, [addToast, markPromptUsed]);
 
   // ── Variable Fill Modal callbacks ──────────────────────────────────────────
 
@@ -544,22 +555,32 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const handleVariableFillCopy = useCallback(async (renderedText: string) => {
     try {
       await copyToClipboard(renderedText);
+      if (variableFillPromptId) {
+        void markPromptUsed(variableFillPromptId).catch((err: unknown) => {
+          console.error('Failed to update last used timestamp:', err);
+        });
+      }
       addToast('Prompt copied to clipboard', 'success');
     } catch (err) {
       addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw err;
     }
-  }, [addToast]);
+  }, [addToast, markPromptUsed, variableFillPromptId]);
 
   const handleVariableFillPaste = useCallback(async (renderedText: string) => {
     try {
-      await pasteToActiveApp(renderedText);
-      addToast('Prompt copied for pasting', 'success');
+      const result = await pasteToActiveApp(renderedText, hideMainWindow);
+      if (variableFillPromptId) {
+        void markPromptUsed(variableFillPromptId).catch((err: unknown) => {
+          console.error('Failed to update last used timestamp:', err);
+        });
+      }
+      addToast(result?.pasted === false ? 'Prompt copied to clipboard' : 'Prompt pasted', 'success');
     } catch (err) {
       addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw err;
     }
-  }, [addToast]);
+  }, [addToast, markPromptUsed, variableFillPromptId]);
 
   // ── Determine if Inspector should show ─────────────────────────────────────
 
@@ -593,6 +614,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
         onCommandPaletteOpen={handleCommandPaletteOpen}
         onSettingsOpen={handleSettingsOpen}
         onSync={handleSync}
+        syncStatus={syncStatus}
       />
 
       {/* Conflict badge — shown in header area when unresolved conflicts exist */}
@@ -661,7 +683,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
                 setScreen({ name: 'library' });
               } : undefined}
               onCopy={screen.promptId && editorPrompt ? () => {
-                handleCopyPromptBody(editorPrompt!.body);
+                handleCopyPromptBody(editorPrompt!.body, editorPrompt!.id);
               } : undefined}
             />
           )}

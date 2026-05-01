@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PromptEditor } from '../PromptEditor';
 import { MOCK_PROMPTS, MOCK_FOLDERS } from '../../data/mock-data';
 
@@ -65,6 +65,43 @@ describe('PromptEditor', () => {
 
   it('renders action buttons including Save', () => {
     render(<PromptEditor {...defaultProps} />);
+    expect(screen.getByText('Save')).toBeDefined();
+  });
+
+  it('requires title and body before saving', async () => {
+    const onSave = vi.fn();
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('Save'));
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Title is required');
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('calls onSave after required fields are present', async () => {
+    const onSave = vi.fn();
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Ready' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows an error when saving fails', async () => {
+    const onSave = vi.fn().mockRejectedValueOnce(new Error('disk full'));
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Ready' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Failed to save prompt: disk full');
+    });
     expect(screen.getByText('Save')).toBeDefined();
   });
 

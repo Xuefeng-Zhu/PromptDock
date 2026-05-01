@@ -66,6 +66,9 @@ export class SyncService {
     localPrompts: PromptRecipe[],
     migrationChoice: MigrationChoice,
   ): Promise<void> {
+    this.stopSnapshotListener();
+    this.teardownConnectivityListeners();
+
     this.currentUserId = userId;
     this.currentWorkspaceId = workspaceId;
     this.localPromptsSnapshot = [...localPrompts];
@@ -180,7 +183,10 @@ export class SyncService {
       q,
       (snapshot) => {
         const remotePrompts: PromptRecipe[] = snapshot.docs.map((docSnap) =>
-          firestoreDocToPromptRecipe(docSnap.id, docSnap.data() as FirestorePromptDoc),
+          firestoreDocToPromptRecipe(
+            docSnap.id,
+            docSnap.data({ serverTimestamps: 'estimate' }) as FirestorePromptDoc,
+          ),
         );
 
         // Detect conflicts by comparing with local snapshot
@@ -260,10 +266,25 @@ export class SyncService {
   private async migrateLocalPrompts(localPrompts: PromptRecipe[]): Promise<void> {
     if (!this.firestoreBackend || !this.currentWorkspaceId) return;
 
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { doc, getDoc, setDoc, Timestamp } = await import('firebase/firestore');
+    const firestore = await getFirebaseFirestore();
+
     for (const prompt of localPrompts) {
       try {
-        await this.firestoreBackend.create({
-          workspaceId: this.currentWorkspaceId,
+        const promptRef = doc(
+          firestore,
+          'workspaces',
+          this.currentWorkspaceId,
+          'prompts',
+          prompt.id,
+        );
+        const existing = await getDoc(promptRef);
+        if (existing.exists()) {
+          continue;
+        }
+
+        await setDoc(promptRef, {
           title: prompt.title,
           description: prompt.description,
           body: prompt.body,
@@ -271,10 +292,13 @@ export class SyncService {
           folderId: prompt.folderId,
           favorite: prompt.favorite,
           archived: prompt.archived,
-          archivedAt: prompt.archivedAt,
-          lastUsedAt: prompt.lastUsedAt,
+          archivedAt: prompt.archivedAt ? Timestamp.fromDate(prompt.archivedAt) : null,
+          createdAt: Timestamp.fromDate(prompt.createdAt),
+          updatedAt: Timestamp.fromDate(prompt.updatedAt),
+          lastUsedAt: prompt.lastUsedAt ? Timestamp.fromDate(prompt.lastUsedAt) : null,
           createdBy: this.currentUserId ?? 'local',
           version: prompt.version,
+          workspaceId: this.currentWorkspaceId,
         });
       } catch (error) {
         console.error(`Failed to migrate prompt "${prompt.title}":`, error);

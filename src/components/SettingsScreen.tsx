@@ -157,10 +157,13 @@ function AccountCard({ authService }: AccountCardProps) {
   const handleSignOut = useCallback(async () => {
     if (!authService) return;
     setIsSubmitting(true);
+    setAuthError(null);
     try {
       await authService.signOut();
       setUserId(null);
       setMode('local');
+    } catch (err) {
+      setAuthError(`Failed to sign out: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -679,8 +682,14 @@ function ImportExportCard() {
     try {
       const json = importExportService.exportToJSON(prompts);
       const timestamp = new Date().toISOString().slice(0, 10);
-      await saveFile(json, `promptdock-export-${timestamp}.json`);
-      setSuccessMessage('Prompts exported successfully.');
+      const saved = await saveFile(json, `promptdock-export-${timestamp}.json`);
+      if (saved) {
+        setSuccessMessage('Prompts exported successfully.');
+      }
+    } catch (err) {
+      setImportErrors([
+        `Export failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
     } finally {
       setIsExporting(false);
     }
@@ -735,6 +744,10 @@ function ImportExportCard() {
         });
       }
       setSuccessMessage(`Imported ${result.prompts.length} prompt(s) successfully.`);
+    } catch (err) {
+      setImportErrors([
+        `Import failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
     } finally {
       setIsImporting(false);
     }
@@ -742,67 +755,79 @@ function ImportExportCard() {
 
   // ── Duplicate resolution: skip all ─────────────────────────────────────────
   const handleSkipAll = useCallback(async () => {
-    // Only import non-duplicate prompts
-    for (const p of pendingNonDuplicates) {
-      await createPrompt({
-        workspaceId: p.workspaceId || 'local',
-        title: p.title,
-        description: p.description,
-        body: p.body,
-        tags: p.tags,
-        folderId: p.folderId,
-        favorite: p.favorite,
-        archived: p.archived,
-        archivedAt: p.archivedAt,
-        lastUsedAt: p.lastUsedAt,
-        createdBy: p.createdBy,
-        version: p.version,
-      });
+    try {
+      // Only import non-duplicate prompts
+      for (const p of pendingNonDuplicates) {
+        await createPrompt({
+          workspaceId: p.workspaceId || 'local',
+          title: p.title,
+          description: p.description,
+          body: p.body,
+          tags: p.tags,
+          folderId: p.folderId,
+          favorite: p.favorite,
+          archived: p.archived,
+          archivedAt: p.archivedAt,
+          lastUsedAt: p.lastUsedAt,
+          createdBy: p.createdBy,
+          version: p.version,
+        });
+      }
+      const count = pendingNonDuplicates.length;
+      setDuplicates([]);
+      setPendingNonDuplicates([]);
+      setSuccessMessage(
+        count > 0
+          ? `Imported ${count} prompt(s), skipped ${duplicates.length} duplicate(s).`
+          : `Skipped ${duplicates.length} duplicate(s). No new prompts imported.`,
+      );
+    } catch (err) {
+      setImportErrors([
+        `Import failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
     }
-    const count = pendingNonDuplicates.length;
-    setDuplicates([]);
-    setPendingNonDuplicates([]);
-    setSuccessMessage(
-      count > 0
-        ? `Imported ${count} prompt(s), skipped ${duplicates.length} duplicate(s).`
-        : `Skipped ${duplicates.length} duplicate(s). No new prompts imported.`,
-    );
   }, [pendingNonDuplicates, duplicates.length, createPrompt]);
 
   // ── Duplicate resolution: overwrite all ────────────────────────────────────
   const handleOverwriteAll = useCallback(async () => {
-    // Overwrite existing prompts with incoming data
-    for (const dupe of duplicates) {
-      await updatePrompt(dupe.existing.id, {
-        title: dupe.incoming.title,
-        description: dupe.incoming.description,
-        body: dupe.incoming.body,
-        tags: dupe.incoming.tags,
-        folderId: dupe.incoming.folderId,
-        favorite: dupe.incoming.favorite,
-      });
+    try {
+      // Overwrite existing prompts with incoming data
+      for (const dupe of duplicates) {
+        await updatePrompt(dupe.existing.id, {
+          title: dupe.incoming.title,
+          description: dupe.incoming.description,
+          body: dupe.incoming.body,
+          tags: dupe.incoming.tags,
+          folderId: dupe.incoming.folderId,
+          favorite: dupe.incoming.favorite,
+        });
+      }
+      // Also import non-duplicate prompts
+      for (const p of pendingNonDuplicates) {
+        await createPrompt({
+          workspaceId: p.workspaceId || 'local',
+          title: p.title,
+          description: p.description,
+          body: p.body,
+          tags: p.tags,
+          folderId: p.folderId,
+          favorite: p.favorite,
+          archived: p.archived,
+          archivedAt: p.archivedAt,
+          lastUsedAt: p.lastUsedAt,
+          createdBy: p.createdBy,
+          version: p.version,
+        });
+      }
+      const total = duplicates.length + pendingNonDuplicates.length;
+      setDuplicates([]);
+      setPendingNonDuplicates([]);
+      setSuccessMessage(`Imported ${total} prompt(s), overwrote ${duplicates.length} duplicate(s).`);
+    } catch (err) {
+      setImportErrors([
+        `Import failed: ${err instanceof Error ? err.message : String(err)}`,
+      ]);
     }
-    // Also import non-duplicate prompts
-    for (const p of pendingNonDuplicates) {
-      await createPrompt({
-        workspaceId: p.workspaceId || 'local',
-        title: p.title,
-        description: p.description,
-        body: p.body,
-        tags: p.tags,
-        folderId: p.folderId,
-        favorite: p.favorite,
-        archived: p.archived,
-        archivedAt: p.archivedAt,
-        lastUsedAt: p.lastUsedAt,
-        createdBy: p.createdBy,
-        version: p.version,
-      });
-    }
-    const total = duplicates.length + pendingNonDuplicates.length;
-    setDuplicates([]);
-    setPendingNonDuplicates([]);
-    setSuccessMessage(`Imported ${total} prompt(s), overwrote ${duplicates.length} duplicate(s).`);
   }, [duplicates, pendingNonDuplicates, createPrompt, updatePrompt]);
 
   return (
@@ -974,9 +999,9 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
   const handleHotkeyChange = useCallback(
     async (hotkeyCombo: string) => {
       setHotkeyError(null);
-      await updateSettings({ hotkeyCombo });
       try {
         await registerHotkey(hotkeyCombo);
+        await updateSettings({ hotkeyCombo });
       } catch (err) {
         setHotkeyError(
           `Failed to register hotkey: ${err instanceof Error ? err.message : String(err)}`,

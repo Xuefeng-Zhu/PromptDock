@@ -1,6 +1,11 @@
-use tauri::{AppHandle, Manager, Runtime};
+use std::sync::Mutex;
+
+use tauri::{AppHandle, Manager, Runtime, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+
+#[derive(Default)]
+pub struct CurrentHotkey(pub Mutex<Option<String>>);
 
 // ---------------------------------------------------------------------------
 // Clipboard & Paste Commands
@@ -19,11 +24,13 @@ pub fn copy_to_clipboard<R: Runtime>(app: AppHandle<R>, text: String) -> Result<
 /// simulation.  A small delay is inserted before the key-press so the calling
 /// window has time to hide and the target app can receive focus.
 #[tauri::command]
-pub fn paste_to_active_app() -> Result<(), String> {
+pub fn paste_to_active_app<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
+    hide_promptdock_for_paste(&app)?;
+
     // Small delay to let the window hide and the target app gain focus.
-    std::thread::sleep(std::time::Duration::from_millis(150));
+    std::thread::sleep(std::time::Duration::from_millis(350));
 
     let mut enigo =
         Enigo::new(&Settings::default()).map_err(|e| format!("Failed to create Enigo: {e}"))?;
@@ -32,26 +39,26 @@ pub fn paste_to_active_app() -> Result<(), String> {
     {
         enigo
             .key(Key::Meta, Direction::Press)
-            .map_err(|e| format!("Paste failed: {e}"))?;
-        enigo
-            .key(Key::Unicode('v'), Direction::Click)
-            .map_err(|e| format!("Paste failed: {e}"))?;
-        enigo
-            .key(Key::Meta, Direction::Release)
-            .map_err(|e| format!("Paste failed: {e}"))?;
+            .map_err(format_paste_error)?;
+        // macOS virtual keycode 9 is the physical V key. Using the raw keycode
+        // avoids layout-dependent Unicode synthesis while Command is held.
+        let click_result = enigo.raw(9, Direction::Click);
+        let release_result = enigo.key(Key::Meta, Direction::Release);
+
+        click_result.map_err(format_paste_error)?;
+        release_result.map_err(format_paste_error)?;
     }
 
     #[cfg(not(target_os = "macos"))]
     {
         enigo
             .key(Key::Control, Direction::Press)
-            .map_err(|e| format!("Paste failed: {e}"))?;
-        enigo
-            .key(Key::Unicode('v'), Direction::Click)
-            .map_err(|e| format!("Paste failed: {e}"))?;
-        enigo
-            .key(Key::Control, Direction::Release)
-            .map_err(|e| format!("Paste failed: {e}"))?;
+            .map_err(format_paste_error)?;
+        let click_result = enigo.key(Key::Unicode('v'), Direction::Click);
+        let release_result = enigo.key(Key::Control, Direction::Release);
+
+        click_result.map_err(format_paste_error)?;
+        release_result.map_err(format_paste_error)?;
     }
 
     Ok(())
@@ -63,14 +70,29 @@ pub fn paste_to_active_app() -> Result<(), String> {
 
 /// Register a global hotkey that toggles the quick launcher window.
 #[tauri::command]
-pub fn register_hotkey<R: Runtime>(app: AppHandle<R>, shortcut: String) -> Result<(), String> {
+pub fn register_hotkey<R: Runtime>(
+    app: AppHandle<R>,
+    current_hotkey: State<'_, CurrentHotkey>,
+    shortcut: String,
+) -> Result<(), String> {
+    let shortcut = shortcut.trim().to_string();
+    if shortcut.is_empty() {
+        return unregister_hotkey(app, current_hotkey);
+    }
+
+    let existing = current_hotkey
+        .0
+        .lock()
+        .map_err(|_| "Failed to access current hotkey state".to_string())?
+        .clone();
+
+    if existing.as_deref() == Some(shortcut.as_str()) {
+        return Ok(());
+    }
+
     let gs = app.global_shortcut();
-
-    // Unregister all existing shortcuts first to avoid conflicts.
-    gs.unregister_all()
-        .map_err(|e| format!("Failed to unregister existing shortcuts: {e}"))?;
-
     let app_handle = app.clone();
+
     gs.on_shortcut(shortcut.as_str(), move |_app, _shortcut, event| {
         if event.state == ShortcutState::Pressed {
             let _ = do_toggle_quick_launcher(&app_handle);
@@ -78,15 +100,50 @@ pub fn register_hotkey<R: Runtime>(app: AppHandle<R>, shortcut: String) -> Resul
     })
     .map_err(|e| format!("Failed to register hotkey '{shortcut}': {e}"))?;
 
+    if let Some(old_shortcut) = existing {
+        if let Err(e) = gs.unregister(old_shortcut.as_str()) {
+            let _ = gs.unregister(shortcut.as_str());
+            return Err(format!(
+                "Registered hotkey '{shortcut}', but failed to unregister previous hotkey '{old_shortcut}': {e}"
+            ));
+        }
+    }
+
+    *current_hotkey
+        .0
+        .lock()
+        .map_err(|_| "Failed to update current hotkey state".to_string())? = Some(shortcut);
+
     Ok(())
 }
 
 /// Unregister the current global hotkey.
 #[tauri::command]
-pub fn unregister_hotkey<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    app.global_shortcut()
-        .unregister_all()
-        .map_err(|e| format!("Failed to unregister hotkey: {e}"))
+pub fn unregister_hotkey<R: Runtime>(
+    app: AppHandle<R>,
+    current_hotkey: State<'_, CurrentHotkey>,
+) -> Result<(), String> {
+    let existing = current_hotkey
+        .0
+        .lock()
+        .map_err(|_| "Failed to access current hotkey state".to_string())?
+        .clone();
+
+    let gs = app.global_shortcut();
+    if let Some(shortcut) = existing {
+        gs.unregister(shortcut.as_str())
+            .map_err(|e| format!("Failed to unregister hotkey '{shortcut}': {e}"))?;
+    } else {
+        gs.unregister_all()
+            .map_err(|e| format!("Failed to unregister hotkey: {e}"))?;
+    }
+
+    *current_hotkey
+        .0
+        .lock()
+        .map_err(|_| "Failed to update current hotkey state".to_string())? = None;
+
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +159,8 @@ pub fn toggle_quick_launcher<R: Runtime>(app: AppHandle<R>) -> Result<(), String
 /// Show the main application window and bring it to focus.
 #[tauri::command]
 pub fn show_main_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    show_promptdock(&app)?;
+
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
@@ -145,6 +204,8 @@ fn do_toggle_quick_launcher<R: Runtime>(app: &AppHandle<R>) -> Result<(), String
             .hide()
             .map_err(|e| format!("Failed to hide quick launcher: {e}"))?;
     } else {
+        show_promptdock(app)?;
+
         // Center, show, and focus the quick launcher.
         window
             .center()
@@ -157,5 +218,41 @@ fn do_toggle_quick_launcher<R: Runtime>(app: &AppHandle<R>) -> Result<(), String
             .map_err(|e| format!("Failed to focus quick launcher: {e}"))?;
     }
 
+    Ok(())
+}
+
+fn format_paste_error<E: std::fmt::Display>(error: E) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        format!(
+            "Paste failed: {error}. On macOS, enable PromptDock in System Settings > Privacy & Security > Accessibility."
+        )
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        format!("Paste failed: {error}")
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn hide_promptdock_for_paste<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    app.hide()
+        .map_err(|e| format!("Failed to hide PromptDock before paste: {e}"))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn hide_promptdock_for_paste<R: Runtime>(_app: &AppHandle<R>) -> Result<(), String> {
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn show_promptdock<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
+    app.show()
+        .map_err(|e| format!("Failed to show PromptDock: {e}"))
+}
+
+#[cfg(not(target_os = "macos"))]
+fn show_promptdock<R: Runtime>(_app: &AppHandle<R>) -> Result<(), String> {
     Ok(())
 }

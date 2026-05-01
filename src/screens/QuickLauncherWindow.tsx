@@ -29,6 +29,7 @@ export function QuickLauncherWindow() {
   const prompts = usePromptStore((s) => s.prompts);
   const isLoading = usePromptStore((s) => s.isLoading);
   const loadPrompts = usePromptStore((s) => s.loadPrompts);
+  const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
   const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
 
   const [query, setQuery] = useState('');
@@ -119,27 +120,36 @@ export function QuickLauncherWindow() {
   }, [selectedPrompt, hideWindow]);
 
   // ── Copy to clipboard and close ──────────────────────────────────────────
-  const copyAndClose = useCallback(async (text: string) => {
+  const markUsed = useCallback((promptId?: string) => {
+    if (!promptId) return;
+    void markPromptUsed(promptId).catch((err: unknown) => {
+      console.error('Failed to update last used timestamp:', err);
+    });
+  }, [markPromptUsed]);
+
+  const copyAndClose = useCallback(async (text: string, promptId?: string) => {
     setActionError(null);
     try {
       await copyToClipboard(text);
+      markUsed(promptId);
       await hideWindow();
     } catch (err) {
       setActionError(formatActionError('copy prompt', err));
       throw err;
     }
-  }, [hideWindow]);
+  }, [hideWindow, markUsed]);
 
   // ── Paste into active app ────────────────────────────────────────────────
-  const pasteAndClose = useCallback(async (text: string) => {
+  const pasteAndClose = useCallback(async (text: string, promptId?: string) => {
     setActionError(null);
     try {
       await pasteToActiveApp(text, hideWindow);
+      markUsed(promptId);
     } catch (err) {
       setActionError(formatActionError('paste prompt', err));
       throw err;
     }
-  }, [hideWindow]);
+  }, [hideWindow, markUsed]);
 
   // ── Handle prompt selection ──────────────────────────────────────────────
   const handleSelectPrompt = useCallback(
@@ -148,10 +158,10 @@ export function QuickLauncherWindow() {
       if (variables.length > 0) {
         setSelectedPrompt(prompt);
       } else if (defaultAction === 'paste') {
-        void pasteAndClose(prompt.body).catch(() => {});
+        void pasteAndClose(prompt.body, prompt.id).catch(() => {});
       } else {
         // No variables — copy body directly and close
-        void copyAndClose(prompt.body).catch(() => {});
+        void copyAndClose(prompt.body, prompt.id).catch(() => {});
       }
     },
     [copyAndClose, defaultAction, pasteAndClose],
@@ -193,8 +203,8 @@ export function QuickLauncherWindow() {
         <VariableFillModal
           prompt={selectedPrompt}
           variables={variables}
-          onCopy={copyAndClose}
-          onPaste={pasteAndClose}
+          onCopy={(renderedText) => copyAndClose(renderedText, selectedPrompt.id)}
+          onPaste={(renderedText) => pasteAndClose(renderedText, selectedPrompt.id)}
           onCancel={() => setSelectedPrompt(null)}
         />
       </div>

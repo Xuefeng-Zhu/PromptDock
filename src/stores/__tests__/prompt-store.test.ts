@@ -277,6 +277,22 @@ describe('PromptStore', () => {
     });
   });
 
+  // ── markPromptUsed ─────────────────────────────────────────────────────────
+
+  describe('markPromptUsed', () => {
+    it('should persist and reflect a lastUsedAt timestamp', async () => {
+      await store.getState().loadPrompts();
+
+      await store.getState().markPromptUsed('p1');
+
+      expect(repo.update).toHaveBeenCalledWith('p1', {
+        lastUsedAt: expect.any(Date),
+      });
+      expect(store.getState().prompts.find((p) => p.id === 'p1')?.lastUsedAt)
+        .toBeInstanceOf(Date);
+    });
+  });
+
   // ── archivePrompt ──────────────────────────────────────────────────────────
 
   describe('archivePrompt', () => {

@@ -24,10 +24,17 @@ export interface IPromptRenderer {
 
 /**
  * Search prompts by query. Returns ranked results.
- * Empty query returns all non-archived prompts.
+ * Empty query returns all prompts in the selected archived scope.
  */
 export interface ISearchEngine {
-  search(prompts: PromptRecipe[], query: string): PromptRecipe[];
+  search(
+    prompts: PromptRecipe[],
+    query: string,
+    options?: {
+      includeArchived?: boolean;
+      fields?: Array<'title' | 'tags' | 'description' | 'body'>;
+    },
+  ): PromptRecipe[];
 }
 
 export interface IImportExportService {

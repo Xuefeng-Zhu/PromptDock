@@ -137,6 +137,21 @@ describe('ImportExportService — Unit Tests', () => {
     }
   });
 
+  it('should reject unsupported export versions and invalid export timestamps', () => {
+    const json = JSON.stringify({
+      version: '999.0',
+      exportedAt: 'not a date',
+      prompts: [],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.some((e) => e.includes('Unsupported export version'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('exportedAt'))).toBe(true);
+    }
+  });
+
   it('should return validation errors for malformed JSON', () => {
     const result = service.importFromJSON('not valid json {{{');
 
@@ -157,6 +172,34 @@ describe('ImportExportService — Unit Tests', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.some((e) => e.includes('title'))).toBe(true);
+    }
+  });
+
+  it('should reject prompts with invalid optional field types', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        {
+          title: 'Invalid prompt',
+          body: 'Body',
+          tags: ['ok', 42],
+          folderId: 12,
+          favorite: 'yes',
+          createdAt: 'not a date',
+          updatedAt: 'also not a date',
+        },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.some((e) => e.includes('tags'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('folderId'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('favorite'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('createdAt'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('updatedAt'))).toBe(true);
     }
   });
 

@@ -18,6 +18,7 @@ import type { PromptRecipe, Folder } from '../types/index';
 import { Select } from './ui/Select';
 import { Toggle } from './ui/Toggle';
 import { Button } from './ui/Button';
+import { VariableParser } from '../services/variable-parser';
 
 // ─── Helper Functions (exported for testability) ───────────────────────────────
 
@@ -26,19 +27,10 @@ import { Button } from './ui/Button';
  * in first-appearance order.
  */
 export function extractVariables(body: string): string[] {
-  const regex = /\{\{(\w+)\}\}/g;
-  const seen = new Set<string>();
-  const result: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(body)) !== null) {
-    const name = match[1];
-    if (!seen.has(name)) {
-      seen.add(name);
-      result.push(name);
-    }
-  }
-  return result;
+  return variableParser.parse(body);
 }
+
+const variableParser = new VariableParser();
 
 /**
  * Count non-empty tokens from whitespace split.
@@ -62,7 +54,7 @@ export interface PromptEditorProps {
   promptId?: string;
   prompt?: PromptRecipe;
   folders: Folder[];
-  onSave: (data: Partial<PromptRecipe>) => void;
+  onSave: (data: Partial<PromptRecipe>) => void | Promise<void>;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onDuplicate?: () => void;
@@ -167,6 +159,8 @@ export function PromptEditor({
   const [showTagInput, setShowTagInput] = useState(false);
   const [showFormattingHelp, setShowFormattingHelp] = useState(false);
   const [isEditorExpanded, setIsEditorExpanded] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // ── Populate fields when prompt prop changes ───────────────────────────────
   useEffect(() => {
@@ -246,31 +240,46 @@ export function PromptEditor({
   }, []);
 
   // ── Save handler ───────────────────────────────────────────────────────────
-  const handleSave = useCallback(() => {
-    onSave({
-      title: title.trim(),
-      description: description.trim(),
-      body,
-      tags,
-      folderId,
-      favorite,
-    });
+  const savePrompt = useCallback(async () => {
+    const trimmedTitle = title.trim();
+    const trimmedBody = body.trim();
+
+    if (!trimmedTitle) {
+      setValidationError('Title is required.');
+      return;
+    }
+    if (!trimmedBody) {
+      setValidationError('Body is required.');
+      return;
+    }
+
+    setValidationError(null);
+    setIsSaving(true);
+    try {
+      await onSave({
+        title: trimmedTitle,
+        description: description.trim(),
+        body,
+        tags,
+        folderId,
+        favorite,
+      });
+    } catch (err) {
+      setValidationError(
+        `Failed to save prompt: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }, [onSave, title, description, body, tags, folderId, favorite]);
 
   // ── Save options dropdown state ────────────────────────────────────────────
   const [showSaveOptions, setShowSaveOptions] = useState(false);
 
   const handleSaveAndClose = useCallback(() => {
-    onSave({
-      title: title.trim(),
-      description: description.trim(),
-      body,
-      tags,
-      folderId,
-      favorite,
-    });
+    void savePrompt();
     setShowSaveOptions(false);
-  }, [onSave, title, description, body, tags, folderId, favorite]);
+  }, [savePrompt]);
 
   // ── Folder options for Select ──────────────────────────────────────────────
   const folderOptions = useMemo(
@@ -352,15 +361,17 @@ export function PromptEditor({
                 variant="primary"
                 size="sm"
                 className="rounded-r-none"
-                onClick={handleSave}
+                onClick={() => void savePrompt()}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </Button>
               <Button
                 variant="primary"
                 size="sm"
                 className="rounded-l-none border-l border-white/20 px-2"
                 aria-label="Save options"
+                disabled={isSaving}
                 onClick={() => setShowSaveOptions((prev) => !prev)}
               >
                 <ChevronDown className="h-4 w-4" />
@@ -379,6 +390,15 @@ export function PromptEditor({
             </div>
           </div>
         </div>
+
+        {validationError && (
+          <div
+            role="alert"
+            className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {validationError}
+          </div>
+        )}
 
         {/* ── Title Field ─────────────────────────────────────────────────── */}
         <div className="mb-6">

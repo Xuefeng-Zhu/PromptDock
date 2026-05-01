@@ -11,6 +11,7 @@ import { seedDefaultPrompts } from './services/seed-data';
 import { registerHotkey } from './utils/hotkey';
 import { AuthService } from './services/auth-service';
 import { SyncService } from './services/sync-service';
+import type { MigrationChoice } from './services/sync-service';
 import { ConflictService } from './services/conflict-service';
 import { AppModeProvider } from './contexts/AppModeProvider';
 import { AppShell } from './components/AppShell';
@@ -30,6 +31,7 @@ export interface AppInitializationOptions {
   registerGlobalHotkey?: boolean;
   enableBackgroundServices?: boolean;
   restoreAuthSession?: boolean;
+  syncMigrationChoice?: MigrationChoice;
 }
 
 /** Get the shared ConflictService instance (available after initialization). */
@@ -68,6 +70,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
     registerGlobalHotkey = true,
     enableBackgroundServices = true,
     restoreAuthSession = enableBackgroundServices,
+    syncMigrationChoice = 'migrate',
   } = options;
 
   // 1. Pick the right storage backend based on runtime environment
@@ -148,7 +151,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
           userId,
           workspaceId,
           currentPrompts,
-          'migrate',
+          syncMigrationChoice,
         ).then(() => {
           // Wire PromptRepository to FirestoreBackend after transition completes
           const fb = syncServiceInstance?.getFirestoreBackend();
@@ -164,6 +167,10 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         syncServiceInstance = null;
         // Revert PromptRepository to local-only mode
         promptRepo.setFirestoreDelegate(null);
+        conflictServiceInstance?.clearAll();
+        void promptStore.getState().loadPrompts().catch((err) => {
+          console.error('Failed to reload local prompts after leaving synced mode:', err);
+        });
       }
     });
   }
@@ -177,35 +184,6 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         const appMode = appModeStore.getState();
         appMode.setUserId(result.user.uid);
         appMode.setMode('synced');
-
-        // After mode transition, instantiate SyncService and start sync
-        if (!syncServiceInstance) {
-          syncServiceInstance = new SyncService({
-            appModeStore: appModeStore.getState(),
-            onRemotePromptsChanged: (prompts) => {
-              promptStore.setState({ prompts });
-            },
-            onConflictDetected: (local, remote) => {
-              conflictServiceInstance?.processConflict(local, remote);
-            },
-          });
-        }
-
-        // Start the sync transition with the user's workspace
-        const workspaceId = result.user.uid; // default workspace = user ID
-        const currentPrompts = promptStore.getState().prompts;
-        await syncServiceInstance.transitionToSynced(
-          result.user.uid,
-          workspaceId,
-          currentPrompts,
-          'migrate',
-        );
-
-        // Wire PromptRepository to FirestoreBackend
-        const firestoreBackend = syncServiceInstance.getFirestoreBackend();
-        if (firestoreBackend) {
-          promptRepo.setFirestoreDelegate(firestoreBackend);
-        }
       }
     } catch {
       // Session restore failure is non-fatal — stay in local mode

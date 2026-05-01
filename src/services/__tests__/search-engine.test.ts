@@ -86,6 +86,26 @@ describe('SearchEngine — Unit Tests', () => {
     expect(results[0].id).toBe('1');
   });
 
+  it('can include archived prompts when requested', () => {
+    const prompts = [
+      makePrompt({ id: '1', title: 'Test Prompt', archived: false }),
+      makePrompt({ id: '2', title: 'Test Archived', archived: true }),
+    ];
+    const results = engine.search(prompts, 'Test', { includeArchived: true });
+
+    expect(results.map((r) => r.id)).toEqual(['1', '2']);
+  });
+
+  it('can restrict matching to selected fields', () => {
+    const prompts = [
+      makePrompt({ id: 'body-match', title: 'Unrelated', body: 'deploy checklist' }),
+      makePrompt({ id: 'title-match', title: 'deploy pipeline', body: 'Unrelated' }),
+    ];
+    const results = engine.search(prompts, 'deploy', { fields: ['title'] });
+
+    expect(results.map((r) => r.id)).toEqual(['title-match']);
+  });
+
   it('should rank title matches above tag matches', () => {
     const prompts = [
       makePrompt({ id: 'tag-match', title: 'Unrelated', tags: ['deploy'], body: '' }),

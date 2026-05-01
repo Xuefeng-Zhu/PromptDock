@@ -26,6 +26,8 @@ export interface SidebarProps {
   tagCounts?: Record<string, number>;
   onSettingsOpen?: () => void;
   onCreateFolder?: (name: string) => void;
+  onMoreFolders?: () => void;
+  onMoreTags?: () => void;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -42,6 +44,8 @@ export function Sidebar({
   tagCounts = {},
   onSettingsOpen,
   onCreateFolder,
+  onMoreFolders,
+  onMoreTags,
 }: SidebarProps) {
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [folderInputValue, setFolderInputValue] = useState('');
@@ -160,6 +164,7 @@ export function Sidebar({
           )}
           <button
             type="button"
+            onClick={onMoreFolders}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
           >
             More…
@@ -182,6 +187,7 @@ export function Sidebar({
           ))}
           <button
             type="button"
+            onClick={onMoreTags}
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
           >
             More…

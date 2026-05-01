@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 7</title>
+  <desc id="desc">A tag-shaped prompt recipe marker with a variable chip.</desc>
+  <defs>
+    <linearGradient id="tile" x1="154" y1="118" x2="870" y2="906" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22C55E"/>
+      <stop offset="0.5" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#1E40AF"/>
+    </linearGradient>
+    <linearGradient id="tag" x1="270" y1="218" x2="760" y2="754" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#ECFEFF"/>
+    </linearGradient>
+    <filter id="shadow" x="150" y="166" width="724" height="706" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="32" stdDeviation="32" flood-color="#020617" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="212" fill="url(#tile)"/>
+  <path d="M140 732C270 642 392 626 530 676C662 724 772 684 884 578V812C884 852 852 884 812 884H212C172 884 140 852 140 812V732Z" fill="#020617" opacity="0.18"/>
+
+  <g filter="url(#shadow)">
+    <path d="M242 330C242 282 282 242 330 242H586C616 242 644 254 665 275L788 398C832 442 832 512 788 556L556 788C512 832 442 832 398 788L275 665C254 644 242 616 242 586V330Z" fill="url(#tag)"/>
+  </g>
+
+  <circle cx="374" cy="374" r="54" fill="#BAE6FD"/>
+  <circle cx="374" cy="374" r="24" fill="#2563EB"/>
+  <rect x="382" y="526" width="280" height="54" rx="27" fill="#DBEAFE"/>
+  <path d="M432 552H612" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-width="28"/>
+  <path d="M482 640C452 640 438 656 438 680C438 704 424 720 398 720" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="34"/>
+  <path d="M594 640C624 640 638 656 638 680C638 704 652 720 678 720" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="34"/>
+</svg>

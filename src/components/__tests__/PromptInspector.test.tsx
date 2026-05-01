@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PromptInspector } from '../PromptInspector';
 import { MOCK_PROMPTS, MOCK_FOLDERS } from '../../data/mock-data';
 
@@ -57,5 +57,144 @@ describe('PromptInspector', () => {
     );
     expect(screen.getByRole('button', { name: /favorites/i })).toBeDefined();
     expect(screen.getByRole('button', { name: 'More options' })).toBeDefined();
+  });
+
+  describe('action callbacks', () => {
+    it('calls onToggleFavorite with prompt id when star button is clicked', () => {
+      const onToggleFavorite = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onToggleFavorite={onToggleFavorite}
+        />
+      );
+      const starBtn = screen.getByRole('button', { name: /favorites/i });
+      fireEvent.click(starBtn);
+      expect(onToggleFavorite).toHaveBeenCalledTimes(1);
+      expect(onToggleFavorite).toHaveBeenCalledWith(mockPrompt.id);
+    });
+
+    it('calls onCopyBody with prompt body when Copy button is clicked', () => {
+      const onCopyBody = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onCopyBody={onCopyBody}
+        />
+      );
+      const copyBtn = screen.getByRole('button', { name: 'Copy prompt body' });
+      fireEvent.click(copyBtn);
+      expect(onCopyBody).toHaveBeenCalledTimes(1);
+      expect(onCopyBody).toHaveBeenCalledWith(mockPrompt.body);
+    });
+
+    it('calls onEdit with prompt id and closes dropdown when "Edit prompt" is clicked', () => {
+      const onEdit = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onEdit={onEdit}
+        />
+      );
+      // Open the dropdown
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      expect(screen.getByRole('menu')).toBeDefined();
+
+      // Click "Edit prompt"
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Edit prompt' }));
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(onEdit).toHaveBeenCalledWith(mockPrompt.id);
+      // Dropdown should be closed
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('calls onDuplicate with prompt id and closes dropdown when "Duplicate" is clicked', () => {
+      const onDuplicate = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onDuplicate={onDuplicate}
+        />
+      );
+      // Open the dropdown
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      expect(screen.getByRole('menu')).toBeDefined();
+
+      // Click "Duplicate"
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }));
+      expect(onDuplicate).toHaveBeenCalledTimes(1);
+      expect(onDuplicate).toHaveBeenCalledWith(mockPrompt.id);
+      // Dropdown should be closed
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('calls onArchive with prompt id and closes dropdown when "Archive" is clicked', () => {
+      const onArchive = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onArchive={onArchive}
+        />
+      );
+      // Open the dropdown
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      expect(screen.getByRole('menu')).toBeDefined();
+
+      // Click "Archive"
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
+      expect(onArchive).toHaveBeenCalledTimes(1);
+      expect(onArchive).toHaveBeenCalledWith(mockPrompt.id);
+      // Dropdown should be closed
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('calls onDelete with prompt id and closes dropdown when "Delete" is clicked', () => {
+      const onDelete = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onDelete={onDelete}
+        />
+      );
+      // Open the dropdown
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      expect(screen.getByRole('menu')).toBeDefined();
+
+      // Click "Delete"
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(onDelete).toHaveBeenCalledWith(mockPrompt.id);
+      // Dropdown should be closed
+      expect(screen.queryByRole('menu')).toBeNull();
+    });
+
+    it('does not throw when callbacks are not provided and buttons are clicked', () => {
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+        />
+      );
+      // Click star - should not throw
+      fireEvent.click(screen.getByRole('button', { name: /favorites/i }));
+      // Click copy - should not throw
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt body' }));
+      // Open dropdown and click items - should not throw
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Edit prompt' }));
+    });
   });
 });

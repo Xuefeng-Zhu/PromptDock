@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 5</title>
+  <desc id="desc">A prompt template grid with a highlighted reusable block.</desc>
+  <defs>
+    <linearGradient id="tile" x1="132" y1="126" x2="890" y2="884" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38BDF8"/>
+      <stop offset="0.45" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#3730A3"/>
+    </linearGradient>
+    <filter id="shadow" x="172" y="162" width="680" height="700" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="32" flood-color="#020617" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="204" fill="url(#tile)"/>
+  <path d="M146 334C292 234 438 210 590 262C722 307 812 286 886 214V152C886 122 862 98 832 98H210C174 98 146 126 146 162V334Z" fill="#FFFFFF" opacity="0.14"/>
+  <path d="M138 742C248 658 378 638 512 684C654 732 786 692 888 590V812C888 854 854 888 812 888H214C172 888 138 854 138 812V742Z" fill="#020617" opacity="0.18"/>
+
+  <g filter="url(#shadow)">
+    <rect x="238" y="220" width="548" height="584" rx="92" fill="#F8FAFC"/>
+    <rect x="308" y="300" width="176" height="146" rx="44" fill="#DBEAFE"/>
+    <rect x="540" y="300" width="176" height="146" rx="44" fill="#CCFBF1"/>
+    <rect x="308" y="502" width="176" height="146" rx="44" fill="#EDE9FE"/>
+    <rect x="540" y="502" width="176" height="146" rx="44" fill="#FEF3C7"/>
+  </g>
+
+  <path d="M384 350L356 374L384 398" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <path d="M638 552L666 576L638 600" fill="none" stroke="#B45309" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <rect x="568" y="354" width="120" height="38" rx="19" fill="#0F766E" opacity="0.9"/>
+  <rect x="342" y="556" width="108" height="38" rx="19" fill="#7C3AED" opacity="0.86"/>
+  <rect x="372" y="704" width="280" height="36" rx="18" fill="#BFDBFE"/>
+</svg>

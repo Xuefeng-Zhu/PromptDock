@@ -67,4 +67,61 @@ describe('PromptEditor', () => {
     expect(screen.getByText(/Updated/)).toBeDefined();
     expect(screen.getByText(/Last used/)).toBeDefined();
   });
+
+  describe('edit-mode action buttons', () => {
+    it('calls onDuplicate when Duplicate button is clicked', () => {
+      const onDuplicate = vi.fn();
+      render(
+        <PromptEditor
+          {...defaultProps}
+          promptId="prompt-summarize"
+          prompt={MOCK_PROMPTS[0]}
+          onDuplicate={onDuplicate}
+        />,
+      );
+      fireEvent.click(screen.getByText('Duplicate'));
+      expect(onDuplicate).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onArchive when Archive button is clicked', () => {
+      const onArchive = vi.fn();
+      render(
+        <PromptEditor
+          {...defaultProps}
+          promptId="prompt-summarize"
+          prompt={MOCK_PROMPTS[0]}
+          onArchive={onArchive}
+        />,
+      );
+      fireEvent.click(screen.getByText('Archive'));
+      expect(onArchive).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls onCopy when Copy button is clicked', () => {
+      const onCopy = vi.fn();
+      render(
+        <PromptEditor
+          {...defaultProps}
+          promptId="prompt-summarize"
+          prompt={MOCK_PROMPTS[0]}
+          onCopy={onCopy}
+        />,
+      );
+      fireEvent.click(screen.getByText('Copy'));
+      expect(onCopy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not throw when action buttons are clicked without callbacks', () => {
+      render(
+        <PromptEditor
+          {...defaultProps}
+          promptId="prompt-summarize"
+          prompt={MOCK_PROMPTS[0]}
+        />,
+      );
+      expect(() => fireEvent.click(screen.getByText('Duplicate'))).not.toThrow();
+      expect(() => fireEvent.click(screen.getByText('Archive'))).not.toThrow();
+      expect(() => fireEvent.click(screen.getByText('Copy'))).not.toThrow();
+    });
+  });
 });

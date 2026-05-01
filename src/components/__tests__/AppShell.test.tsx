@@ -309,4 +309,160 @@ describe('AppShell', () => {
       expect(store.getState().searchQuery).toBe('summarize');
     });
   });
+
+  describe('PromptInspector action callbacks via AppShell', () => {
+    /**
+     * Helper: select a prompt card to open the inspector panel.
+     */
+    async function selectPromptCard(promptId: string) {
+      const card = screen.getByTestId(`prompt-card-${promptId}`);
+      await act(async () => {
+        fireEvent.click(card);
+      });
+    }
+
+    it('clicking favorite star in inspector calls toggleFavorite on the store', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      // The inspector should now be visible with the favorite star button
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      const favBtn = inspector.querySelector('button[aria-label*="favorites"]')!;
+      expect(favBtn).not.toBeNull();
+
+      await act(async () => {
+        fireEvent.click(favBtn);
+      });
+
+      expect(mockRepo.toggleFavorite).toHaveBeenCalledWith('prompt-1');
+    });
+
+    it('clicking Duplicate in inspector dropdown calls duplicatePrompt on the store', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      // Open the dropdown menu
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      const moreBtn = inspector.querySelector('button[aria-label="More options"]')!;
+      expect(moreBtn).not.toBeNull();
+
+      await act(async () => {
+        fireEvent.click(moreBtn);
+      });
+
+      // Click "Duplicate" menu item
+      const duplicateItem = screen.getByRole('menuitem', { name: 'Duplicate' });
+      await act(async () => {
+        fireEvent.click(duplicateItem);
+      });
+
+      expect(mockRepo.duplicate).toHaveBeenCalledWith('prompt-1');
+    });
+
+    it('clicking Archive in inspector dropdown calls archivePrompt on the store', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      // Open the dropdown menu
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      const moreBtn = inspector.querySelector('button[aria-label="More options"]')!;
+
+      await act(async () => {
+        fireEvent.click(moreBtn);
+      });
+
+      // Click "Archive" menu item
+      const archiveItem = screen.getByRole('menuitem', { name: 'Archive' });
+      await act(async () => {
+        fireEvent.click(archiveItem);
+      });
+
+      expect(mockRepo.softDelete).toHaveBeenCalledWith('prompt-1');
+    });
+
+    it('clicking Delete in inspector dropdown calls deletePrompt on the store', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      // Open the dropdown menu
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      const moreBtn = inspector.querySelector('button[aria-label="More options"]')!;
+
+      await act(async () => {
+        fireEvent.click(moreBtn);
+      });
+
+      // Click "Delete" menu item
+      const deleteItem = screen.getByRole('menuitem', { name: 'Delete' });
+      await act(async () => {
+        fireEvent.click(deleteItem);
+      });
+
+      expect(mockRepo.softDelete).toHaveBeenCalledWith('prompt-1');
+    });
+
+    it('clicking Edit prompt in inspector dropdown navigates to editor', async () => {
+      await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      // Open the dropdown menu
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      const moreBtn = inspector.querySelector('button[aria-label="More options"]')!;
+
+      await act(async () => {
+        fireEvent.click(moreBtn);
+      });
+
+      // Click "Edit prompt" menu item
+      const editItem = screen.getByRole('menuitem', { name: 'Edit prompt' });
+      await act(async () => {
+        fireEvent.click(editItem);
+      });
+
+      // Should navigate to editor — title input should be visible
+      expect(screen.getByLabelText(/title/i)).toBeDefined();
+    });
+
+    it('clicking Copy prompt body in inspector copies to clipboard', async () => {
+      // Mock clipboard
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      Object.assign(navigator, {
+        clipboard: { writeText: writeTextMock },
+      });
+
+      await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      // Click the "Copy prompt body" button in the inspector
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      const copyBtn = inspector.querySelector('button[aria-label="Copy prompt body"]')!;
+      expect(copyBtn).not.toBeNull();
+
+      await act(async () => {
+        fireEvent.click(copyBtn);
+      });
+
+      // The clipboard should have been called with the prompt body
+      expect(writeTextMock).toHaveBeenCalledWith('Hello world');
+    });
+
+    it('clicking Sync in TopBar calls loadPrompts on the store', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      // Click the Sync button in the TopBar
+      const syncBtn = screen.getByLabelText('Sync');
+      await act(async () => {
+        fireEvent.click(syncBtn);
+      });
+
+      // loadPrompts calls repo.getAll
+      expect(mockRepo.getAll).toHaveBeenCalled();
+    });
+  });
 });

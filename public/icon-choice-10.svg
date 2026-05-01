@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 10</title>
+  <desc id="desc">A simple PromptDock monogram with prompt brackets.</desc>
+  <defs>
+    <linearGradient id="tile" x1="138" y1="116" x2="884" y2="908" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="0.45" stop-color="#DBEAFE"/>
+      <stop offset="1" stop-color="#CCFBF1"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="296" y1="206" x2="728" y2="806" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1D4ED8"/>
+      <stop offset="0.62" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+    <filter id="shadow" x="178" y="164" width="668" height="710" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="34" flood-color="#0F172A" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="218" fill="url(#tile)"/>
+  <path d="M144 300C270 202 424 182 574 234C710 281 812 260 880 186V142C880 112 856 88 826 88H210C174 88 144 118 144 154V300Z" fill="#FFFFFF" opacity="0.55"/>
+  <path d="M146 744C260 660 394 636 532 684C664 730 776 690 878 590V814C878 850 850 878 814 878H210C174 878 146 850 146 814V744Z" fill="#2563EB" opacity="0.1"/>
+
+  <g filter="url(#shadow)">
+    <path d="M344 224H530C656 224 752 320 752 448C752 576 656 672 530 672H442V798H344V224ZM442 318V578H526C594 578 650 524 650 448C650 372 594 318 526 318H442Z" fill="url(#mark)"/>
+  </g>
+  <path d="M304 374L248 430L304 486" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="44"/>
+  <path d="M720 374L776 430L720 486" fill="none" stroke="#1D4ED8" stroke-linecap="round" stroke-linejoin="round" stroke-width="44"/>
+  <rect x="456" y="444" width="112" height="40" rx="20" fill="#F8FAFC"/>
+</svg>

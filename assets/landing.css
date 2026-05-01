@@ -125,37 +125,43 @@ a {
 
 .hero {
   position: relative;
-  display: grid;
+  display: flex;
   min-height: 100svh;
-  place-items: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  padding: 7.8rem 1.25rem 5.5rem;
+  padding: 7.8rem 1.25rem 3rem;
 }
 
 .ambient-stage {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  order: 2;
+  width: min(1080px, 100%);
+  height: clamp(360px, 38vw, 450px);
+  margin-top: 2.8rem;
+  overflow: visible;
   pointer-events: none;
 }
 
 .ambient-stage::before {
   position: absolute;
-  inset: auto 8% 6% 8%;
-  height: 34%;
+  inset: auto 3% 2% 3%;
+  height: 58%;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.42);
-  filter: blur(34px);
+  background: rgba(255, 255, 255, 0.54);
+  filter: blur(38px);
   content: "";
 }
 
 .hero-copy {
   position: relative;
-  z-index: 3;
+  z-index: 5;
+  order: 1;
   display: grid;
   justify-items: center;
-  width: min(960px, 100%);
+  width: min(980px, 100%);
   text-align: center;
 }
 
@@ -169,18 +175,20 @@ a {
 }
 
 .hero h1 {
-  max-width: 960px;
+  max-width: 920px;
   margin: 0;
-  font-size: clamp(4.1rem, 10.2vw, 9.4rem);
-  line-height: 0.82;
+  font-size: clamp(3.7rem, 7.4vw, 6.8rem);
+  line-height: 0.92;
   letter-spacing: 0;
+  text-wrap: balance;
 }
 
 .hero-copy p:not(.eyebrow) {
-  max-width: 610px;
-  margin: 1.3rem 0 0;
-  color: var(--muted);
-  font-size: clamp(1.05rem, 2vw, 1.26rem);
+  max-width: 680px;
+  margin: 1.15rem 0 0;
+  color: #504843;
+  font-size: clamp(1.07rem, 1.8vw, 1.24rem);
+  font-weight: 650;
 }
 
 .store-button {
@@ -238,9 +246,9 @@ a {
 .launcher-window {
   position: absolute;
   z-index: 2;
-  right: max(20px, calc((100vw - 1060px) / 2));
-  bottom: 8%;
-  width: min(430px, 38vw);
+  right: 2%;
+  bottom: 2%;
+  width: min(520px, 48%);
   border: 1px solid rgba(48, 38, 30, 0.14);
   border-radius: 18px;
   background: rgba(255, 253, 247, 0.9);
@@ -322,9 +330,9 @@ a {
 .menu-card {
   position: absolute;
   z-index: 2;
-  left: max(18px, calc((100vw - 1060px) / 2));
-  bottom: 10%;
-  width: min(380px, 34vw);
+  left: 2%;
+  bottom: 8%;
+  width: min(410px, 38%);
   box-shadow: 0 20px 54px rgba(64, 47, 35, 0.14);
   padding: 0.62rem;
   transform: rotate(-1.4deg);
@@ -398,21 +406,21 @@ kbd {
 }
 
 .chip-one {
-  top: 21%;
-  left: 7%;
+  top: 5%;
+  left: 9%;
   transform: rotate(-7deg);
 }
 
 .chip-two {
-  top: 17%;
-  right: 11%;
+  top: 2%;
+  right: 12%;
   background: rgba(233, 228, 255, 0.78);
   transform: rotate(6deg);
 }
 
 .chip-three {
-  left: 18%;
-  bottom: 27%;
+  left: 37%;
+  bottom: 22%;
   background: rgba(255, 232, 206, 0.82);
   transform: rotate(4deg);
 }
@@ -420,8 +428,8 @@ kbd {
 .press-hint {
   justify-content: center;
   gap: 0.38rem;
-  margin-top: -3.2rem;
-  padding: 0 1rem 3rem;
+  margin-top: -0.8rem;
+  padding: 0 1rem 3.4rem;
   color: var(--muted);
   font-size: 0.95rem;
   font-weight: 850;
@@ -549,23 +557,29 @@ details a {
   }
 
   .hero {
+    min-height: auto;
     padding-top: 10rem;
   }
 
+  .ambient-stage {
+    height: 390px;
+    margin-top: 2.4rem;
+  }
+
   .launcher-window {
-    right: -120px;
-    width: 420px;
-    opacity: 0.46;
+    right: -4%;
+    width: min(430px, 56%);
+    opacity: 0.86;
   }
 
   .menu-card {
-    left: -120px;
-    width: 360px;
-    opacity: 0.42;
+    left: -4%;
+    width: min(360px, 48%);
+    opacity: 0.82;
   }
 
   .prompt-chip {
-    opacity: 0.46;
+    opacity: 0.72;
   }
 
   .feature-cloud {
@@ -600,12 +614,11 @@ details a {
   }
 
   .hero {
-    min-height: 92svh;
-    padding: 11.5rem 1rem 4rem;
+    padding: 11.2rem 1rem 3rem;
   }
 
   .hero h1 {
-    font-size: clamp(3.35rem, 16vw, 4.7rem);
+    font-size: clamp(3.1rem, 14vw, 4.25rem);
   }
 
   .hero-copy p:not(.eyebrow) {
@@ -616,11 +629,18 @@ details a {
     min-width: min(100%, 270px);
   }
 
+  .ambient-stage {
+    height: 330px;
+    margin-top: 2rem;
+  }
+
   .launcher-window {
-    right: -250px;
-    bottom: 12%;
-    width: 400px;
-    opacity: 0.27;
+    right: auto;
+    bottom: 0;
+    left: 50%;
+    width: min(360px, 94vw);
+    opacity: 0.96;
+    transform: translateX(-50%) rotate(1deg);
   }
 
   .menu-card,
@@ -629,7 +649,7 @@ details a {
   }
 
   .press-hint {
-    margin-top: -2.5rem;
+    margin-top: -0.6rem;
     padding-bottom: 2.3rem;
   }
 

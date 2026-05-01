@@ -247,7 +247,7 @@ describe('LocalStorageBackend', () => {
       const customSettings: UserSettings = {
         hotkeyCombo: 'CommandOrControl+Shift+L',
         theme: 'dark',
-        defaultAction: 'paste',
+        defaultAction: 'copy',
         activeWorkspaceId: 'workspace-123',
       };
       await backend.writeSettings(customSettings);

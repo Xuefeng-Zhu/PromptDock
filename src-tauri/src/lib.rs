@@ -12,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .manage(commands::CurrentHotkey::default())
+        .manage(commands::LastActiveApp::default())
         .invoke_handler(tauri::generate_handler![
             commands::copy_to_clipboard,
             commands::paste_to_active_app,
@@ -78,7 +79,7 @@ pub fn run() {
 
             if let Err(e) = gs.on_shortcut(default_shortcut, move |_app, _shortcut, event| {
                 if event.state == ShortcutState::Pressed {
-                    let _ = commands::toggle_quick_launcher(handle.clone());
+                    let _ = commands::toggle_quick_launcher_from_hotkey(handle.clone());
                 }
             }) {
                 eprintln!("Failed to register default hotkey: {e}");

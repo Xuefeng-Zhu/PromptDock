@@ -171,6 +171,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   // ── SettingsStore selectors ────────────────────────────────────────────────
 
   const theme = useSettingsStore((s) => s.settings.theme);
+  const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
 
@@ -532,6 +533,17 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     if (variables.length > 0) {
       // Prompt has variables → open VariableFillModal
       setVariableFillPromptId(prompt.id);
+    } else if (defaultAction === 'paste') {
+      pasteToActiveApp(prompt.body, hideMainWindow)
+        .then((result) => {
+          void markPromptUsed(prompt.id).catch((err: unknown) => {
+            console.error('Failed to update last used timestamp:', err);
+          });
+          addToast(result?.pasted === false ? 'Prompt copied to clipboard' : 'Prompt pasted', 'success');
+        })
+        .catch((err: unknown) => {
+          addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        });
     } else {
       copyToClipboard(prompt.body)
         .then(() => {
@@ -544,7 +556,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
         });
     }
-  }, [addToast, markPromptUsed]);
+  }, [addToast, defaultAction, markPromptUsed]);
 
   // ── Variable Fill Modal callbacks ──────────────────────────────────────────
 
@@ -733,6 +745,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           prompt={variableFillPrompt}
           variables={variableFillVariables}
           onCancel={handleVariableFillCancel}
+          defaultAction={defaultAction}
           onCopy={handleVariableFillCopy}
           onPaste={handleVariableFillPaste}
         />

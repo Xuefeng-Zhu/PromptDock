@@ -1,13 +1,32 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { AppShell, filterPrompts } from '../AppShell';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import type { PromptRecipe } from '../../types/index';
 import type { IPromptRepository } from '../../repositories/interfaces';
 import { initPromptStore } from '../../stores/prompt-store';
 import { initSettingsStore, DEFAULT_SETTINGS } from '../../stores/settings-store';
 import { initAppModeStore } from '../../stores/app-mode-store';
 import type { ISettingsRepository } from '../../repositories/interfaces';
+
+const { mockCopyToClipboard, mockPasteToActiveApp, mockHideMainWindow } = vi.hoisted(() => ({
+  mockCopyToClipboard: vi.fn(() => Promise.resolve()),
+  mockPasteToActiveApp: vi.fn(async (_text: string, beforePaste?: () => Promise<void>) => {
+    await beforePaste?.();
+    return { copied: true, pasted: true };
+  }),
+  mockHideMainWindow: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../utils/clipboard', () => ({
+  copyToClipboard: mockCopyToClipboard,
+  pasteToActiveApp: mockPasteToActiveApp,
+}));
+
+vi.mock('../../utils/window', () => ({
+  hideMainWindow: mockHideMainWindow,
+}));
+
+import { AppShell, filterPrompts } from '../AppShell';
 
 // ─── Test Helpers ──────────────────────────────────────────────────────────────
 
@@ -95,17 +114,21 @@ let mockSettingsRepo: ISettingsRepository;
  * The AppShell component reads from usePromptStore(), so we must initialize
  * the store before rendering.
  */
-async function setupStore(prompts: PromptRecipe[] = TEST_PROMPTS) {
+async function setupStore(
+  prompts: PromptRecipe[] = TEST_PROMPTS,
+  settings = { ...DEFAULT_SETTINGS },
+) {
   mockRepo = createMockRepo(prompts);
   const store = initPromptStore(mockRepo);
   await store.getState().loadPrompts();
 
   // Initialize SettingsStore so SettingsScreen can render
   mockSettingsRepo = {
-    get: vi.fn(async () => ({ ...DEFAULT_SETTINGS })),
-    update: vi.fn(async (changes) => ({ ...DEFAULT_SETTINGS, ...changes })),
+    get: vi.fn(async () => ({ ...settings })),
+    update: vi.fn(async (changes) => ({ ...settings, ...changes })),
   };
-  initSettingsStore(mockSettingsRepo);
+  const settingsStore = initSettingsStore(mockSettingsRepo);
+  await settingsStore.getState().loadSettings();
 
   // Initialize AppModeStore so OnboardingScreen can render
   initAppModeStore();
@@ -116,8 +139,11 @@ async function setupStore(prompts: PromptRecipe[] = TEST_PROMPTS) {
 /**
  * Render AppShell on the library screen by completing onboarding first.
  */
-async function renderOnLibraryScreen(prompts?: PromptRecipe[]) {
-  const store = await setupStore(prompts);
+async function renderOnLibraryScreen(
+  prompts?: PromptRecipe[],
+  settings = { ...DEFAULT_SETTINGS },
+) {
+  const store = await setupStore(prompts, settings);
 
   const result = render(<AppShell />);
 
@@ -135,6 +161,17 @@ async function renderOnLibraryScreen(prompts?: PromptRecipe[]) {
 describe('AppShell', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockCopyToClipboard.mockReset();
+    mockCopyToClipboard.mockResolvedValue(undefined);
+    mockPasteToActiveApp.mockReset();
+    mockPasteToActiveApp.mockImplementation(
+      async (_text: string, beforePaste?: () => Promise<void>) => {
+        await beforePaste?.();
+        return { copied: true, pasted: true };
+      },
+    );
+    mockHideMainWindow.mockReset();
+    mockHideMainWindow.mockResolvedValue(undefined);
     localStorage.clear();
   });
 
@@ -172,6 +209,38 @@ describe('AppShell', () => {
       fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
 
       expect(screen.getByTestId('command-palette-backdrop')).toBeDefined();
+    });
+
+    it('pastes a prompt from the command palette when default action is paste', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Summarize Text'));
+      });
+
+      await waitFor(() => {
+        expect(mockPasteToActiveApp).toHaveBeenCalledWith('Hello world', mockHideMainWindow);
+      });
+      expect(mockCopyToClipboard).not.toHaveBeenCalled();
+    });
+
+    it('copies a prompt from the command palette when default action is copy', async () => {
+      await renderOnLibraryScreen(undefined, { ...DEFAULT_SETTINGS, defaultAction: 'copy' });
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Summarize Text'));
+      });
+
+      await waitFor(() => {
+        expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello world');
+      });
+      expect(mockPasteToActiveApp).not.toHaveBeenCalled();
     });
   });
 
@@ -547,12 +616,6 @@ describe('AppShell', () => {
     });
 
     it('clicking Copy prompt body in inspector copies to clipboard', async () => {
-      // Mock clipboard
-      const writeTextMock = vi.fn().mockResolvedValue(undefined);
-      Object.assign(navigator, {
-        clipboard: { writeText: writeTextMock },
-      });
-
       await renderOnLibraryScreen();
 
       await selectPromptCard('prompt-1');
@@ -567,7 +630,7 @@ describe('AppShell', () => {
       });
 
       // The clipboard should have been called with the prompt body
-      expect(writeTextMock).toHaveBeenCalledWith('Hello world');
+      expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello world');
     });
 
     it('clicking Sync in TopBar calls loadPrompts on the store', async () => {

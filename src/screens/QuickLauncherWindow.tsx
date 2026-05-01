@@ -203,6 +203,7 @@ export function QuickLauncherWindow() {
         <VariableFillModal
           prompt={selectedPrompt}
           variables={variables}
+          defaultAction={defaultAction}
           onCopy={(renderedText) => copyAndClose(renderedText, selectedPrompt.id)}
           onPaste={(renderedText) => pasteAndClose(renderedText, selectedPrompt.id)}
           onCancel={() => setSelectedPrompt(null)}

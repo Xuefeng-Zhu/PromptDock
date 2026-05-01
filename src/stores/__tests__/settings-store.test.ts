@@ -52,8 +52,8 @@ describe('SettingsStore', () => {
       expect(store.getState().settings.theme).toBe('system');
     });
 
-    it('should default defaultAction to "copy"', () => {
-      expect(store.getState().settings.defaultAction).toBe('copy');
+    it('should default defaultAction to "paste"', () => {
+      expect(store.getState().settings.defaultAction).toBe('paste');
     });
 
     it('should default activeWorkspaceId to "local"', () => {
@@ -68,7 +68,7 @@ describe('SettingsStore', () => {
       const customSettings: UserSettings = {
         hotkeyCombo: 'Alt+P',
         theme: 'dark',
-        defaultAction: 'paste',
+        defaultAction: 'copy',
         activeWorkspaceId: 'ws-1',
       };
       repo = createMockRepo(customSettings);
@@ -112,9 +112,9 @@ describe('SettingsStore', () => {
 
     it('should update defaultAction setting', async () => {
       await store.getState().loadSettings();
-      await store.getState().updateSettings({ defaultAction: 'paste' });
+      await store.getState().updateSettings({ defaultAction: 'copy' });
 
-      expect(store.getState().settings.defaultAction).toBe('paste');
+      expect(store.getState().settings.defaultAction).toBe('copy');
     });
 
     it('should update activeWorkspaceId setting', async () => {
@@ -128,11 +128,11 @@ describe('SettingsStore', () => {
       await store.getState().loadSettings();
       await store.getState().updateSettings({
         theme: 'light',
-        defaultAction: 'paste',
+        defaultAction: 'copy',
       });
 
       expect(store.getState().settings.theme).toBe('light');
-      expect(store.getState().settings.defaultAction).toBe('paste');
+      expect(store.getState().settings.defaultAction).toBe('copy');
     });
 
     it('should preserve unchanged settings when updating a subset', async () => {
@@ -142,7 +142,7 @@ describe('SettingsStore', () => {
       expect(store.getState().settings.hotkeyCombo).toBe(
         'CommandOrControl+Shift+P',
       );
-      expect(store.getState().settings.defaultAction).toBe('copy');
+      expect(store.getState().settings.defaultAction).toBe('paste');
       expect(store.getState().settings.activeWorkspaceId).toBe('local');
     });
   });

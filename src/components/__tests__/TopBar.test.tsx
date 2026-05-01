@@ -72,4 +72,18 @@ describe('TopBar', () => {
     const { container } = render(<TopBar {...defaultProps} />);
     expect(container.querySelector('header')).toBeDefined();
   });
+
+  it('calls onSync when clicking the Sync button', () => {
+    const onSync = vi.fn();
+    render(<TopBar {...defaultProps} onSync={onSync} />);
+    const syncBtn = screen.getByRole('button', { name: 'Sync' });
+    fireEvent.click(syncBtn);
+    expect(onSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not throw when Sync button is clicked without onSync prop', () => {
+    render(<TopBar {...defaultProps} />);
+    const syncBtn = screen.getByRole('button', { name: 'Sync' });
+    expect(() => fireEvent.click(syncBtn)).not.toThrow();
+  });
 });

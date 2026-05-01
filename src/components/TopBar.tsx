@@ -9,6 +9,7 @@ export interface TopBarProps {
   onSearchChange: (query: string) => void;
   onCommandPaletteOpen: () => void;
   onSettingsOpen: () => void;
+  onSync?: () => void;
   syncStatus?: SyncStatus;
 }
 
@@ -35,6 +36,7 @@ export function TopBar({
   onSearchChange,
   onCommandPaletteOpen,
   onSettingsOpen,
+  onSync,
   syncStatus,
 }: TopBarProps) {
   return (
@@ -97,6 +99,7 @@ export function TopBar({
         <button
           type="button"
           aria-label="Sync"
+          onClick={() => onSync?.()}
           className="rounded-lg p-2 transition-colors hover:bg-gray-100"
           style={{ color: 'var(--color-text-muted)' }}
         >

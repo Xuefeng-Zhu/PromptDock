@@ -15,6 +15,8 @@ export interface LibraryScreenProps {
   onToggleFavorite: (id: string) => void;
   onFilterChange: (filter: FilterType) => void;
   onNewPrompt: () => void;
+  onFiltersClick?: () => void;
+  onNewPromptOptions?: () => void;
   categoryColorMap: Record<string, string>;
   totalPromptCount?: number;
   loading?: boolean;
@@ -44,6 +46,8 @@ export function LibraryScreen({
   onToggleFavorite,
   onFilterChange,
   onNewPrompt,
+  onFiltersClick,
+  onNewPromptOptions,
   categoryColorMap,
   totalPromptCount,
   loading = false,
@@ -116,6 +120,7 @@ export function LibraryScreen({
                 size="sm"
                 className="rounded-l-none border-l border-white/20 px-2"
                 aria-label="New prompt options"
+                onClick={onNewPromptOptions}
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -151,6 +156,7 @@ export function LibraryScreen({
           })}
           {/* Filters button */}
           <button
+            onClick={onFiltersClick}
             className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium border border-[var(--color-border)] bg-[var(--color-panel)] text-[var(--color-text-muted)] hover:bg-gray-50 transition-colors ml-auto"
           >
             <SlidersHorizontal className="h-3 w-3" />

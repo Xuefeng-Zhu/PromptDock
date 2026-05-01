@@ -8,6 +8,12 @@ export interface PromptInspectorProps {
   prompt: PromptRecipe;
   folder?: Folder;
   variables: string[];
+  onToggleFavorite?: (id: string) => void;
+  onEdit?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onArchive?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onCopyBody?: (body: string) => void;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -57,7 +63,7 @@ function HighlightedBody({ text }: { text: string }) {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export function PromptInspector({ prompt, folder, variables }: PromptInspectorProps) {
+export function PromptInspector({ prompt, folder, variables, onToggleFavorite, onEdit, onDuplicate, onArchive, onDelete, onCopyBody }: PromptInspectorProps) {
   const [variablesExpanded, setVariablesExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -91,6 +97,7 @@ export function PromptInspector({ prompt, folder, variables }: PromptInspectorPr
                 type="button"
                 className="p-1 rounded-md hover:bg-gray-100 transition-colors"
                 aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
+                onClick={() => onToggleFavorite?.(prompt.id)}
               >
                 <Star
                   className={[
@@ -118,12 +125,12 @@ export function PromptInspector({ prompt, folder, variables }: PromptInspectorPr
                     role="menu"
                     className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1 shadow-lg"
                   >
-                    <DropdownItem icon={<Pencil className="h-4 w-4" />} label="Edit prompt" onClick={() => setMenuOpen(false)} />
-                    <DropdownItem icon={<Files className="h-4 w-4" />} label="Duplicate" onClick={() => setMenuOpen(false)} />
+                    <DropdownItem icon={<Pencil className="h-4 w-4" />} label="Edit prompt" onClick={() => { onEdit?.(prompt.id); setMenuOpen(false); }} />
+                    <DropdownItem icon={<Files className="h-4 w-4" />} label="Duplicate" onClick={() => { onDuplicate?.(prompt.id); setMenuOpen(false); }} />
                     <DropdownItem icon={<FolderInput className="h-4 w-4" />} label="Move to folder" onClick={() => setMenuOpen(false)} />
-                    <DropdownItem icon={<Archive className="h-4 w-4" />} label="Archive" onClick={() => setMenuOpen(false)} />
+                    <DropdownItem icon={<Archive className="h-4 w-4" />} label="Archive" onClick={() => { onArchive?.(prompt.id); setMenuOpen(false); }} />
                     <div className="my-1 border-t border-[var(--color-border)]" />
-                    <DropdownItem icon={<Trash2 className="h-4 w-4" />} label="Delete" onClick={() => setMenuOpen(false)} danger />
+                    <DropdownItem icon={<Trash2 className="h-4 w-4" />} label="Delete" onClick={() => { onDelete?.(prompt.id); setMenuOpen(false); }} danger />
                   </div>
                 )}
               </div>
@@ -178,6 +185,7 @@ export function PromptInspector({ prompt, folder, variables }: PromptInspectorPr
               type="button"
               className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)] transition-colors"
               aria-label="Copy prompt body"
+              onClick={() => onCopyBody?.(prompt.body)}
             >
               <Copy className="h-3 w-3" />
               Copy

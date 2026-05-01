@@ -63,6 +63,9 @@ export interface PromptEditorProps {
   folders: Folder[];
   onSave: (data: Partial<PromptRecipe>) => void;
   onCancel: () => void;
+  onDuplicate?: () => void;
+  onArchive?: () => void;
+  onCopy?: () => void;
 }
 
 // ─── Line Numbers Helper ───────────────────────────────────────────────────────
@@ -162,6 +165,9 @@ export function PromptEditor({
   folders,
   onSave,
   onCancel,
+  onDuplicate,
+  onArchive,
+  onCopy,
 }: PromptEditorProps) {
   // ── Form state ─────────────────────────────────────────────────────────────
   const [title, setTitle] = useState(prompt?.title ?? '');
@@ -243,6 +249,21 @@ export function PromptEditor({
     });
   }, [onSave, title, description, body, tags, folderId, favorite]);
 
+  // ── Save options dropdown state ────────────────────────────────────────────
+  const [showSaveOptions, setShowSaveOptions] = useState(false);
+
+  const handleSaveAndClose = useCallback(() => {
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      body,
+      tags,
+      folderId,
+      favorite,
+    });
+    setShowSaveOptions(false);
+  }, [onSave, title, description, body, tags, folderId, favorite]);
+
   // ── Folder options for Select ──────────────────────────────────────────────
   const folderOptions = useMemo(
     () => [
@@ -304,21 +325,21 @@ export function PromptEditor({
           <div className="flex items-center gap-2">
             {isEditing && (
               <>
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={() => onDuplicate?.()}>
                   <Files className="mr-1.5 h-4 w-4" />
                   Duplicate
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={() => onArchive?.()}>
                   <Archive className="mr-1.5 h-4 w-4" />
                   Archive
                 </Button>
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary" size="sm" onClick={() => onCopy?.()}>
                   <Copy className="mr-1.5 h-4 w-4" />
                   Copy
                 </Button>
               </>
             )}
-            <div className="flex">
+            <div className="relative flex">
               <Button
                 variant="primary"
                 size="sm"
@@ -332,9 +353,21 @@ export function PromptEditor({
                 size="sm"
                 className="rounded-l-none border-l border-white/20 px-2"
                 aria-label="Save options"
+                onClick={() => setShowSaveOptions((prev) => !prev)}
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
+              {showSaveOptions && (
+                <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={handleSaveAndClose}
+                    className="flex w-full items-center px-3 py-2 text-sm text-[var(--color-text-main)] hover:bg-gray-100 transition-colors"
+                  >
+                    Save and Close
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

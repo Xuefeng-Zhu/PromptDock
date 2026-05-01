@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 9</title>
+  <desc id="desc">A calm notebook-style prompt library icon.</desc>
+  <defs>
+    <linearGradient id="tile" x1="156" y1="118" x2="868" y2="906" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06B6D4"/>
+      <stop offset="0.5" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="book" x1="298" y1="186" x2="746" y2="816" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EFF6FF"/>
+    </linearGradient>
+    <filter id="shadow" x="174" y="144" width="676" height="760" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="32" flood-color="#020617" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="url(#tile)"/>
+  <path d="M150 744C280 654 398 630 536 678C662 722 780 690 874 586V814C874 850 850 874 814 874H210C174 874 150 850 150 814V744Z" fill="#020617" opacity="0.18"/>
+
+  <g filter="url(#shadow)">
+    <path d="M302 190H662C708 190 746 228 746 274V758C746 800 712 834 670 834H302C270 834 244 808 244 776V248C244 216 270 190 302 190Z" fill="url(#book)"/>
+    <path d="M302 190H360V834H302C270 834 244 808 244 776V248C244 216 270 190 302 190Z" fill="#DBEAFE"/>
+    <path d="M360 190H662C708 190 746 228 746 274V312H360V190Z" fill="#BAE6FD"/>
+  </g>
+
+  <rect x="426" y="392" width="244" height="42" rx="21" fill="#BFDBFE"/>
+  <rect x="426" y="480" width="170" height="42" rx="21" fill="#A7F3D0"/>
+  <rect x="426" y="568" width="244" height="42" rx="21" fill="#C4B5FD" opacity="0.78"/>
+  <g fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round" stroke-width="34">
+    <path d="M456 670C430 670 418 684 418 706C418 728 406 742 384 742"/>
+    <path d="M588 670C614 670 626 684 626 706C626 728 638 742 660 742"/>
+  </g>
+  <circle cx="302" cy="300" r="20" fill="#2563EB"/>
+  <circle cx="302" cy="390" r="20" fill="#2563EB"/>
+</svg>

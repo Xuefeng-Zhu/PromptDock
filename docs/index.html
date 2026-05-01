@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PromptDock | Local-first prompt recipe manager</title>
+    <meta
+      name="description"
+      content="PromptDock is a local-first prompt recipe manager with reusable templates, variable fill, and a global quick launcher for fast copy and paste workflows."
+    />
+    <meta property="og:title" content="PromptDock" />
+    <meta
+      property="og:description"
+      content="Build, organize, fill, and reuse prompt recipes from a fast local-first desktop app."
+    />
+    <meta property="og:image" content="assets/promptdock-hero.png" />
+    <link rel="icon" href="assets/promptdock-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/landing.css" />
+  </head>
+  <body>
+    <header class="site-header" aria-label="Primary">
+      <a class="brand" href="#top" aria-label="PromptDock home">
+        <img src="assets/promptdock-icon.svg" alt="" />
+        <span>PromptDock</span>
+      </a>
+      <nav class="nav-links" aria-label="Site navigation">
+        <a href="#features">Features</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#start">Start</a>
+        <a href="https://github.com/Xuefeng-Zhu/PromptDock">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-label="PromptDock overview">
+        <img class="hero-image" src="assets/promptdock-hero.png" alt="" />
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Local-first prompt recipes</p>
+          <h1>PromptDock</h1>
+          <p class="lede">
+            A desktop prompt library for people who reuse their best AI workflows all day.
+            Save templates, fill variables, and paste the finished prompt without leaving
+            the app you are already using.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button button-primary" href="https://github.com/Xuefeng-Zhu/PromptDock">
+              View project
+            </a>
+            <a class="button button-secondary" href="#start">Run locally</a>
+          </div>
+          <ul class="hero-points" aria-label="Highlights">
+            <li>Tauri desktop shell</li>
+            <li>Browser fallback</li>
+            <li>Optional Firebase sync</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="signal-band" aria-label="Project signals">
+        <div>
+          <strong>Tauri 2</strong>
+          <span>Native shell, tray, clipboard, and global hotkey hooks.</span>
+        </div>
+        <div>
+          <strong>React 18</strong>
+          <span>Focused library, editor, quick launcher, and settings surfaces.</span>
+        </div>
+        <div>
+          <strong>Local storage</strong>
+          <span>Disk persistence on desktop and localStorage in the browser.</span>
+        </div>
+        <div>
+          <strong>Prompt variables</strong>
+          <span>Use <code>{{variable}}</code> placeholders with a fill-before-paste flow.</span>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="section-heading">
+          <p class="eyebrow">The daily loop</p>
+          <h2>Keep your best prompts close.</h2>
+          <p>
+            PromptDock turns one-off prompt writing into a reusable library that works
+            from the desktop, a quick launcher, or a normal browser during development.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">01</span>
+            <h3>Recipe library</h3>
+            <p>
+              Create prompt templates, group them with folders and tags, favorite the ones
+              you reach for most, and archive old versions without losing context.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">02</span>
+            <h3>Variable fill</h3>
+            <p>
+              Drop <code>{{name}}</code> placeholders into a prompt and fill them in a
+              compact modal with a live rendered preview before copy or paste.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">03</span>
+            <h3>Quick launcher</h3>
+            <p>
+              Use a global shortcut to open a compact search window, pick a prompt, and
+              send it to the clipboard or active application.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">04</span>
+            <h3>Optional sync</h3>
+            <p>
+              Stay local by default, or opt into Firebase Auth and Firestore sync when
+              you want prompts available across machines.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="workflow-section" id="workflow">
+        <div class="workflow-copy">
+          <p class="eyebrow">Designed for reuse</p>
+          <h2>From idea to pasted prompt in seconds.</h2>
+          <p>
+            PromptDock is built around a small, repeatable motion: find the recipe,
+            fill only what changed, and move the rendered prompt into the tool where
+            the work is happening.
+          </p>
+        </div>
+        <ol class="workflow-list">
+          <li>
+            <span>Save</span>
+            <p>Capture prompts as recipes with body text, tags, folder, and favorite state.</p>
+          </li>
+          <li>
+            <span>Fill</span>
+            <p>PromptDock extracts variables and asks for just the values needed this time.</p>
+          </li>
+          <li>
+            <span>Launch</span>
+            <p>Search from the app, command palette, or global hotkey quick launcher.</p>
+          </li>
+          <li>
+            <span>Paste</span>
+            <p>Copy to the clipboard or paste into the active desktop app when Tauri is running.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section contrast-section">
+        <div class="section-heading">
+          <p class="eyebrow">Local when it matters</p>
+          <h2>Private workflows do not need a hosted service first.</h2>
+          <p>
+            The app starts with local persistence and browser-safe fallbacks. Sync, auth,
+            and Firestore stay optional rather than becoming the center of the experience.
+          </p>
+        </div>
+        <div class="assurance-grid">
+          <div class="assurance-item">
+            <strong>Desktop-native when available</strong>
+            <span>Clipboard commands, paste simulation, tray behavior, and global shortcuts live behind Tauri commands.</span>
+          </div>
+          <div class="assurance-item">
+            <strong>Browser-friendly by design</strong>
+            <span>The same UI can run without Tauri by using localStorage and web clipboard fallbacks.</span>
+          </div>
+          <div class="assurance-item">
+            <strong>Built to inspect</strong>
+            <span>Typed stores, repository boundaries, import/export, and tests keep the core workflows legible.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="start-section" id="start">
+        <div>
+          <p class="eyebrow">Run it locally</p>
+          <h2>Clone, install, launch.</h2>
+          <p>
+            The browser development server runs on port 1420. Use the Tauri command when
+            you want desktop integrations like the quick launcher and paste flow.
+          </p>
+        </div>
+        <div class="command-panel" aria-label="Local setup commands">
+          <code>git clone https://github.com/Xuefeng-Zhu/PromptDock.git</code>
+          <code>cd PromptDock</code>
+          <code>npm install</code>
+          <code>npm run dev</code>
+          <code>npm run tauri dev</code>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>PromptDock</span>
+      <a href="https://github.com/Xuefeng-Zhu/PromptDock/tree/main/docs">Documentation</a>
+      <a href="https://github.com/Xuefeng-Zhu/PromptDock">GitHub repository</a>
+    </footer>
+  </body>
+</html>

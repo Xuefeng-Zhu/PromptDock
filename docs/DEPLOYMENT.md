@@ -91,7 +91,9 @@ Remember: `VITE_` variables are baked into the frontend bundle.
 
 ## CI/CD Notes
 
-No CI workflow is present in the repository at the time of writing.
+The repository includes `.github/workflows/release-macos.yml` for signed and
+notarized macOS releases. It runs on tag pushes that match `v*` and can also be
+started manually from GitHub Actions.
 
 Recommended CI jobs:
 
@@ -112,17 +114,49 @@ cargo check --manifest-path src-tauri/Cargo.toml
 npm run tauri build
 ```
 
-TODO: Add a checked-in CI workflow once the current test/build failures are resolved.
+### macOS signing and notarization
 
-## Current Build Caveat
+Unsigned or ad-hoc signed macOS apps can appear to work locally but fail after a
+browser download because Gatekeeper applies quarantine checks. Production macOS
+release assets must be signed with a Developer ID Application certificate and
+notarized by Apple before upload.
 
-At the time of this docs pass, `npm run build` fails with:
+Required GitHub Actions secrets:
 
-```text
-src/components/AppShell.tsx(578,24): error TS2339: Property 'pasted' does not exist on type 'never'.
+| Secret | Description |
+|---|---|
+| `APPLE_CERTIFICATE` | Base64-encoded `.p12` export of the Developer ID Application certificate. |
+| `APPLE_CERTIFICATE_PASSWORD` | Password used when exporting the `.p12`. |
+| `APPLE_ID` | Apple ID email used for notarization. |
+| `APPLE_PASSWORD` | App-specific password for the Apple ID. |
+| `APPLE_TEAM_ID` | Apple Developer Team ID. |
+
+To create `APPLE_CERTIFICATE`, export the Developer ID Application certificate
+from Keychain Access as a `.p12`, then encode it:
+
+```bash
+openssl base64 -A -in DeveloperIDApplication.p12 -out certificate-base64.txt
 ```
 
-This must be resolved before a production frontend or Tauri build can complete.
+Store the contents of `certificate-base64.txt` as the `APPLE_CERTIFICATE`
+secret. The workflow imports this certificate into an ephemeral keychain,
+discovers the `Developer ID Application` signing identity, and passes it to the
+Tauri build through `APPLE_SIGNING_IDENTITY`. Release assets are uploaded to
+GitHub only after the signed app and DMG pass verification.
+
+After a successful release build, the workflow verifies the app and DMG with:
+
+```bash
+codesign --verify --deep --strict --verbose=4 PromptDock.app
+spctl -a -vv PromptDock.app
+xcrun stapler validate PromptDock.app
+xcrun stapler validate PromptDock_0.1.0_aarch64.dmg
+```
+
+## Current Build Status
+
+`npm run build` passed locally during the macOS signing workflow update. Keep
+the release workflow green before publishing signed desktop assets.
 
 ## Rollback Strategy
 

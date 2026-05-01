@@ -149,7 +149,7 @@ Firebase rules and indexes:
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-See [Deployment](docs/DEPLOYMENT.md) before publishing a release; there is no CI workflow checked into the repository at the time of writing.
+See [Deployment](docs/DEPLOYMENT.md) before publishing a release; macOS release signing and notarization run through `.github/workflows/release-macos.yml`.
 
 ## Troubleshooting
 

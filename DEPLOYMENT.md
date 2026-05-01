@@ -41,6 +41,20 @@ Browser hosting requirements:
 - Desktop-only features such as global hotkeys, tray, Tauri Store, and paste simulation are unavailable.
 - Optional Firebase sync requires `VITE_FIREBASE_*` values at build time.
 
+## GitHub Pages Landing Page
+
+The public project landing page is a static site at:
+
+```text
+docs/index.html
+docs/assets/
+```
+
+It does not depend on the Vite/Tauri build and can be published even while the
+application build has known failures. The deployed Pages branch serves the
+contents of `docs/` from the repository root, so asset links in `index.html`
+should stay relative to that directory.
+
 ## Tauri Desktop Build
 
 ```bash

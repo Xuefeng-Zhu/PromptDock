@@ -16,16 +16,28 @@ import {
   Moon,
   Monitor,
   BadgeCheck,
+  LogOut,
+  AlertCircle,
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Toggle } from './ui/Toggle';
+import { useSettingsStore } from '../stores/settings-store';
+import { useAppModeStore } from '../stores/app-mode-store';
+import { usePromptStore } from '../stores/prompt-store';
+import { registerHotkey } from '../utils/hotkey';
+import { saveFile, openFile } from '../utils/file-dialog';
+import { ImportExportService } from '../services/import-export';
+import type { IAuthService } from '../services/interfaces';
+import type { UserSettings, AuthError, DuplicateInfo, PromptRecipe } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface SettingsScreenProps {
   onBack: () => void;
+  authService?: IAuthService;
+  loading?: boolean;
 }
 
 // ─── Section IDs ───────────────────────────────────────────────────────────────
@@ -56,34 +68,227 @@ const NAV_ITEMS: NavItem[] = [
 // ─── Sync State Types ──────────────────────────────────────────────────────────
 
 type SyncState = 'off' | 'guest' | 'signed-in';
-type ThemeOption = 'light' | 'dark' | 'system';
+type ThemeOption = UserSettings['theme'];
 type DensityOption = 'comfortable' | 'compact';
-type DefaultAction = 'copy' | 'paste';
+type DefaultAction = UserSettings['defaultAction'];
+
+// ─── Auth Error Messages ───────────────────────────────────────────────────────
+
+function authErrorMessage(error: AuthError): string {
+  switch (error) {
+    case 'invalid-credentials':
+      return 'Invalid email or password. Please try again.';
+    case 'email-in-use':
+      return 'An account with this email already exists.';
+    case 'weak-password':
+      return 'Password is too weak. Use at least 6 characters.';
+    case 'unknown':
+    default:
+      return 'An unexpected error occurred. Please try again.';
+  }
+}
 
 // ─── AccountCard ───────────────────────────────────────────────────────────────
 
-function AccountCard() {
+type AuthFormMode = 'sign-in' | 'sign-up';
+
+interface AccountCardProps {
+  authService?: IAuthService;
+}
+
+function AccountCard({ authService }: AccountCardProps) {
+  const mode = useAppModeStore((s) => s.mode);
+  const userId = useAppModeStore((s) => s.userId);
+  const setMode = useAppModeStore((s) => s.setMode);
+  const setUserId = useAppModeStore((s) => s.setUserId);
+
+  const [formMode, setFormMode] = useState<AuthFormMode>('sign-in');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSignIn = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!authService) return;
+      setAuthError(null);
+      setIsSubmitting(true);
+      try {
+        const result = await authService.signIn(email, password);
+        if (result.success) {
+          setUserId(result.user.uid);
+          setMode('synced');
+          setEmail('');
+          setPassword('');
+        } else {
+          setAuthError(authErrorMessage(result.error));
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [authService, email, password, setMode, setUserId],
+  );
+
+  const handleSignUp = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!authService) return;
+      setAuthError(null);
+      setIsSubmitting(true);
+      try {
+        const result = await authService.signUp(email, password);
+        if (result.success) {
+          setUserId(result.user.uid);
+          setMode('synced');
+          setEmail('');
+          setPassword('');
+        } else {
+          setAuthError(authErrorMessage(result.error));
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [authService, email, password, setMode, setUserId],
+  );
+
+  const handleSignOut = useCallback(async () => {
+    if (!authService) return;
+    setIsSubmitting(true);
+    try {
+      await authService.signOut();
+      setUserId(null);
+      setMode('local');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [authService, setMode, setUserId]);
+
+  // ── Signed-in view ─────────────────────────────────────────────────────────
+  if (mode === 'synced' && userId) {
+    return (
+      <Card padding="lg">
+        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+          Account
+        </h3>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)]">
+            <User size={24} className="text-[var(--color-primary)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-[var(--color-text-main)]">
+              Signed in
+            </p>
+            <div className="mt-1 flex items-center gap-1.5">
+              <BadgeCheck size={14} className="text-green-600" />
+              <span className="text-xs text-green-600">Synced</span>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSignOut}
+            disabled={isSubmitting}
+            aria-label="Sign out"
+          >
+            <LogOut size={16} className="mr-1.5" />
+            Sign Out
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  // ── Sign-in / Sign-up form view ────────────────────────────────────────────
   return (
     <Card padding="lg">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
         Account
       </h3>
-      <div className="flex items-center gap-4">
-        {/* Avatar placeholder */}
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)]">
-          <User size={24} className="text-[var(--color-primary)]" />
-        </div>
-        <div className="min-w-0 flex-1">
-          {/* TODO: Wire to AuthService for real user data */}
-          <p className="text-sm font-medium text-[var(--color-text-main)]">
-            user@example.com
-          </p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <BadgeCheck size={14} className="text-green-600" />
-            <span className="text-xs text-green-600">Verified</span>
-          </div>
-        </div>
+
+      {/* Tab toggle */}
+      <div className="mb-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => { setFormMode('sign-in'); setAuthError(null); }}
+          className={[
+            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            formMode === 'sign-in'
+              ? 'bg-[var(--color-primary)] text-white'
+              : 'text-[var(--color-text-muted)] hover:bg-gray-100',
+          ].join(' ')}
+        >
+          Sign In
+        </button>
+        <button
+          type="button"
+          onClick={() => { setFormMode('sign-up'); setAuthError(null); }}
+          className={[
+            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+            formMode === 'sign-up'
+              ? 'bg-[var(--color-primary)] text-white'
+              : 'text-[var(--color-text-muted)] hover:bg-gray-100',
+          ].join(' ')}
+        >
+          Sign Up
+        </button>
       </div>
+
+      <form
+        onSubmit={formMode === 'sign-in' ? handleSignIn : handleSignUp}
+        className="space-y-3"
+      >
+        <div>
+          <label htmlFor="auth-email" className="mb-1 block text-xs font-medium text-[var(--color-text-main)]">
+            Email
+          </label>
+          <Input
+            id="auth-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            aria-label="Email"
+          />
+        </div>
+        <div>
+          <label htmlFor="auth-password" className="mb-1 block text-xs font-medium text-[var(--color-text-main)]">
+            Password
+          </label>
+          <Input
+            id="auth-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            aria-label="Password"
+          />
+        </div>
+
+        {authError && (
+          <p role="alert" className="text-xs text-red-600">
+            {authError}
+          </p>
+        )}
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          disabled={isSubmitting}
+          className="w-full"
+        >
+          {isSubmitting
+            ? 'Please wait…'
+            : formMode === 'sign-in'
+              ? 'Sign In'
+              : 'Create Account'}
+        </Button>
+      </form>
     </Card>
   );
 }
@@ -295,9 +500,10 @@ function AppearanceCard({
 interface HotkeyCardProps {
   hotkey: string;
   onHotkeyChange: (hotkey: string) => void;
+  error?: string | null;
 }
 
-function HotkeyCard({ hotkey, onHotkeyChange }: HotkeyCardProps) {
+function HotkeyCard({ hotkey, onHotkeyChange, error }: HotkeyCardProps) {
   const [isCapturing, setIsCapturing] = useState(false);
 
   const handleKeyDown = useCallback(
@@ -335,7 +541,6 @@ function HotkeyCard({ hotkey, onHotkeyChange }: HotkeyCardProps) {
       <p className="mb-3 text-xs text-[var(--color-text-muted)]">
         Set a global keyboard shortcut to open PromptDock from anywhere.
       </p>
-      {/* TODO: Wire to Tauri global shortcut plugin for actual registration */}
       <div className="flex items-center gap-3">
         <Input
           value={isCapturing ? 'Press a key combination…' : hotkey}
@@ -364,6 +569,11 @@ function HotkeyCard({ hotkey, onHotkeyChange }: HotkeyCardProps) {
           Clear
         </Button>
       </div>
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-red-600">
+          {error}
+        </p>
+      )}
     </Card>
   );
 }
@@ -442,7 +652,158 @@ function DefaultBehaviorCard({
 
 // ─── ImportExportCard ──────────────────────────────────────────────────────────
 
+const importExportService = new ImportExportService();
+
 function ImportExportCard() {
+  const prompts = usePromptStore((s) => s.prompts);
+  const createPrompt = usePromptStore((s) => s.createPrompt);
+  const updatePrompt = usePromptStore((s) => s.updatePrompt);
+
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
+  const [pendingNonDuplicates, setPendingNonDuplicates] = useState<PromptRecipe[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const clearMessages = useCallback(() => {
+    setImportErrors([]);
+    setSuccessMessage(null);
+  }, []);
+
+  // ── Export handler ─────────────────────────────────────────────────────────
+  const handleExport = useCallback(async () => {
+    clearMessages();
+    setIsExporting(true);
+    try {
+      const json = importExportService.exportToJSON(prompts);
+      const timestamp = new Date().toISOString().slice(0, 10);
+      await saveFile(json, `promptdock-export-${timestamp}.json`);
+      setSuccessMessage('Prompts exported successfully.');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [prompts, clearMessages]);
+
+  // ── Import handler ─────────────────────────────────────────────────────────
+  const handleImport = useCallback(async () => {
+    clearMessages();
+    setDuplicates([]);
+    setPendingNonDuplicates([]);
+    setIsImporting(true);
+    try {
+      const content = await openFile();
+      if (!content) {
+        // User cancelled
+        return;
+      }
+
+      const result = importExportService.importFromJSON(content);
+      if (!result.success) {
+        setImportErrors(result.errors);
+        return;
+      }
+
+      // Check for duplicates
+      const dupes = importExportService.detectDuplicates(result.prompts, prompts);
+      const dupeIncomingIds = new Set(dupes.map((d) => d.incoming.id));
+      const nonDuplicates = result.prompts.filter((p) => !dupeIncomingIds.has(p.id));
+
+      if (dupes.length > 0) {
+        // Show duplicate resolution UI
+        setDuplicates(dupes);
+        setPendingNonDuplicates(nonDuplicates);
+        return;
+      }
+
+      // No duplicates — add all prompts
+      for (const p of result.prompts) {
+        await createPrompt({
+          workspaceId: p.workspaceId || 'local',
+          title: p.title,
+          description: p.description,
+          body: p.body,
+          tags: p.tags,
+          folderId: p.folderId,
+          favorite: p.favorite,
+          archived: p.archived,
+          archivedAt: p.archivedAt,
+          lastUsedAt: p.lastUsedAt,
+          createdBy: p.createdBy,
+          version: p.version,
+        });
+      }
+      setSuccessMessage(`Imported ${result.prompts.length} prompt(s) successfully.`);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [prompts, createPrompt, clearMessages]);
+
+  // ── Duplicate resolution: skip all ─────────────────────────────────────────
+  const handleSkipAll = useCallback(async () => {
+    // Only import non-duplicate prompts
+    for (const p of pendingNonDuplicates) {
+      await createPrompt({
+        workspaceId: p.workspaceId || 'local',
+        title: p.title,
+        description: p.description,
+        body: p.body,
+        tags: p.tags,
+        folderId: p.folderId,
+        favorite: p.favorite,
+        archived: p.archived,
+        archivedAt: p.archivedAt,
+        lastUsedAt: p.lastUsedAt,
+        createdBy: p.createdBy,
+        version: p.version,
+      });
+    }
+    const count = pendingNonDuplicates.length;
+    setDuplicates([]);
+    setPendingNonDuplicates([]);
+    setSuccessMessage(
+      count > 0
+        ? `Imported ${count} prompt(s), skipped ${duplicates.length} duplicate(s).`
+        : `Skipped ${duplicates.length} duplicate(s). No new prompts imported.`,
+    );
+  }, [pendingNonDuplicates, duplicates.length, createPrompt]);
+
+  // ── Duplicate resolution: overwrite all ────────────────────────────────────
+  const handleOverwriteAll = useCallback(async () => {
+    // Overwrite existing prompts with incoming data
+    for (const dupe of duplicates) {
+      await updatePrompt(dupe.existing.id, {
+        title: dupe.incoming.title,
+        description: dupe.incoming.description,
+        body: dupe.incoming.body,
+        tags: dupe.incoming.tags,
+        folderId: dupe.incoming.folderId,
+        favorite: dupe.incoming.favorite,
+      });
+    }
+    // Also import non-duplicate prompts
+    for (const p of pendingNonDuplicates) {
+      await createPrompt({
+        workspaceId: p.workspaceId || 'local',
+        title: p.title,
+        description: p.description,
+        body: p.body,
+        tags: p.tags,
+        folderId: p.folderId,
+        favorite: p.favorite,
+        archived: p.archived,
+        archivedAt: p.archivedAt,
+        lastUsedAt: p.lastUsedAt,
+        createdBy: p.createdBy,
+        version: p.version,
+      });
+    }
+    const total = duplicates.length + pendingNonDuplicates.length;
+    setDuplicates([]);
+    setPendingNonDuplicates([]);
+    setSuccessMessage(`Imported ${total} prompt(s), overwrote ${duplicates.length} duplicate(s).`);
+  }, [duplicates, pendingNonDuplicates, createPrompt, updatePrompt]);
+
   return (
     <Card padding="lg">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -451,31 +812,90 @@ function ImportExportCard() {
       <p className="mb-4 text-xs text-[var(--color-text-muted)]">
         Back up your prompt library or import prompts from a JSON file.
       </p>
-      {/* TODO: Wire to import/export service for actual file operations */}
+
       <div className="flex gap-3">
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            // TODO: Wire to export service
-          }}
+          onClick={handleExport}
+          disabled={isExporting}
           aria-label="Export prompts to JSON file"
         >
           <Upload size={16} className="mr-2" />
-          Export
+          {isExporting ? 'Exporting…' : 'Export'}
         </Button>
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => {
-            // TODO: Wire to import service
-          }}
+          onClick={handleImport}
+          disabled={isImporting}
           aria-label="Import prompts from JSON file"
         >
           <Download size={16} className="mr-2" />
-          Import
+          {isImporting ? 'Importing…' : 'Import'}
         </Button>
       </div>
+
+      {/* Success message */}
+      {successMessage && (
+        <p role="status" className="mt-3 text-xs text-green-600">
+          {successMessage}
+        </p>
+      )}
+
+      {/* Validation errors */}
+      {importErrors.length > 0 && (
+        <div role="alert" className="mt-3 rounded-md border border-red-200 bg-red-50 p-3">
+          <div className="mb-1 flex items-center gap-1.5">
+            <AlertCircle size={14} className="text-red-600" />
+            <span className="text-xs font-medium text-red-700">Import failed</span>
+          </div>
+          <ul className="list-inside list-disc space-y-0.5">
+            {importErrors.map((err, i) => (
+              <li key={i} className="text-xs text-red-600">
+                {err}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Duplicate resolution UI */}
+      {duplicates.length > 0 && (
+        <div role="alert" className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <div className="mb-2 flex items-center gap-1.5">
+            <AlertCircle size={14} className="text-amber-600" />
+            <span className="text-xs font-medium text-amber-700">
+              {duplicates.length} duplicate(s) found
+            </span>
+          </div>
+          <ul className="mb-3 list-inside list-disc space-y-0.5">
+            {duplicates.map((d, i) => (
+              <li key={i} className="text-xs text-amber-700">
+                &quot;{d.incoming.title}&quot; — matched on {d.matchedOn}
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSkipAll}
+              aria-label="Skip duplicates"
+            >
+              Skip Duplicates
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleOverwriteAll}
+              aria-label="Overwrite duplicates"
+            >
+              Overwrite Duplicates
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -514,15 +934,69 @@ function AboutCard() {
  * Uses local state for all settings values (mock data, not persisted).
  * Integration points are marked with TODO comments.
  */
-export function SettingsScreen({ onBack }: SettingsScreenProps) {
-  // ── Local mock state ───────────────────────────────────────────────────────
-  // TODO: Replace with settings store / repository persistence
-  const [syncState, setSyncState] = useState<SyncState>('off');
-  const [theme, setTheme] = useState<ThemeOption>('system');
+export function SettingsScreen({ onBack, authService, loading = false }: SettingsScreenProps) {
+  // ── Read settings from SettingsStore ───────────────────────────────────────
+  const settings = useSettingsStore((s) => s.settings);
+  const updateSettings = useSettingsStore((s) => s.updateSettings);
+
+  // ── Sync state derived from AppModeStore ───────────────────────────────────
+  const appMode = useAppModeStore((s) => s.mode);
+  const syncState: SyncState = appMode === 'synced' ? 'signed-in' : 'off';
+
+  // ── Density is a UI-only preference not in UserSettings ────────────────────
   const [density, setDensity] = useState<DensityOption>('comfortable');
-  const [hotkey, setHotkey] = useState('⌘+Shift+P');
-  const [defaultAction, setDefaultAction] = useState<DefaultAction>('copy');
+
   const [activeSection, setActiveSection] = useState<SectionId>('account-sync');
+
+  // ── Hotkey registration error ──────────────────────────────────────────────
+  const [hotkeyError, setHotkeyError] = useState<string | null>(null);
+
+  // ── Settings update error (for theme, default action, etc.) ────────────────
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  // ── Handlers that delegate to SettingsStore ────────────────────────────────
+  const handleThemeChange = useCallback(
+    async (theme: ThemeOption) => {
+      setSettingsError(null);
+      try {
+        await updateSettings({ theme });
+      } catch (err) {
+        setSettingsError(
+          `Failed to save theme: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    },
+    [updateSettings],
+  );
+
+  const handleHotkeyChange = useCallback(
+    async (hotkeyCombo: string) => {
+      setHotkeyError(null);
+      await updateSettings({ hotkeyCombo });
+      try {
+        await registerHotkey(hotkeyCombo);
+      } catch (err) {
+        setHotkeyError(
+          `Failed to register hotkey: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    },
+    [updateSettings],
+  );
+
+  const handleDefaultActionChange = useCallback(
+    async (defaultAction: DefaultAction) => {
+      setSettingsError(null);
+      try {
+        await updateSettings({ defaultAction });
+      } catch (err) {
+        setSettingsError(
+          `Failed to save default action: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    },
+    [updateSettings],
+  );
 
   // ── Section refs for scroll-to behavior ────────────────────────────────────
   const sectionRefs = useRef<Record<SectionId, HTMLElement | null>>({
@@ -602,18 +1076,44 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
 
         {/* Right content column */}
         <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="mx-auto max-w-2xl space-y-6" aria-label="Loading settings">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-6"
+                  data-testid="settings-placeholder"
+                >
+                  <div className="mb-4 h-4 w-1/4 rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="space-y-3">
+                    <div className="h-3 w-full rounded bg-gray-200 dark:bg-gray-700" />
+                    <div className="h-3 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
+                    <div className="h-8 w-1/2 rounded bg-gray-200 dark:bg-gray-700" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="mx-auto max-w-2xl space-y-6">
+            {/* Inline settings error */}
+            {settingsError && (
+              <div role="alert" className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+                <AlertCircle size={16} className="shrink-0 text-red-600" />
+                <p className="text-xs text-red-600">{settingsError}</p>
+              </div>
+            )}
+
             {/* Account & Sync */}
             <section
               ref={setSectionRef('account-sync')}
               id="settings-account-sync"
               aria-label="Account and Sync settings"
             >
-              <AccountCard />
+              <AccountCard authService={authService} />
               <div className="mt-4">
                 <SyncCard
                   syncState={syncState}
-                  onSyncStateChange={setSyncState}
+                  onSyncStateChange={() => {/* Sync state is derived from AppModeStore */}}
                 />
               </div>
             </section>
@@ -625,8 +1125,8 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
               aria-label="Appearance settings"
             >
               <AppearanceCard
-                theme={theme}
-                onThemeChange={setTheme}
+                theme={settings.theme}
+                onThemeChange={handleThemeChange}
                 density={density}
                 onDensityChange={setDensity}
               />
@@ -638,7 +1138,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
               id="settings-hotkey"
               aria-label="Hotkey settings"
             >
-              <HotkeyCard hotkey={hotkey} onHotkeyChange={setHotkey} />
+              <HotkeyCard hotkey={settings.hotkeyCombo} onHotkeyChange={handleHotkeyChange} error={hotkeyError} />
             </section>
 
             {/* Default Behavior */}
@@ -648,8 +1148,8 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
               aria-label="Default behavior settings"
             >
               <DefaultBehaviorCard
-                defaultAction={defaultAction}
-                onDefaultActionChange={setDefaultAction}
+                defaultAction={settings.defaultAction}
+                onDefaultActionChange={handleDefaultActionChange}
               />
             </section>
 
@@ -671,6 +1171,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
               <AboutCard />
             </section>
           </div>
+          )}
         </div>
       </div>
     </div>

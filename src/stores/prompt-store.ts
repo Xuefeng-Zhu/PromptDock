@@ -17,6 +17,7 @@ export type CreatePromptData = Omit<
 export interface PromptStore {
   // State
   prompts: PromptRecipe[];
+  isLoading: boolean;
   activeWorkspaceId: string;
   selectedPromptId: string | null;
   searchQuery: string;
@@ -45,6 +46,7 @@ export function createPromptStore(repo: IPromptRepository) {
   return create<PromptStore>((set, get) => ({
     // ── Initial state ────────────────────────────────────────────────────────
     prompts: [],
+    isLoading: false,
     activeWorkspaceId: 'local',
     selectedPromptId: null,
     searchQuery: '',
@@ -54,9 +56,15 @@ export function createPromptStore(repo: IPromptRepository) {
     // ── Actions ──────────────────────────────────────────────────────────────
 
     async loadPrompts() {
-      const { activeWorkspaceId } = get();
-      const prompts = await repo.getAll(activeWorkspaceId);
-      set({ prompts });
+      set({ isLoading: true });
+      try {
+        const { activeWorkspaceId } = get();
+        const prompts = await repo.getAll(activeWorkspaceId);
+        set({ prompts, isLoading: false });
+      } catch (err) {
+        set({ isLoading: false });
+        throw err;
+      }
     },
 
     async createPrompt(data: CreatePromptData) {

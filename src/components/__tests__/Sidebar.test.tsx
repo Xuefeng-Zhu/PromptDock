@@ -59,16 +59,18 @@ describe('Sidebar', () => {
     expect(onItemSelect).toHaveBeenCalledWith('library');
   });
 
-  it('renders "TAGS" section', () => {
-    render(<Sidebar {...defaultProps} />);
+  it('renders "TAGS" section with dynamic tag counts', () => {
+    render(<Sidebar {...defaultProps} tagCounts={{ Writing: 5, Code: 3 }} />);
     expect(screen.getByText('TAGS')).toBeDefined();
+    // Tags are rendered from the tagCounts prop
+    const writingElements = screen.getAllByText('Writing');
+    expect(writingElements.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Code')).toBeDefined();
   });
 
-  it('renders "WORKSPACES" section', () => {
+  it('does not render "WORKSPACES" section (mock data removed)', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('WORKSPACES')).toBeDefined();
-    expect(screen.getByText('Personal')).toBeDefined();
-    expect(screen.getByText('Team Workspace')).toBeDefined();
+    expect(screen.queryByText('WORKSPACES')).toBeNull();
   });
 
   it('renders as a nav element with aria-label', () => {

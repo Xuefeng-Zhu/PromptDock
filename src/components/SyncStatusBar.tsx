@@ -64,6 +64,13 @@ export function SyncStatusBar({
       <span aria-hidden="true">{display.icon}</span>
       <span className={`font-medium ${display.colorClass}`}>{display.label}</span>
 
+      {/* Syncing mode: animated indicator */}
+      {syncStatus === 'syncing' && (
+        <span className="text-blue-600 dark:text-blue-400" aria-live="polite">
+          Syncing…
+        </span>
+      )}
+
       {/* Local mode: sign-in prompt */}
       {syncStatus === 'local' && onSignInClick && (
         <button

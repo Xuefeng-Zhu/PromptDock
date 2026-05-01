@@ -1,4 +1,23 @@
-import type { PromptRecipe, Workspace, UserSettings } from '../types/index';
+import type { PromptRecipe, Folder, Workspace, UserSettings } from '../types/index';
+
+// ─── Storage Backend Interface ─────────────────────────────────────────────────
+
+/**
+ * Abstraction over the persistence layer. Implemented by:
+ * - `LocalStorageBackend` (Tauri Store plugin — desktop)
+ * - `BrowserStorageBackend` (window.localStorage — browser)
+ */
+export interface IStorageBackend {
+  initialize(): Promise<void>;
+  readPrompts(): Promise<PromptRecipe[]>;
+  writePrompts(prompts: PromptRecipe[]): Promise<void>;
+  readFolders(): Promise<Folder[]>;
+  writeFolders(folders: Folder[]): Promise<void>;
+  readSettings(): Promise<UserSettings>;
+  writeSettings(settings: UserSettings): Promise<void>;
+  readWorkspace(): Promise<Workspace>;
+  writeWorkspace(workspace: Workspace): Promise<void>;
+}
 
 // ─── Repository Interfaces ────────────────────────────────────────────────────
 

@@ -1,6 +1,5 @@
 import type { UserSettings } from '../types/index';
-import type { ISettingsRepository } from './interfaces';
-import type { LocalStorageBackend } from './local-storage-backend';
+import type { ISettingsRepository, IStorageBackend } from './interfaces';
 
 // ─── Default Settings ──────────────────────────────────────────────────────────
 
@@ -12,7 +11,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
 };
 
 // ─── SettingsRepository ────────────────────────────────────────────────────────
-// Implements ISettingsRepository by delegating to LocalStorageBackend.
+// Implements ISettingsRepository by delegating to an IStorageBackend.
 // Uses lazy loading with an in-memory cache. Settings are read from the backend
 // on first access and persisted on every mutation.
 
@@ -20,7 +19,7 @@ export class SettingsRepository implements ISettingsRepository {
   private settings: UserSettings | null = null;
   private loaded = false;
 
-  constructor(private readonly backend: LocalStorageBackend) {}
+  constructor(private readonly backend: IStorageBackend) {}
 
   /**
    * Ensure the in-memory settings are populated from the backend.

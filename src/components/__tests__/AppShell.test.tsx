@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { AppShell } from '../AppShell';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { AppShell, filterPrompts } from '../AppShell';
 import type { PromptRecipe } from '../../types/index';
 import type { IPromptRepository } from '../../repositories/interfaces';
 import { initPromptStore } from '../../stores/prompt-store';
@@ -88,6 +88,7 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
 // ─── Setup ─────────────────────────────────────────────────────────────────────
 
 let mockRepo: IPromptRepository;
+let mockSettingsRepo: ISettingsRepository;
 
 /**
  * Initialize the PromptStore singleton with a mock repo and load test prompts.
@@ -100,11 +101,11 @@ async function setupStore(prompts: PromptRecipe[] = TEST_PROMPTS) {
   await store.getState().loadPrompts();
 
   // Initialize SettingsStore so SettingsScreen can render
-  const settingsRepo: ISettingsRepository = {
+  mockSettingsRepo = {
     get: vi.fn(async () => ({ ...DEFAULT_SETTINGS })),
     update: vi.fn(async (changes) => ({ ...DEFAULT_SETTINGS, ...changes })),
   };
-  initSettingsStore(settingsRepo);
+  initSettingsStore(mockSettingsRepo);
 
   // Initialize AppModeStore so OnboardingScreen can render
   initAppModeStore();
@@ -283,6 +284,38 @@ describe('AppShell', () => {
       expect(screen.getByText('Settings')).toBeDefined();
     });
 
+    it('returns to the library when a sidebar item is clicked from settings', async () => {
+      await renderOnLibraryScreen();
+
+      await act(async () => {
+        fireEvent.click(screen.getByLabelText('Settings'));
+      });
+
+      expect(screen.getByText('Settings')).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Favorites'));
+      });
+
+      const headings = screen.getAllByText('All Prompts');
+      const h1 = headings.find((el) => el.tagName === 'H1');
+      expect(h1).toBeDefined();
+      expect(screen.queryByText('Settings')).toBeNull();
+    });
+
+    it('updates the theme when the sidebar theme toggle is clicked', async () => {
+      await renderOnLibraryScreen();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
+      });
+
+      expect(mockSettingsRepo.update).toHaveBeenCalledWith({ theme: 'dark' });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeDefined();
+      });
+    });
+
     it('navigates to editor when New Prompt is clicked', async () => {
       await renderOnLibraryScreen();
 
@@ -307,6 +340,52 @@ describe('AppShell', () => {
       });
 
       expect(store.getState().searchQuery).toBe('summarize');
+    });
+  });
+
+  describe('sidebar filtering', () => {
+    it('filters sidebar favorites without treating favorites as a folder id', () => {
+      const results = filterPrompts(TEST_PROMPTS, '', 'all', 'favorites');
+      expect(results.map((prompt) => prompt.id)).toEqual(['prompt-1']);
+    });
+
+    it('filters sidebar archived prompts', () => {
+      const archivedPrompt = makePrompt({
+        id: 'prompt-archived',
+        title: 'Archived Prompt',
+        archived: true,
+        archivedAt: new Date('2024-03-01'),
+      });
+
+      const results = filterPrompts([...TEST_PROMPTS, archivedPrompt], '', 'all', 'archived');
+      expect(results.map((prompt) => prompt.id)).toEqual(['prompt-archived']);
+    });
+
+    it('filters sidebar tags by tag key', () => {
+      const results = filterPrompts(TEST_PROMPTS, '', 'all', 'tag-test');
+      expect(results).toHaveLength(3);
+    });
+  });
+
+  describe('selected prompt visibility', () => {
+    it('clears the inspector when the selected prompt is no longer visible', async () => {
+      await renderOnLibraryScreen();
+
+      const selectedCard = screen.getByTestId('prompt-card-prompt-1');
+      await act(async () => {
+        fireEvent.click(selectedCard);
+      });
+
+      expect(screen.getByRole('complementary', { name: 'Prompt details' })).toBeDefined();
+
+      const searchInput = screen.getByPlaceholderText(/search/i);
+      await act(async () => {
+        fireEvent.change(searchInput, { target: { value: 'code' } });
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole('complementary', { name: 'Prompt details' })).toBeNull();
+      });
     });
   });
 

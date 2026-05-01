@@ -8,6 +8,7 @@ import {
   Code,
   Info,
   Maximize2,
+  Minimize2,
   Plus,
   Star,
   X,
@@ -131,27 +132,6 @@ function formatRelativeShort(date: Date | null): string {
   return formatDate(date);
 }
 
-// ─── Variable Description Helper ───────────────────────────────────────────────
-
-/**
- * Returns a human-readable description for a variable name.
- */
-function getVariableDescription(name: string): string {
-  const descriptions: Record<string, string> = {
-    audience: 'Who the summary should be written for.',
-    text: 'The source text to be summarized.',
-    format: 'The desired output format for the summary.',
-    tone: 'The writing tone to use.',
-    problem: 'The problem to solve.',
-    language: 'The programming language.',
-    code: 'The code to review.',
-    recipient: 'Who the email is addressed to.',
-    points: 'Key talking points to cover.',
-    transcript: 'The meeting transcript to process.',
-  };
-  return descriptions[name] ?? `Value for the ${name} variable.`;
-}
-
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -178,6 +158,8 @@ export function PromptEditor({
   const [favorite, setFavorite] = useState(prompt?.favorite ?? false);
   const [tagInput, setTagInput] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
+  const [showFormattingHelp, setShowFormattingHelp] = useState(false);
+  const [isEditorExpanded, setIsEditorExpanded] = useState(false);
 
   // ── Populate fields when prompt prop changes ───────────────────────────────
   useEffect(() => {
@@ -301,7 +283,7 @@ export function PromptEditor({
     <div className="flex h-full overflow-hidden bg-[var(--color-background)]">
       {/* ── Left Column: Editor Form ──────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-4xl px-8 py-6">
+        <div className={isEditorExpanded ? 'mx-auto w-full px-8 py-6' : 'mx-auto w-full max-w-4xl px-8 py-6'}>
         {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
         <nav className="mb-2 flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
           <button
@@ -551,7 +533,10 @@ export function PromptEditor({
             >
               <button
                 type="button"
+                onClick={() => setShowFormattingHelp((prev) => !prev)}
                 className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors"
+                aria-expanded={showFormattingHelp}
+                aria-controls="formatting-help"
               >
                 <Info className="h-3.5 w-3.5" />
                 Formatting help
@@ -560,14 +545,26 @@ export function PromptEditor({
                 <span>{wordCount} words · {charCount} characters</span>
                 <button
                   type="button"
+                  onClick={() => setIsEditorExpanded((prev) => !prev)}
                   className="hover:text-[var(--color-primary)] transition-colors"
-                  aria-label="Expand editor"
+                  aria-label={isEditorExpanded ? 'Restore preview' : 'Expand editor'}
+                  aria-pressed={isEditorExpanded}
                 >
-                  <Maximize2 className="h-3.5 w-3.5" />
+                  {isEditorExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                 </button>
               </div>
             </div>
           </div>
+          {showFormattingHelp && (
+            <div
+              id="formatting-help"
+              className="mt-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-xs text-[var(--color-text-muted)]"
+            >
+              <p className="font-medium text-[var(--color-text-main)]">Template formatting</p>
+              <p className="mt-1">Use double braces for variables, such as {'{{topic}}'} or {'{{audience}}'}.</p>
+              <p className="mt-1">Line breaks and spacing are preserved in the final prompt.</p>
+            </div>
+          )}
         </div>
 
         {/* ── Metadata Footer ─────────────────────────────────────────────── */}
@@ -582,6 +579,7 @@ export function PromptEditor({
       </div>
 
       {/* ── Right Column: Live Preview ──────────────────────────────────────── */}
+      {!isEditorExpanded && (
       <aside className="w-80 shrink-0 border-l border-[var(--color-border)] bg-[var(--color-panel)] overflow-y-auto">
         {/* Live Preview Header */}
         <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
@@ -666,6 +664,7 @@ export function PromptEditor({
           </p>
         </div>
       </aside>
+      )}
     </div>
   );
 }

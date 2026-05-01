@@ -11,8 +11,8 @@ export interface VariableFillModalProps {
   prompt: PromptRecipe;
   variables: string[];
   onCancel: () => void;
-  onCopy: (renderedText: string) => void;
-  onPaste: (renderedText: string) => void;
+  onCopy: (renderedText: string) => void | Promise<void>;
+  onPaste: (renderedText: string) => void | Promise<void>;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,6 +70,7 @@ export function VariableFillModal({
 
   const firstInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const mountedRef = useRef(true);
 
   // ── Computed values ────────────────────────────────────────────────────────
   const isComplete = useMemo(
@@ -89,6 +90,42 @@ export function VariableFillModal({
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleValueChange = useCallback((variableName: string, value: string) => {
+    setValues((prev) => ({ ...prev, [variableName]: value }));
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    if (!isComplete) return;
+
+    Promise.resolve(onCopy(renderedText))
+      .then(() => {
+        if (!mountedRef.current) return;
+        setCopied(true);
+        setTimeout(() => {
+          if (mountedRef.current) {
+            setCopied(false);
+          }
+        }, 2000);
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setCopied(false);
+        }
+      });
+  }, [isComplete, renderedText, onCopy]);
+
+  const handlePaste = useCallback(() => {
+    if (!isComplete) return;
+    Promise.resolve(onPaste(renderedText)).catch(() => {});
+  }, [isComplete, renderedText, onPaste]);
 
   // ── Keyboard handler (Escape to close, ⌘↵ to copy, ⌘V to paste) ──────────
   useEffect(() => {
@@ -115,31 +152,7 @@ export function VariableFillModal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isComplete, onCancel]);
-
-  // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleValueChange = useCallback((variableName: string, value: string) => {
-    setValues((prev) => ({ ...prev, [variableName]: value }));
-  }, []);
-
-  const handleCopy = useCallback(() => {
-    if (!isComplete) return;
-
-    // TODO: Wire to Tauri clipboard write command
-    onCopy(renderedText);
-
-    // Show "Copied!" success state for ~2 seconds
-    setCopied(true);
-    setTimeout(() => {
-      setCopied(false);
-    }, 2000);
-  }, [isComplete, renderedText, onCopy]);
-
-  const handlePaste = useCallback(() => {
-    if (!isComplete) return;
-    // TODO: Wire to Tauri clipboard paste command
-    onPaste(renderedText);
-  }, [isComplete, renderedText, onPaste]);
+  }, [handleCopy, isComplete, onCancel]);
 
   // ── Backdrop click handler ─────────────────────────────────────────────────
   const handleBackdropClick = useCallback(

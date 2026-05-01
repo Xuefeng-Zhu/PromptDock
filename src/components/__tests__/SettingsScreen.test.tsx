@@ -160,17 +160,20 @@ vi.mock('../../utils/hotkey', () => ({
 
 // ─── Mock Tauri dialog/fs modules (dynamic imports in SettingsScreen) ──────────
 
-const mockSaveFile = vi.fn(async () => true);
-const mockOpenFile = vi.fn(async () => null);
+const mockSaveFile = vi.fn(
+  async (_content: string, _defaultName: string): Promise<boolean> => true,
+);
+const mockOpenFile = vi.fn(async (): Promise<string | null> => null);
 
 vi.mock('../../utils/file-dialog', () => ({
-  saveFile: (...args: unknown[]) => mockSaveFile(...args),
-  openFile: (...args: unknown[]) => mockOpenFile(...args),
+  saveFile: (content: string, defaultName: string) => mockSaveFile(content, defaultName),
+  openFile: () => mockOpenFile(),
 }));
 
 // jsdom doesn't implement scrollIntoView
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  HTMLElement.prototype.scrollTo = vi.fn();
 });
 
 beforeEach(() => {
@@ -238,6 +241,28 @@ describe('SettingsScreen', () => {
     expect(aboutNavButton).toBeDefined();
     fireEvent.click(aboutNavButton!);
     expect(aboutNavButton!.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('scrolls the settings content pane when a nav section is clicked', () => {
+    const scrollToSpy = vi.spyOn(HTMLElement.prototype, 'scrollTo');
+    render(<SettingsScreen onBack={() => {}} />);
+
+    const nav = screen.getByRole('navigation', { name: 'Settings navigation' });
+    const aboutNavButton = Array.from(nav.querySelectorAll('button')).find(btn =>
+      btn.textContent?.includes('About'),
+    );
+
+    fireEvent.click(aboutNavButton!);
+
+    expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+
+  it('keeps settings content in a dedicated scroll pane', () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const scrollPane = screen.getByTestId('settings-scroll-pane');
+
+    expect(scrollPane.className).toContain('min-h-0');
+    expect(scrollPane.className).toContain('overflow-y-scroll');
   });
 });
 

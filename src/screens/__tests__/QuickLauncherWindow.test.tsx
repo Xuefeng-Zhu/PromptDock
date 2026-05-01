@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { PromptRecipe } from '../../types/index';
 import type { IPromptRepository } from '../../repositories/interfaces';
 import { initPromptStore } from '../../stores/prompt-store';
@@ -160,6 +160,22 @@ describe('QuickLauncherWindow', () => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith('Just plain text content');
     });
 
+    it('shows an error and keeps the window open when copying fails', async () => {
+      mockCopyToClipboard.mockRejectedValueOnce(new Error('clipboard denied'));
+      await setupStore();
+      render(<QuickLauncherWindow />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Simple Prompt'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeDefined();
+      });
+      expect(screen.getByText('Simple Prompt')).toBeDefined();
+      expect(mockInvoke).not.toHaveBeenCalledWith('toggle_quick_launcher');
+    });
+
     it('calls copyToClipboard via Enter key on highlighted prompt', async () => {
       await setupStore([PROMPT_NO_VARS]);
       render(<QuickLauncherWindow />);
@@ -214,6 +230,35 @@ describe('QuickLauncherWindow', () => {
       });
 
       expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello Alice, welcome to Wonderland');
+    });
+
+    it('does not show copied success when Copy fails in VariableFillModal', async () => {
+      mockCopyToClipboard.mockRejectedValueOnce(new Error('clipboard denied'));
+      await setupStore();
+      render(<QuickLauncherWindow />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Variable Prompt'));
+      });
+
+      await act(async () => {
+        fireEvent.change(screen.getByLabelText('Value for variable name'), {
+          target: { value: 'Alice' },
+        });
+        fireEvent.change(screen.getByLabelText('Value for variable place'), {
+          target: { value: 'Wonderland' },
+        });
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Copy final prompt/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeDefined();
+      });
+      expect(screen.queryByText('Copied!')).toBeNull();
+      expect(mockInvoke).not.toHaveBeenCalledWith('toggle_quick_launcher');
     });
 
     it('calls pasteToActiveApp when Paste is clicked in VariableFillModal', async () => {

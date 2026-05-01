@@ -22,7 +22,6 @@ import { applyTheme } from './utils/theme';
 let initialized = false;
 let syncServiceInstance: SyncService | null = null;
 let conflictServiceInstance: ConflictService | null = null;
-let promptRepoInstance: PromptRepository | null = null;
 let authServiceInstance: AuthService | null = null;
 
 /** Get the shared ConflictService instance (available after initialization). */
@@ -56,7 +55,6 @@ async function initializeApp(): Promise<void> {
   // 2. Create repositories
   const promptRepo = new PromptRepository(backend);
   const settingsRepo = new SettingsRepository(backend);
-  promptRepoInstance = promptRepo;
 
   // 3. Initialize Zustand stores with real repositories
   const appModeStore = initAppModeStore();

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   User,
@@ -953,6 +953,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
 
   // ── Settings update error (for theme, default action, etc.) ────────────────
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
 
   // ── Handlers that delegate to SettingsStore ────────────────────────────────
   const handleThemeChange = useCallback(
@@ -1011,8 +1012,17 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
   const scrollToSection = useCallback((id: SectionId) => {
     setActiveSection(id);
     const el = sectionRefs.current[id];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const container = contentScrollRef.current;
+    if (el && container) {
+      const containerTop = container.getBoundingClientRect().top;
+      const sectionTop = el.getBoundingClientRect().top;
+      const targetTop = container.scrollTop + sectionTop - containerTop;
+
+      if (typeof container.scrollTo === 'function') {
+        container.scrollTo({ top: targetTop, behavior: 'smooth' });
+      } else {
+        container.scrollTop = targetTop;
+      }
     }
   }, []);
 
@@ -1023,8 +1033,38 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
     [],
   );
 
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
+  useEffect(() => {
+    const container = contentScrollRef.current;
+    if (!container) return;
+    const scrollContainer = container;
+
+    function updateActiveSection() {
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      let current: SectionId = 'account-sync';
+
+      for (const item of NAV_ITEMS) {
+        const section = sectionRefs.current[item.id];
+        if (!section) continue;
+        const offset = section.getBoundingClientRect().top - containerTop;
+        if (offset <= 72) {
+          current = item.id;
+        }
+      }
+
+      setActiveSection(current);
+    }
+
+    scrollContainer.addEventListener('scroll', updateActiveSection, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', updateActiveSection);
+  }, []);
+
   return (
-    <div className="flex h-full flex-col bg-[var(--color-background)]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)]">
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6 py-4">
         <Button
@@ -1042,7 +1082,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
       </header>
 
       {/* ── Two-column layout ───────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left nav column */}
         <nav
           className="w-56 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] p-4"
@@ -1075,7 +1115,11 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
         </nav>
 
         {/* Right content column */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          ref={contentScrollRef}
+          className="min-h-0 flex-1 overflow-y-scroll p-6"
+          data-testid="settings-scroll-pane"
+        >
           {loading ? (
             <div className="mx-auto max-w-2xl space-y-6" aria-label="Loading settings">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -1108,6 +1152,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               ref={setSectionRef('account-sync')}
               id="settings-account-sync"
               aria-label="Account and Sync settings"
+              className="scroll-mt-6"
             >
               <AccountCard authService={authService} />
               <div className="mt-4">
@@ -1123,6 +1168,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               ref={setSectionRef('appearance')}
               id="settings-appearance"
               aria-label="Appearance settings"
+              className="scroll-mt-6"
             >
               <AppearanceCard
                 theme={settings.theme}
@@ -1137,6 +1183,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               ref={setSectionRef('hotkey')}
               id="settings-hotkey"
               aria-label="Hotkey settings"
+              className="scroll-mt-6"
             >
               <HotkeyCard hotkey={settings.hotkeyCombo} onHotkeyChange={handleHotkeyChange} error={hotkeyError} />
             </section>
@@ -1146,6 +1193,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               ref={setSectionRef('default-behavior')}
               id="settings-default-behavior"
               aria-label="Default behavior settings"
+              className="scroll-mt-6"
             >
               <DefaultBehaviorCard
                 defaultAction={settings.defaultAction}
@@ -1158,6 +1206,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               ref={setSectionRef('import-export')}
               id="settings-import-export"
               aria-label="Import and export settings"
+              className="scroll-mt-6"
             >
               <ImportExportCard />
             </section>
@@ -1167,6 +1216,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               ref={setSectionRef('about')}
               id="settings-about"
               aria-label="About PromptDock"
+              className="scroll-mt-6"
             >
               <AboutCard />
             </section>

@@ -44,9 +44,23 @@ describe('PromptEditor', () => {
     expect(screen.getByText('Insert variable')).toBeDefined();
   });
 
-  it('renders Formatting help link', () => {
+  it('opens formatting help when Formatting help is clicked', () => {
     render(<PromptEditor {...defaultProps} />);
-    expect(screen.getByText('Formatting help')).toBeDefined();
+    expect(screen.queryByText('Template formatting')).toBeNull();
+    fireEvent.click(screen.getByText('Formatting help'));
+    expect(screen.getByText('Template formatting')).toBeDefined();
+  });
+
+  it('expands the editor and restores the preview rail', () => {
+    render(<PromptEditor {...defaultProps} />);
+    expect(screen.getByText('Live Preview')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand editor' }));
+    expect(screen.queryByText('Live Preview')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Restore preview' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore preview' }));
+    expect(screen.getByText('Live Preview')).toBeDefined();
   });
 
   it('renders action buttons including Save', () => {

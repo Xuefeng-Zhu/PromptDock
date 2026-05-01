@@ -12,6 +12,10 @@ import type { PromptRecipe } from '../types/index';
 const searchEngine = new SearchEngine();
 const variableParser = new VariableParser();
 
+function formatActionError(action: string, err: unknown): string {
+  return `Failed to ${action}: ${err instanceof Error ? err.message : String(err)}`;
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
@@ -26,6 +30,7 @@ export function QuickLauncherWindow() {
   const [query, setQuery] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState<PromptRecipe | null>(null);
   const [highlightIndex, setHighlightIndex] = useState(0);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +55,7 @@ export function QuickLauncherWindow() {
     setQuery('');
     setSelectedPrompt(null);
     setHighlightIndex(0);
+    setActionError(null);
     try {
       await invoke('toggle_quick_launcher');
     } catch {
@@ -75,14 +81,26 @@ export function QuickLauncherWindow() {
 
   // ── Copy to clipboard and close ──────────────────────────────────────────
   const copyAndClose = useCallback(async (text: string) => {
-    await copyToClipboard(text);
-    await hideWindow();
+    setActionError(null);
+    try {
+      await copyToClipboard(text);
+      await hideWindow();
+    } catch (err) {
+      setActionError(formatActionError('copy prompt', err));
+      throw err;
+    }
   }, [hideWindow]);
 
   // ── Paste into active app ────────────────────────────────────────────────
   const pasteAndClose = useCallback(async (text: string) => {
-    await pasteToActiveApp(text);
-    await hideWindow();
+    setActionError(null);
+    try {
+      await pasteToActiveApp(text);
+      await hideWindow();
+    } catch (err) {
+      setActionError(formatActionError('paste prompt', err));
+      throw err;
+    }
   }, [hideWindow]);
 
   // ── Handle prompt selection ──────────────────────────────────────────────
@@ -93,7 +111,7 @@ export function QuickLauncherWindow() {
         setSelectedPrompt(prompt);
       } else {
         // No variables — copy body directly and close
-        copyAndClose(prompt.body);
+        void copyAndClose(prompt.body).catch(() => {});
       }
     },
     [copyAndClose],
@@ -123,15 +141,19 @@ export function QuickLauncherWindow() {
     const variables = variableParser.parse(selectedPrompt.body);
     return (
       <div className="flex h-screen flex-col bg-white dark:bg-gray-800">
+        {actionError && (
+          <div
+            role="alert"
+            className="fixed left-1/2 top-3 z-[60] -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 shadow-sm dark:border-red-800 dark:bg-red-900/40 dark:text-red-200"
+          >
+            {actionError}
+          </div>
+        )}
         <VariableFillModal
           prompt={selectedPrompt}
           variables={variables}
-          onCopy={(text) => {
-            void copyAndClose(text);
-          }}
-          onPaste={(text) => {
-            void pasteAndClose(text);
-          }}
+          onCopy={copyAndClose}
+          onPaste={pasteAndClose}
           onCancel={() => setSelectedPrompt(null)}
         />
       </div>
@@ -153,6 +175,11 @@ export function QuickLauncherWindow() {
           aria-label="Search prompts"
           autoFocus
         />
+        {actionError && (
+          <p role="alert" className="mt-2 text-xs text-red-600 dark:text-red-300">
+            {actionError}
+          </p>
+        )}
       </div>
 
       {/* Results list */}

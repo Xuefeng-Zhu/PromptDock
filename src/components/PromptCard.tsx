@@ -11,6 +11,7 @@ export interface PromptCardProps {
   isSelected: boolean;
   onSelect: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  viewMode?: 'grid' | 'list';
 }
 
 // ─── Icon Mapping ──────────────────────────────────────────────────────────────
@@ -92,12 +93,36 @@ export function PromptCard({
   isSelected,
   onSelect,
   onToggleFavorite,
+  viewMode = 'grid',
 }: PromptCardProps) {
   // Parse the icon name from the categoryColor — the CATEGORY_COLORS data
   // includes an `icon` field, but PromptCard receives only the color string.
   // The parent (PromptGrid) should ideally pass the icon name too, but for now
   // we infer a default icon from the color family.
   const iconNode = resolveIconFromColor(categoryColor);
+
+  const isList = viewMode === 'list';
+
+  const favoriteButton = (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggleFavorite(prompt.id);
+      }}
+      className="shrink-0 rounded-md p-0.5 transition-colors hover:bg-gray-100"
+      aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
+    >
+      <Star
+        className={[
+          'h-4 w-4 transition-colors',
+          prompt.favorite
+            ? 'fill-yellow-400 text-yellow-400'
+            : 'text-[var(--color-text-placeholder)]',
+        ].join(' ')}
+      />
+    </button>
+  );
 
   return (
     <div
@@ -106,7 +131,7 @@ export function PromptCard({
       className={[
         'relative rounded-xl border bg-[var(--color-panel)] p-4 cursor-pointer',
         'transition-all duration-200 ease-in-out',
-        'shadow-sm hover:shadow-md',
+        isList ? 'flex items-center gap-4 shadow-sm hover:shadow' : 'shadow-sm hover:shadow-md',
         isSelected
           ? 'border-[#2563EB] ring-1 ring-[#2563EB]'
           : 'border-[var(--color-border)]',
@@ -125,7 +150,7 @@ export function PromptCard({
       )}
 
       {/* Header: IconTile + Title */}
-      <div className="flex items-start gap-3">
+      <div className={isList ? 'flex min-w-0 flex-1 items-start gap-3' : 'flex items-start gap-3'}>
         <IconTile icon={iconNode} color={categoryColor} />
 
         <div className="flex-1 min-w-0">
@@ -135,15 +160,28 @@ export function PromptCard({
 
           {/* Truncated description */}
           {prompt.description && (
-            <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed line-clamp-2">
+            <p
+              className={[
+                'mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed',
+                isList ? 'truncate' : 'line-clamp-2',
+              ].join(' ')}
+            >
               {truncate(prompt.description, 120)}
             </p>
+          )}
+
+          {isList && prompt.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {prompt.tags.slice(0, 4).map((tag) => (
+                <TagPill key={tag} tag={tag} />
+              ))}
+            </div>
           )}
         </div>
       </div>
 
       {/* Tags */}
-      {prompt.tags.length > 0 && (
+      {!isList && prompt.tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {prompt.tags.map((tag) => (
             <TagPill key={tag} tag={tag} />
@@ -152,28 +190,17 @@ export function PromptCard({
       )}
 
       {/* Footer: relative timestamp + favorite star */}
-      <div className="mt-3 pt-2 border-t border-[var(--color-border)] flex items-center justify-between">
+      <div
+        className={
+          isList
+            ? 'ml-auto flex shrink-0 items-center gap-3'
+            : 'mt-3 flex items-center justify-between border-t border-[var(--color-border)] pt-2'
+        }
+      >
         <span className="text-[11px] text-[var(--color-text-placeholder)]">
           {formatRelativeTime(prompt.lastUsedAt)}
         </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavorite(prompt.id);
-          }}
-          className="shrink-0 p-0.5 rounded-md hover:bg-gray-100 transition-colors"
-          aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          <Star
-            className={[
-              'h-4 w-4 transition-colors',
-              prompt.favorite
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'text-[var(--color-text-placeholder)]',
-            ].join(' ')}
-          />
-        </button>
+        {favoriteButton}
       </div>
     </div>
   );

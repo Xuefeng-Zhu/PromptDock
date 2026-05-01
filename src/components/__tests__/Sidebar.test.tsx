@@ -82,7 +82,19 @@ describe('Sidebar', () => {
   it('renders bottom toolbar with settings and dark mode toggle', () => {
     render(<Sidebar {...defaultProps} />);
     expect(screen.getByRole('button', { name: 'Settings' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Toggle dark mode' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Switch to dark mode' })).toBeDefined();
     expect(screen.getByText('⌘,')).toBeDefined();
+  });
+
+  it('calls onToggleTheme when the theme toggle is clicked', () => {
+    const onToggleTheme = vi.fn();
+    render(<Sidebar {...defaultProps} onToggleTheme={onToggleTheme} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }));
+    expect(onToggleTheme).toHaveBeenCalledOnce();
+  });
+
+  it('labels the theme toggle as light mode when dark theme is active', () => {
+    render(<Sidebar {...defaultProps} theme="dark" />);
+    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeDefined();
   });
 });

@@ -68,6 +68,11 @@ export function PromptInspector({ prompt, folder, variables, onToggleFavorite, o
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const handleEdit = () => {
+    onEdit?.(prompt.id);
+    setMenuOpen(false);
+  };
+
   // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
@@ -125,9 +130,9 @@ export function PromptInspector({ prompt, folder, variables, onToggleFavorite, o
                     role="menu"
                     className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1 shadow-lg"
                   >
-                    <DropdownItem icon={<Pencil className="h-4 w-4" />} label="Edit prompt" onClick={() => { onEdit?.(prompt.id); setMenuOpen(false); }} />
+                    <DropdownItem icon={<Pencil className="h-4 w-4" />} label="Edit prompt" onClick={handleEdit} />
                     <DropdownItem icon={<Files className="h-4 w-4" />} label="Duplicate" onClick={() => { onDuplicate?.(prompt.id); setMenuOpen(false); }} />
-                    <DropdownItem icon={<FolderInput className="h-4 w-4" />} label="Move to folder" onClick={() => setMenuOpen(false)} />
+                    <DropdownItem icon={<FolderInput className="h-4 w-4" />} label="Move to folder" onClick={handleEdit} />
                     <DropdownItem icon={<Archive className="h-4 w-4" />} label="Archive" onClick={() => { onArchive?.(prompt.id); setMenuOpen(false); }} />
                     <div className="my-1 border-t border-[var(--color-border)]" />
                     <DropdownItem icon={<Trash2 className="h-4 w-4" />} label="Delete" onClick={() => { onDelete?.(prompt.id); setMenuOpen(false); }} danger />
@@ -161,6 +166,7 @@ export function PromptInspector({ prompt, folder, variables, onToggleFavorite, o
               type="button"
               className="inline-flex items-center justify-center h-6 w-6 rounded-full border border-dashed border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
               aria-label="Add tag"
+              onClick={handleEdit}
             >
               <Plus className="h-3 w-3" />
             </button>

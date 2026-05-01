@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Sidebar } from '../Sidebar';
 import { PromptEditor } from '../PromptEditor';
 import { createFolder, readFolders, writeFolders } from '../../utils/folder-storage';
@@ -136,7 +136,7 @@ describe('PromptEditor tag persistence', () => {
     { id: 'folder-1', name: 'General', createdAt: new Date(), updatedAt: new Date() },
   ];
 
-  it('includes tags in onSave data when tags are added', () => {
+  it('includes tags in onSave data when tags are added', async () => {
     const onSave = vi.fn();
     render(
       <PromptEditor
@@ -148,6 +148,7 @@ describe('PromptEditor tag persistence', () => {
 
     // Fill in required fields
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Test Prompt' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
 
     // Add a tag
     const addTagBtn = screen.getByRole('button', { name: 'Add tag' });
@@ -159,12 +160,14 @@ describe('PromptEditor tag persistence', () => {
     // Save
     fireEvent.click(screen.getByText('Save'));
 
-    expect(onSave).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
     const savedData = onSave.mock.calls[0][0];
     expect(savedData.tags).toContain('my-tag');
   });
 
-  it('includes multiple tags in onSave data', () => {
+  it('includes multiple tags in onSave data', async () => {
     const onSave = vi.fn();
     render(
       <PromptEditor
@@ -173,6 +176,10 @@ describe('PromptEditor tag persistence', () => {
         onCancel={vi.fn()}
       />,
     );
+
+    // Fill in required fields
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Test Prompt' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
 
     // Add first tag
     const addTagBtn = screen.getByRole('button', { name: 'Add tag' });
@@ -191,11 +198,14 @@ describe('PromptEditor tag persistence', () => {
     // Save
     fireEvent.click(screen.getByText('Save'));
 
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
     const savedData = onSave.mock.calls[0][0];
     expect(savedData.tags).toEqual(['tag-one', 'tag-two']);
   });
 
-  it('preserves existing tags when editing a prompt', () => {
+  it('preserves existing tags when editing a prompt', async () => {
     const onSave = vi.fn();
     const existingPrompt = {
       id: 'p1',
@@ -228,11 +238,14 @@ describe('PromptEditor tag persistence', () => {
     // Save without modifying tags
     fireEvent.click(screen.getByText('Save'));
 
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
     const savedData = onSave.mock.calls[0][0];
     expect(savedData.tags).toContain('existing-tag');
   });
 
-  it('includes newly added tags alongside existing tags when editing', () => {
+  it('includes newly added tags alongside existing tags when editing', async () => {
     const onSave = vi.fn();
     const existingPrompt = {
       id: 'p1',
@@ -272,6 +285,9 @@ describe('PromptEditor tag persistence', () => {
     // Save
     fireEvent.click(screen.getByText('Save'));
 
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
     const savedData = onSave.mock.calls[0][0];
     expect(savedData.tags).toContain('old-tag');
     expect(savedData.tags).toContain('new-tag');

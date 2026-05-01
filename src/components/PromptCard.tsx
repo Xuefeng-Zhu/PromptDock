@@ -128,15 +128,24 @@ export function PromptCard({
     <div
       role="option"
       aria-selected={isSelected}
+      tabIndex={0}
       className={[
         'relative rounded-xl border bg-[var(--color-panel)] p-4 cursor-pointer',
         'transition-all duration-200 ease-in-out',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]',
         isList ? 'flex items-center gap-4 shadow-sm hover:shadow' : 'shadow-sm hover:shadow-md',
         isSelected
           ? 'border-[#2563EB] ring-1 ring-[#2563EB]'
           : 'border-[var(--color-border)]',
       ].join(' ')}
       onClick={() => onSelect(prompt.id)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(prompt.id);
+        }
+      }}
       data-testid={`prompt-card-${prompt.id}`}
     >
       {/* Selected checkmark indicator */}

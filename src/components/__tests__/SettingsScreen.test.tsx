@@ -454,6 +454,7 @@ describe('SettingsScreen + hotkey registration', () => {
       expect(alert.textContent).toContain('Failed to register hotkey');
       expect(alert.textContent).toContain('Hotkey already in use');
     });
+    expect(mockRepo.update).not.toHaveBeenCalledWith({ hotkeyCombo: '' });
   });
 
   it('clears the error when a subsequent hotkey change succeeds', async () => {
@@ -820,6 +821,20 @@ describe('SettingsScreen + ImportExport integration', () => {
       expect(screen.getByRole('status')).toBeDefined();
       expect(screen.getByRole('status').textContent).toContain('exported successfully');
     });
+  });
+
+  it('does not show export success when the save dialog is cancelled', async () => {
+    mockSaveFile.mockResolvedValueOnce(false);
+
+    render(<SettingsScreen onBack={() => {}} />);
+    const exportBtn = screen.getByRole('button', { name: 'Export prompts to JSON file' });
+
+    await act(async () => {
+      fireEvent.click(exportBtn);
+    });
+
+    expect(mockSaveFile).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('displays validation errors when importing invalid JSON', async () => {

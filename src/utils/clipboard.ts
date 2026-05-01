@@ -1,5 +1,14 @@
 import { invoke } from '@tauri-apps/api/core';
 
+export interface PasteResult {
+  copied: true;
+  pasted: boolean;
+}
+
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
 function copyViaSelection(text: string): boolean {
   if (typeof document === 'undefined') return false;
 
@@ -76,12 +85,17 @@ export async function copyToClipboard(text: string): Promise<void> {
 export async function pasteToActiveApp(
   text: string,
   beforePaste?: () => Promise<void>,
-): Promise<void> {
+): Promise<PasteResult> {
   await copyToClipboard(text);
   await beforePaste?.();
   try {
     await invoke('paste_to_active_app');
-  } catch {
-    // Paste not available outside Tauri — text is on clipboard
+    return { copied: true, pasted: true };
+  } catch (err) {
+    if (isTauriRuntime()) {
+      throw err;
+    }
+    // Paste is not available outside Tauri. The text remains on the clipboard.
+    return { copied: true, pasted: false };
   }
 }

@@ -89,7 +89,7 @@ describe('PromptInspector', () => {
       const copyBtn = screen.getByRole('button', { name: 'Copy prompt body' });
       fireEvent.click(copyBtn);
       expect(onCopyBody).toHaveBeenCalledTimes(1);
-      expect(onCopyBody).toHaveBeenCalledWith(mockPrompt.body);
+      expect(onCopyBody).toHaveBeenCalledWith(mockPrompt.body, mockPrompt.id);
     });
 
     it('calls onEdit with prompt id and closes dropdown when "Edit prompt" is clicked', () => {

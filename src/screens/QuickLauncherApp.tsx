@@ -15,8 +15,9 @@ export function QuickLauncherApp() {
     initializeApp({
       seedDefaultData: false,
       registerGlobalHotkey: false,
-      enableBackgroundServices: false,
-      restoreAuthSession: false,
+      enableBackgroundServices: true,
+      restoreAuthSession: true,
+      syncMigrationChoice: 'fresh',
     })
       .then(() => setReady(true))
       .catch((err) => {

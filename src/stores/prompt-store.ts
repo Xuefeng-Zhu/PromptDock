@@ -31,6 +31,7 @@ export interface PromptStore {
   deletePrompt: (id: string) => Promise<void>;
   duplicatePrompt: (id: string) => Promise<void>;
   toggleFavorite: (id: string) => Promise<void>;
+  markPromptUsed: (id: string) => Promise<void>;
   archivePrompt: (id: string) => Promise<void>;
   restorePrompt: (id: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
@@ -97,6 +98,13 @@ export function createPromptStore(repo: IPromptRepository) {
 
     async toggleFavorite(id: string) {
       const updated = await repo.toggleFavorite(id);
+      set((state) => ({
+        prompts: state.prompts.map((p) => (p.id === id ? updated : p)),
+      }));
+    },
+
+    async markPromptUsed(id: string) {
+      const updated = await repo.update(id, { lastUsedAt: new Date() });
       set((state) => ({
         prompts: state.prompts.map((p) => (p.id === id ? updated : p)),
       }));

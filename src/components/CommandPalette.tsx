@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import type { PromptRecipe } from '../types/index';
+import { SearchEngine } from '../services/search-engine';
 
 // ─── Exported Utility Functions ────────────────────────────────────────────────
 
@@ -24,15 +25,12 @@ export function filterCommandPaletteResults(
   prompts: PromptRecipe[],
   query: string,
 ): PromptRecipe[] {
-  if (query.trim() === '') return prompts;
-  const q = query.toLowerCase();
-  return prompts.filter(
-    (p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.description.toLowerCase().includes(q) ||
-      p.tags.some((tag) => tag.toLowerCase().includes(q)),
-  );
+  return commandPaletteSearch.search(prompts, query, {
+    fields: ['title', 'tags', 'description'],
+  });
 }
+
+const commandPaletteSearch = new SearchEngine();
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

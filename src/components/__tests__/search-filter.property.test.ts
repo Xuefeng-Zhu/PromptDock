@@ -39,7 +39,7 @@ const searchQueryArb = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => 
 // ─── Helper ────────────────────────────────────────────────────────────────────
 
 function matchesQuery(prompt: PromptRecipe, query: string): boolean {
-  const q = query.toLowerCase();
+  const q = query.trim().toLowerCase();
   return (
     prompt.title.toLowerCase().includes(q) ||
     prompt.description.toLowerCase().includes(q) ||

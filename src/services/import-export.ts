@@ -6,6 +6,18 @@ import type { IImportExportService } from './interfaces';
  */
 const EXPORT_SCHEMA_VERSION = '1.0';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isValidDateString(value: unknown): value is string {
+  return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
 /**
  * Shape of the export JSON document.
  */
@@ -71,18 +83,22 @@ export class ImportExportService implements IImportExportService {
     // Step 2: Validate top-level structure
     const errors: string[] = [];
 
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    if (!isRecord(parsed)) {
       return { success: false, errors: ['Invalid format: expected a JSON object'] };
     }
 
-    const doc = parsed as Record<string, unknown>;
+    const doc = parsed;
 
     if (!('version' in doc) || typeof doc.version !== 'string') {
       errors.push('Missing or invalid field: "version" must be a string');
+    } else if (doc.version !== EXPORT_SCHEMA_VERSION) {
+      errors.push(`Unsupported export version: expected "${EXPORT_SCHEMA_VERSION}"`);
     }
 
     if (!('exportedAt' in doc) || typeof doc.exportedAt !== 'string') {
       errors.push('Missing or invalid field: "exportedAt" must be a string');
+    } else if (!isValidDateString(doc.exportedAt)) {
+      errors.push('Invalid field: "exportedAt" must be a valid date string');
     }
 
     if (!('prompts' in doc) || !Array.isArray(doc.prompts)) {
@@ -100,22 +116,53 @@ export class ImportExportService implements IImportExportService {
     for (let i = 0; i < promptsArray.length; i++) {
       const item = promptsArray[i];
 
-      if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      if (!isRecord(item)) {
         errors.push(`Prompt at index ${i}: expected an object`);
         continue;
       }
 
-      const prompt = item as Record<string, unknown>;
+      const prompt = item;
+      const promptErrors: string[] = [];
 
       if (typeof prompt.title !== 'string' || prompt.title.length === 0) {
-        errors.push(`Prompt at index ${i}: missing or invalid required field "title"`);
+        promptErrors.push(`Prompt at index ${i}: missing or invalid required field "title"`);
       }
 
       if (typeof prompt.body !== 'string') {
-        errors.push(`Prompt at index ${i}: missing or invalid required field "body"`);
+        promptErrors.push(`Prompt at index ${i}: missing or invalid required field "body"`);
       }
 
-      if (errors.length === 0) {
+      if ('description' in prompt && typeof prompt.description !== 'string') {
+        promptErrors.push(`Prompt at index ${i}: optional field "description" must be a string`);
+      }
+
+      if ('tags' in prompt && !isStringArray(prompt.tags)) {
+        promptErrors.push(`Prompt at index ${i}: optional field "tags" must be an array of strings`);
+      }
+
+      if (
+        'folderId' in prompt
+        && prompt.folderId !== null
+        && typeof prompt.folderId !== 'string'
+      ) {
+        promptErrors.push(`Prompt at index ${i}: optional field "folderId" must be a string or null`);
+      }
+
+      if ('favorite' in prompt && typeof prompt.favorite !== 'boolean') {
+        promptErrors.push(`Prompt at index ${i}: optional field "favorite" must be a boolean`);
+      }
+
+      if ('createdAt' in prompt && !isValidDateString(prompt.createdAt)) {
+        promptErrors.push(`Prompt at index ${i}: optional field "createdAt" must be a valid date string`);
+      }
+
+      if ('updatedAt' in prompt && !isValidDateString(prompt.updatedAt)) {
+        promptErrors.push(`Prompt at index ${i}: optional field "updatedAt" must be a valid date string`);
+      }
+
+      errors.push(...promptErrors);
+
+      if (promptErrors.length === 0) {
         validatedPrompts.push(this.toPromptRecipe(prompt));
       }
     }
@@ -201,13 +248,13 @@ export class ImportExportService implements IImportExportService {
       title: data.title as string,
       description: typeof data.description === 'string' ? data.description : '',
       body: data.body as string,
-      tags: Array.isArray(data.tags) ? (data.tags as string[]) : [],
+      tags: isStringArray(data.tags) ? data.tags : [],
       folderId: typeof data.folderId === 'string' ? data.folderId : null,
       favorite: typeof data.favorite === 'boolean' ? data.favorite : false,
       archived: false,
       archivedAt: null,
-      createdAt: typeof data.createdAt === 'string' ? new Date(data.createdAt) : now,
-      updatedAt: typeof data.updatedAt === 'string' ? new Date(data.updatedAt) : now,
+      createdAt: isValidDateString(data.createdAt) ? new Date(data.createdAt) : now,
+      updatedAt: isValidDateString(data.updatedAt) ? new Date(data.updatedAt) : now,
       lastUsedAt: null,
       createdBy: 'local',
       version: 1,

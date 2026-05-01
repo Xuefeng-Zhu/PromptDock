@@ -33,7 +33,7 @@ describe('QuickLauncherApp', () => {
     vi.restoreAllMocks();
   });
 
-  it('initializes the quick launcher without background app services', async () => {
+  it('initializes the quick launcher with shared background app services', async () => {
     render(<QuickLauncherApp />);
 
     await waitFor(() => {
@@ -43,8 +43,9 @@ describe('QuickLauncherApp', () => {
     expect(mockInitializeApp).toHaveBeenCalledWith({
       seedDefaultData: false,
       registerGlobalHotkey: false,
-      enableBackgroundServices: false,
-      restoreAuthSession: false,
+      enableBackgroundServices: true,
+      restoreAuthSession: true,
+      syncMigrationChoice: 'fresh',
     });
     expect(screen.getByTestId('theme-manager')).toBeDefined();
   });

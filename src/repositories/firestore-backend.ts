@@ -21,6 +21,8 @@ export interface FirestoreTimestamp {
   toDate(): Date;
 }
 
+type FirestoreDateValue = FirestoreTimestamp | Date | null | undefined;
+
 export interface FirestorePromptDoc {
   title: string;
   description: string;
@@ -75,8 +77,23 @@ export function dateToTimestamp(date: Date): FirestoreTimestamp {
 /**
  * Convert a FirestoreTimestamp back to a Date.
  */
-export function timestampToDate(timestamp: FirestoreTimestamp): Date {
-  return timestamp.toDate();
+export function timestampToDate(timestamp: FirestoreDateValue): Date {
+  if (!timestamp) return new Date();
+  if (timestamp instanceof Date) return timestamp;
+  if (typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  if (
+    typeof timestamp.seconds === 'number' &&
+    typeof timestamp.nanoseconds === 'number'
+  ) {
+    return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1_000_000);
+  }
+  return new Date();
+}
+
+function nullableTimestampToDate(timestamp: FirestoreDateValue): Date | null {
+  return timestamp ? timestampToDate(timestamp) : null;
 }
 
 /**
@@ -115,10 +132,10 @@ export function firestoreDocToPromptRecipe(id: string, doc: FirestorePromptDoc):
     folderId: doc.folderId,
     favorite: doc.favorite,
     archived: doc.archived,
-    archivedAt: doc.archivedAt ? timestampToDate(doc.archivedAt) : null,
+    archivedAt: nullableTimestampToDate(doc.archivedAt),
     createdAt: timestampToDate(doc.createdAt),
     updatedAt: timestampToDate(doc.updatedAt),
-    lastUsedAt: doc.lastUsedAt ? timestampToDate(doc.lastUsedAt) : null,
+    lastUsedAt: nullableTimestampToDate(doc.lastUsedAt),
     createdBy: doc.createdBy,
     version: doc.version,
   };
@@ -188,19 +205,25 @@ export class FirestoreBackend implements IPromptRepository {
   async create(
     recipe: Omit<PromptRecipe, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<PromptRecipe> {
-    const { addDoc, serverTimestamp } = await import('firebase/firestore');
+    const { addDoc, serverTimestamp, Timestamp } = await import('firebase/firestore');
     const promptsCol = await this.getPromptsCollection();
 
     const now = new Date();
     const docData = {
-      ...promptRecipeToFirestoreDoc({
-        ...recipe,
-        id: '', // placeholder, will be replaced by Firestore-generated ID
-        createdAt: now,
-        updatedAt: now,
-      } as PromptRecipe),
+      title: recipe.title,
+      description: recipe.description,
+      body: recipe.body,
+      tags: [...recipe.tags],
+      folderId: recipe.folderId,
+      favorite: recipe.favorite,
+      archived: recipe.archived,
+      archivedAt: recipe.archivedAt ? Timestamp.fromDate(recipe.archivedAt) : null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      lastUsedAt: recipe.lastUsedAt ? Timestamp.fromDate(recipe.lastUsedAt) : null,
+      createdBy: recipe.createdBy,
+      version: recipe.version,
+      workspaceId: recipe.workspaceId,
     };
 
     const docRef = await addDoc(promptsCol, docData);
@@ -222,7 +245,10 @@ export class FirestoreBackend implements IPromptRepository {
 
     if (!snapshot.exists()) return null;
 
-    return firestoreDocToPromptRecipe(snapshot.id, snapshot.data() as FirestorePromptDoc);
+    return firestoreDocToPromptRecipe(
+      snapshot.id,
+      snapshot.data({ serverTimestamps: 'estimate' }) as FirestorePromptDoc,
+    );
   }
 
   async getAll(workspaceId: string): Promise<PromptRecipe[]> {
@@ -232,36 +258,51 @@ export class FirestoreBackend implements IPromptRepository {
     const snapshot = await getDocs(q);
 
     return snapshot.docs.map((docSnap) =>
-      firestoreDocToPromptRecipe(docSnap.id, docSnap.data() as FirestorePromptDoc),
+      firestoreDocToPromptRecipe(
+        docSnap.id,
+        docSnap.data({ serverTimestamps: 'estimate' }) as FirestorePromptDoc,
+      ),
     );
   }
 
   async update(id: string, changes: Partial<PromptRecipe>): Promise<PromptRecipe> {
-    const { doc, updateDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+    const { doc, updateDoc, getDoc, serverTimestamp, Timestamp, increment } = await import('firebase/firestore');
     const { getFirebaseFirestore } = await import('../firebase/config');
     const firestore = await getFirebaseFirestore();
     const docRef = doc(firestore, 'workspaces', this.workspaceId, 'prompts', id);
 
-    const updateData: Record<string, unknown> = { ...changes, updatedAt: serverTimestamp() };
+    const updateData: Record<string, unknown> = {
+      ...changes,
+      updatedAt: serverTimestamp(),
+      version: increment(1),
+    };
     // Convert Date fields to Timestamps for Firestore
-    if (changes.archivedAt) {
-      updateData.archivedAt = dateToTimestamp(changes.archivedAt);
+    if ('archivedAt' in changes) {
+      updateData.archivedAt = changes.archivedAt
+        ? Timestamp.fromDate(changes.archivedAt)
+        : null;
     }
-    if (changes.lastUsedAt) {
-      updateData.lastUsedAt = dateToTimestamp(changes.lastUsedAt);
+    if ('lastUsedAt' in changes) {
+      updateData.lastUsedAt = changes.lastUsedAt
+        ? Timestamp.fromDate(changes.lastUsedAt)
+        : null;
     }
-    // Remove id from update data — it's the document key, not a field
+    // Remove immutable/generated fields from update data.
     delete updateData.id;
+    delete updateData.createdAt;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await updateDoc(docRef, updateData as Record<string, any>);
 
     const updated = await getDoc(docRef);
-    return firestoreDocToPromptRecipe(updated.id, updated.data() as FirestorePromptDoc);
+    return firestoreDocToPromptRecipe(
+      updated.id,
+      updated.data({ serverTimestamps: 'estimate' }) as FirestorePromptDoc,
+    );
   }
 
   async softDelete(id: string): Promise<void> {
-    const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+    const { doc, updateDoc, serverTimestamp, increment } = await import('firebase/firestore');
     const { getFirebaseFirestore } = await import('../firebase/config');
     const firestore = await getFirebaseFirestore();
     const docRef = doc(firestore, 'workspaces', this.workspaceId, 'prompts', id);
@@ -270,11 +311,12 @@ export class FirestoreBackend implements IPromptRepository {
       archived: true,
       archivedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      version: increment(1),
     });
   }
 
   async restore(id: string): Promise<void> {
-    const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+    const { doc, updateDoc, serverTimestamp, increment } = await import('firebase/firestore');
     const { getFirebaseFirestore } = await import('../firebase/config');
     const firestore = await getFirebaseFirestore();
     const docRef = doc(firestore, 'workspaces', this.workspaceId, 'prompts', id);
@@ -283,6 +325,7 @@ export class FirestoreBackend implements IPromptRepository {
       archived: false,
       archivedAt: null,
       updatedAt: serverTimestamp(),
+      version: increment(1),
     });
   }
 

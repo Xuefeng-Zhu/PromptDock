@@ -8,7 +8,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .manage(commands::CurrentHotkey::default())
         .invoke_handler(tauri::generate_handler![
             commands::copy_to_clipboard,
             commands::paste_to_active_app,
@@ -22,15 +25,18 @@ pub fn run() {
             // ---------------------------------------------------------------
             // System tray icon with "Quit" context menu
             // ---------------------------------------------------------------
-            let quit_item = tauri::menu::MenuItemBuilder::with_id("quit", "Quit")
-                .build(app)?;
+            let quit_item = tauri::menu::MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
             let tray_menu = tauri::menu::MenuBuilder::new(app)
                 .item(&quit_item)
                 .build()?;
 
             let _tray = tauri::tray::TrayIconBuilder::new()
-                .icon(app.default_window_icon().cloned().expect("no app icon configured"))
+                .icon(
+                    app.default_window_icon()
+                        .cloned()
+                        .expect("no app icon configured"),
+                )
                 .menu(&tray_menu)
                 .tooltip("PromptDock")
                 .on_tray_icon_event(|tray_icon, event| {
@@ -45,6 +51,8 @@ pub fn run() {
                             if window.is_visible().unwrap_or(false) {
                                 let _ = window.hide();
                             } else {
+                                #[cfg(target_os = "macos")]
+                                let _ = app.show();
                                 let _ = window.show();
                                 let _ = window.set_focus();
                             }
@@ -74,6 +82,14 @@ pub fn run() {
                 }
             }) {
                 eprintln!("Failed to register default hotkey: {e}");
+            } else {
+                {
+                    let current_hotkey = app.state::<commands::CurrentHotkey>();
+                    let lock_result = current_hotkey.0.lock();
+                    if let Ok(mut hotkey) = lock_result {
+                        *hotkey = Some(default_shortcut.to_string());
+                    }
+                }
             }
 
             Ok(())

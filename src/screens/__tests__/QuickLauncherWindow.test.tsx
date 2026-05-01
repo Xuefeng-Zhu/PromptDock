@@ -176,7 +176,10 @@ describe('QuickLauncherWindow', () => {
 
   describe('12.2 — prompt selection uses copyToClipboard()', () => {
     it('calls copyToClipboard when selecting a prompt without variables', async () => {
-      const store = await setupStore();
+      const store = await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       const promptButton = screen.getByText('Simple Prompt');
@@ -193,7 +196,10 @@ describe('QuickLauncherWindow', () => {
 
     it('shows an error and keeps the window open when copying fails', async () => {
       mockCopyToClipboard.mockRejectedValueOnce(new Error('clipboard denied'));
-      await setupStore();
+      await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       await act(async () => {
@@ -208,7 +214,10 @@ describe('QuickLauncherWindow', () => {
     });
 
     it('calls copyToClipboard via Enter key on highlighted prompt', async () => {
-      await setupStore([PROMPT_NO_VARS]);
+      await setupStore([PROMPT_NO_VARS], {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       const input = screen.getByLabelText('Search prompts');
@@ -236,7 +245,10 @@ describe('QuickLauncherWindow', () => {
     });
 
     it('calls copyToClipboard when Copy is clicked in VariableFillModal', async () => {
-      await setupStore();
+      await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       // Select the prompt with variables
@@ -265,7 +277,10 @@ describe('QuickLauncherWindow', () => {
 
     it('does not show copied success when Copy fails in VariableFillModal', async () => {
       mockCopyToClipboard.mockRejectedValueOnce(new Error('clipboard denied'));
-      await setupStore();
+      await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       await act(async () => {
@@ -292,8 +307,11 @@ describe('QuickLauncherWindow', () => {
       expect(mockInvoke).not.toHaveBeenCalledWith('toggle_quick_launcher');
     });
 
-    it('calls pasteToActiveApp when Paste is clicked in VariableFillModal', async () => {
-      await setupStore();
+    it('does not show Paste in VariableFillModal', async () => {
+      await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       // Select the prompt with variables
@@ -311,22 +329,49 @@ describe('QuickLauncherWindow', () => {
         });
       });
 
-      // Click Paste
-      const pasteButton = screen.getByRole('button', { name: /Paste/i });
+      expect(screen.queryByRole('button', { name: /Paste/i })).toBeNull();
+      expect(mockPasteToActiveApp).not.toHaveBeenCalled();
+    });
+
+    it('uses paste as the VariableFillModal primary action when configured', async () => {
+      await setupStore([PROMPT_NO_VARS, PROMPT_WITH_VARS], {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'paste',
+      });
+      render(<QuickLauncherWindow />);
+
       await act(async () => {
-        fireEvent.click(pasteButton);
+        fireEvent.click(screen.getByText('Variable Prompt'));
+      });
+
+      await act(async () => {
+        fireEvent.change(screen.getByLabelText('Value for variable name'), {
+          target: { value: 'Bob' },
+        });
+        fireEvent.change(screen.getByLabelText('Value for variable place'), {
+          target: { value: 'Office' },
+        });
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Paste into active app/i }));
       });
 
       expect(mockPasteToActiveApp).toHaveBeenCalledWith(
         'Hello Bob, welcome to Office',
         expect.any(Function),
       );
+      expect(mockCopyToClipboard).not.toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalledWith('toggle_quick_launcher');
     });
   });
 
   describe('12.4 — hides window after copy/paste action', () => {
     it('invokes toggle_quick_launcher after copying a prompt without variables', async () => {
-      await setupStore();
+      await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       await act(async () => {
@@ -337,7 +382,10 @@ describe('QuickLauncherWindow', () => {
     });
 
     it('invokes toggle_quick_launcher after Copy in VariableFillModal', async () => {
-      await setupStore();
+      await setupStore(undefined, {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'copy',
+      });
       render(<QuickLauncherWindow />);
 
       // Select prompt with variables
@@ -363,38 +411,8 @@ describe('QuickLauncherWindow', () => {
       expect(mockInvoke).toHaveBeenCalledWith('toggle_quick_launcher');
     });
 
-    it('invokes toggle_quick_launcher after Paste in VariableFillModal', async () => {
-      await setupStore();
-      render(<QuickLauncherWindow />);
-
-      // Select prompt with variables
-      await act(async () => {
-        fireEvent.click(screen.getByText('Variable Prompt'));
-      });
-
-      // Fill variables
-      await act(async () => {
-        fireEvent.change(screen.getByLabelText('Value for variable name'), {
-          target: { value: 'Bob' },
-        });
-        fireEvent.change(screen.getByLabelText('Value for variable place'), {
-          target: { value: 'Office' },
-        });
-      });
-
-      // Click Paste
-      await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Paste/i }));
-      });
-
-      expect(mockInvoke).toHaveBeenCalledWith('toggle_quick_launcher');
-    });
-
-    it('uses the paste action for prompt selection when configured as the default', async () => {
-      await setupStore([PROMPT_NO_VARS], {
-        ...DEFAULT_SETTINGS,
-        defaultAction: 'paste',
-      });
+    it('uses the paste action for prompt selection by default', async () => {
+      await setupStore([PROMPT_NO_VARS]);
       render(<QuickLauncherWindow />);
 
       await act(async () => {

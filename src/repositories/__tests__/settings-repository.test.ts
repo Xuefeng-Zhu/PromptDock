@@ -59,7 +59,7 @@ describe('SettingsRepository', () => {
       const custom: UserSettings = {
         hotkeyCombo: 'Alt+P',
         theme: 'dark',
-        defaultAction: 'paste',
+        defaultAction: 'copy',
         activeWorkspaceId: 'workspace-123',
       };
       backend = createMockBackend(custom);
@@ -84,11 +84,11 @@ describe('SettingsRepository', () => {
     it('should update multiple fields at once', async () => {
       const result = await repo.update({
         theme: 'light',
-        defaultAction: 'paste',
+        defaultAction: 'copy',
       });
 
       expect(result.theme).toBe('light');
-      expect(result.defaultAction).toBe('paste');
+      expect(result.defaultAction).toBe('copy');
       expect(result.hotkeyCombo).toBe(DEFAULT_SETTINGS.hotkeyCombo);
     });
 
@@ -122,11 +122,11 @@ describe('SettingsRepository', () => {
 
     it('should apply sequential updates cumulatively', async () => {
       await repo.update({ theme: 'dark' });
-      await repo.update({ defaultAction: 'paste' });
+      await repo.update({ defaultAction: 'copy' });
 
       const result = await repo.get();
       expect(result.theme).toBe('dark');
-      expect(result.defaultAction).toBe('paste');
+      expect(result.defaultAction).toBe('copy');
     });
 
     it('should return a copy, not the internal reference', async () => {
@@ -156,7 +156,7 @@ describe('SettingsRepository', () => {
     });
 
     it('should have the correct default action', () => {
-      expect(DEFAULT_SETTINGS.defaultAction).toBe('copy');
+      expect(DEFAULT_SETTINGS.defaultAction).toBe('paste');
     });
 
     it('should have the correct default active workspace id', () => {

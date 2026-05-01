@@ -12,6 +12,7 @@ const defaultProps = {
   prompt: testPrompt,
   variables: testVariables,
   onCancel: vi.fn(),
+  defaultAction: 'copy' as const,
   onCopy: vi.fn(),
   onPaste: vi.fn(),
 };
@@ -68,13 +69,22 @@ describe('VariableFillModal', () => {
     expect(copyButton.hasAttribute('disabled')).toBe(true);
   });
 
-  it('disables Paste button when variables are not all filled', () => {
+  it('does not render a Paste button', () => {
     render(<VariableFillModal {...defaultProps} />);
-    const pasteButton = screen.getByRole('button', { name: /Paste/i });
-    expect(pasteButton.hasAttribute('disabled')).toBe(true);
+    expect(screen.queryByRole('button', { name: /Paste/i })).toBeNull();
   });
 
-  it('enables Copy and Paste buttons when all variables are filled', () => {
+  it('defaults the primary action to Paste into active app', () => {
+    const { defaultAction, ...propsWithoutAction } = defaultProps;
+    expect(defaultAction).toBe('copy');
+    render(<VariableFillModal {...propsWithoutAction} />);
+
+    expect(
+      screen.getByRole('button', { name: /Paste into active app/i }),
+    ).toBeDefined();
+  });
+
+  it('enables Copy button when all variables are filled', () => {
     render(<VariableFillModal {...defaultProps} />);
     // Fill all variables
     fireEvent.change(screen.getByLabelText('Value for variable audience'), {
@@ -90,9 +100,7 @@ describe('VariableFillModal', () => {
     const copyButton = screen.getByRole('button', {
       name: /Copy final prompt/i,
     });
-    const pasteButton = screen.getByRole('button', { name: /Paste/i });
     expect(copyButton.hasAttribute('disabled')).toBe(false);
-    expect(pasteButton.hasAttribute('disabled')).toBe(false);
   });
 
   it('calls onCopy with rendered text when Copy button is clicked', async () => {
@@ -122,10 +130,18 @@ describe('VariableFillModal', () => {
     expect(renderedText).toContain('markdown');
   });
 
-  it('calls onPaste with rendered text when Paste button is clicked', () => {
+  it('uses Paste into active app as the primary action when configured', async () => {
+    const onCopy = vi.fn();
     const onPaste = vi.fn();
-    render(<VariableFillModal {...defaultProps} onPaste={onPaste} />);
-    // Fill all variables
+    render(
+      <VariableFillModal
+        {...defaultProps}
+        defaultAction="paste"
+        onCopy={onCopy}
+        onPaste={onPaste}
+      />,
+    );
+
     fireEvent.change(screen.getByLabelText('Value for variable audience'), {
       target: { value: 'managers' },
     });
@@ -136,11 +152,46 @@ describe('VariableFillModal', () => {
       target: { value: 'paragraphs' },
     });
 
-    const pasteButton = screen.getByRole('button', { name: /Paste/i });
-    fireEvent.click(pasteButton);
+    const primaryButton = screen.getByRole('button', {
+      name: /Paste into active app/i,
+    });
+    await act(async () => {
+      fireEvent.click(primaryButton);
+    });
+
     expect(onPaste).toHaveBeenCalledTimes(1);
+    expect(onCopy).not.toHaveBeenCalled();
     const renderedText = onPaste.mock.calls[0][0] as string;
     expect(renderedText).toContain('managers');
+    expect(renderedText).toContain('Report content');
+    expect(renderedText).toContain('paragraphs');
+  });
+
+  it('uses the keyboard shortcut for the configured primary action', async () => {
+    const onPaste = vi.fn();
+    render(
+      <VariableFillModal
+        {...defaultProps}
+        defaultAction="paste"
+        onPaste={onPaste}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Value for variable audience'), {
+      target: { value: 'developers' },
+    });
+    fireEvent.change(screen.getByLabelText('Value for variable text'), {
+      target: { value: 'Hello world' },
+    });
+    fireEvent.change(screen.getByLabelText('Value for variable format'), {
+      target: { value: 'markdown' },
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+    });
+
+    expect(onPaste).toHaveBeenCalledTimes(1);
   });
 
   describe('Copied! success state', () => {
@@ -217,11 +268,11 @@ describe('VariableFillModal', () => {
     });
   });
 
-  it('renders the floating hint text', () => {
+  it('does not render the paste-anywhere hint text', () => {
     render(<VariableFillModal {...defaultProps} />);
     expect(
-      screen.getByText('Built for speed. Use ⌘V to paste anywhere.'),
-    ).toBeDefined();
+      screen.queryByText('Built for speed. Use ⌘V to paste anywhere.'),
+    ).toBeNull();
   });
 
   it('calls onCancel when Cancel button is clicked', () => {
@@ -257,6 +308,6 @@ describe('VariableFillModal', () => {
   it('renders keyboard shortcut hints on buttons', () => {
     render(<VariableFillModal {...defaultProps} />);
     expect(screen.getByText('Esc')).toBeDefined();
-    expect(screen.getByText('⌘V')).toBeDefined();
+    expect(screen.getByText('⌘↵')).toBeDefined();
   });
 });

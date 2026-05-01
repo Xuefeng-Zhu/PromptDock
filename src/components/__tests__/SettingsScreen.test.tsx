@@ -284,8 +284,8 @@ describe('SettingsScreen + SettingsStore integration', () => {
 
   it('reads defaultAction from SettingsStore and displays the correct active option', () => {
     render(<SettingsScreen onBack={() => {}} />);
-    const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i }) as HTMLInputElement;
-    expect(copyRadio.checked).toBe(true);
+    const pasteRadio = screen.getByRole('radio', { name: /Paste into Active App/i }) as HTMLInputElement;
+    expect(pasteRadio.checked).toBe(true);
   });
 
   it('calls updateSettings({ theme }) when theme is changed', async () => {
@@ -301,13 +301,13 @@ describe('SettingsScreen + SettingsStore integration', () => {
 
   it('calls updateSettings({ defaultAction }) when default action is changed', async () => {
     render(<SettingsScreen onBack={() => {}} />);
-    const pasteRadio = screen.getByRole('radio', { name: /Paste into Active App/i });
+    const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i });
 
     await act(async () => {
-      fireEvent.click(pasteRadio);
+      fireEvent.click(copyRadio);
     });
 
-    expect(mockRepo.update).toHaveBeenCalledWith({ defaultAction: 'paste' });
+    expect(mockRepo.update).toHaveBeenCalledWith({ defaultAction: 'copy' });
   });
 
   it('calls updateSettings({ hotkeyCombo }) when hotkey Clear button is clicked', async () => {
@@ -337,11 +337,11 @@ describe('SettingsScreen + SettingsStore integration', () => {
     render(<SettingsScreen onBack={() => {}} />);
 
     await act(async () => {
-      await testStore.getState().updateSettings({ defaultAction: 'paste' });
+      await testStore.getState().updateSettings({ defaultAction: 'copy' });
     });
 
-    const pasteRadio = screen.getByRole('radio', { name: /Paste into Active App/i }) as HTMLInputElement;
-    expect(pasteRadio.checked).toBe(true);
+    const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i }) as HTMLInputElement;
+    expect(copyRadio.checked).toBe(true);
   });
 
   it('reflects updated hotkeyCombo from store after change', async () => {

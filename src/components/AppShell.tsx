@@ -171,6 +171,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   // ── SettingsStore selectors ────────────────────────────────────────────────
 
   const theme = useSettingsStore((s) => s.settings.theme);
+  const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
 
@@ -733,6 +734,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           prompt={variableFillPrompt}
           variables={variableFillVariables}
           onCancel={handleVariableFillCancel}
+          defaultAction={defaultAction}
           onCopy={handleVariableFillCopy}
           onPaste={handleVariableFillPaste}
         />

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Check, Copy, ClipboardPaste, X } from 'lucide-react';
+import { Check, ClipboardPaste, Copy, X } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import type { PromptRecipe } from '../types/index';
+import type { PromptRecipe, UserSettings } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -11,6 +11,7 @@ export interface VariableFillModalProps {
   prompt: PromptRecipe;
   variables: string[];
   onCancel: () => void;
+  defaultAction?: UserSettings['defaultAction'];
   onCopy: (renderedText: string) => void | Promise<void>;
   onPaste: (renderedText: string) => void | Promise<void>;
 }
@@ -43,7 +44,7 @@ function allVariablesFilled(
 /**
  * Redesigned Variable Fill Modal — displays input fields for each detected
  * variable in a prompt template, shows a live rendered preview, and provides
- * Cancel / Paste / Copy action buttons with keyboard shortcut hints.
+ * Cancel and primary action buttons with keyboard shortcut hints.
  *
  * Uses a <dialog> element with role="dialog" and aria-modal="true".
  * Auto-focuses the first variable input on open.
@@ -53,6 +54,7 @@ export function VariableFillModal({
   prompt,
   variables,
   onCancel,
+  defaultAction = 'paste',
   onCopy,
   onPaste,
 }: VariableFillModalProps) {
@@ -82,6 +84,8 @@ export function VariableFillModal({
     () => renderBody(prompt.body, values),
     [prompt.body, values],
   );
+
+  const isPasteAction = defaultAction === 'paste';
 
   // ── Auto-focus first input on mount ────────────────────────────────────────
   useEffect(() => {
@@ -122,12 +126,18 @@ export function VariableFillModal({
       });
   }, [isComplete, renderedText, onCopy]);
 
-  const handlePaste = useCallback(() => {
+  const handlePrimaryAction = useCallback(() => {
     if (!isComplete) return;
-    Promise.resolve(onPaste(renderedText)).catch(() => {});
-  }, [isComplete, renderedText, onPaste]);
 
-  // ── Keyboard handler (Escape to close, ⌘↵ to copy, ⌘V to paste) ──────────
+    if (isPasteAction) {
+      Promise.resolve(onPaste(renderedText)).catch(() => {});
+      return;
+    }
+
+    handleCopy();
+  }, [handleCopy, isComplete, isPasteAction, onPaste, renderedText]);
+
+  // ── Keyboard handler (Escape to close, ⌘↵ for primary action) ────────────
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -138,21 +148,17 @@ export function VariableFillModal({
 
       const isMeta = e.metaKey || e.ctrlKey;
 
-      // ⌘↵ / Ctrl+Enter → Copy final prompt
+      // ⌘↵ / Ctrl+Enter → Primary action
       if (isMeta && e.key === 'Enter' && isComplete) {
         e.preventDefault();
-        handleCopy();
+        handlePrimaryAction();
         return;
       }
-
-      // Note: ⌘V / Ctrl+V is NOT intercepted here to avoid blocking
-      // normal paste behavior into the variable input fields.
-      // The Paste button is available as a click target instead.
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCopy, isComplete, onCancel]);
+  }, [handlePrimaryAction, isComplete, onCancel]);
 
   // ── Backdrop click handler ─────────────────────────────────────────────────
   const handleBackdropClick = useCallback(
@@ -259,14 +265,9 @@ export function VariableFillModal({
 
         {/* Action buttons */}
         <div
-          className="flex items-center justify-between border-t px-5 py-3"
+          className="flex items-center justify-end border-t px-5 py-3"
           style={{ borderColor: 'var(--color-border)' }}
         >
-          {/* Floating hint */}
-          <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            Built for speed. Use ⌘V to paste anywhere.
-          </p>
-
           <div className="flex items-center gap-2">
             {/* Cancel */}
             <Button variant="ghost" size="sm" onClick={onCancel}>
@@ -283,43 +284,27 @@ export function VariableFillModal({
               </kbd>
             </Button>
 
-            {/* Paste */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePaste}
-              disabled={!isComplete}
-            >
-              <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-              Paste
-              <kbd
-                className="ml-1.5 rounded border px-1 py-0.5 text-[10px] font-mono"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-background)',
-                }}
-              >
-                ⌘V
-              </kbd>
-            </Button>
-
-            {/* Copy final prompt */}
+            {/* Primary action */}
             <Button
               variant="primary"
               size="sm"
-              onClick={handleCopy}
+              onClick={handlePrimaryAction}
               disabled={!isComplete}
-              className={copied ? 'bg-green-600 hover:bg-green-700' : ''}
+              className={!isPasteAction && copied ? 'bg-green-600 hover:bg-green-700' : ''}
             >
-              {copied ? (
+              {!isPasteAction && copied ? (
                 <>
                   <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
                   Copied!
                 </>
               ) : (
                 <>
-                  <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                  Copy final prompt
+                  {isPasteAction ? (
+                    <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {isPasteAction ? 'Paste into active app' : 'Copy final prompt'}
                   <kbd
                     className="ml-1.5 rounded border px-1 py-0.5 text-[10px] font-mono"
                     style={{

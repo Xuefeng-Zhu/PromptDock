@@ -7,7 +7,7 @@ import type { ISettingsRepository } from '../repositories/interfaces';
 export const DEFAULT_SETTINGS: UserSettings = {
   hotkeyCombo: 'CommandOrControl+Shift+P',
   theme: 'system',
-  defaultAction: 'copy',
+  defaultAction: 'paste',
   activeWorkspaceId: 'local',
 };
 

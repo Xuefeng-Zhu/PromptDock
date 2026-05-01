@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 4</title>
+  <desc id="desc">A minimal dock tray with floating prompt tiles.</desc>
+  <defs>
+    <linearGradient id="tile" x1="144" y1="110" x2="880" y2="914" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="0.5" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="cardA" x1="314" y1="232" x2="450" y2="514" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
+    </linearGradient>
+    <linearGradient id="cardB" x1="478" y1="198" x2="704" y2="552" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F0FDFA"/>
+      <stop offset="1" stop-color="#A7F3D0"/>
+    </linearGradient>
+    <filter id="shadow" x="140" y="140" width="744" height="742" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#020617" flood-opacity="0.26"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="216" fill="url(#tile)"/>
+  <path d="M144 748C268 662 394 638 536 684C662 724 776 700 880 602V812C880 850 850 880 812 880H212C174 880 144 850 144 812V748Z" fill="#020617" opacity="0.24"/>
+
+  <g filter="url(#shadow)">
+    <rect x="292" y="244" width="232" height="328" rx="70" fill="url(#cardA)" transform="rotate(-10 408 408)"/>
+    <rect x="500" y="218" width="232" height="328" rx="70" fill="url(#cardB)" transform="rotate(9 616 382)"/>
+    <rect x="212" y="610" width="600" height="156" rx="78" fill="#F8FAFC"/>
+  </g>
+
+  <path d="M376 374L340 410L376 446" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round" stroke-width="34"/>
+  <path d="M614 348L650 384L614 420" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="34"/>
+  <rect x="306" y="662" width="412" height="48" rx="24" fill="#DBEAFE"/>
+  <circle cx="512" cy="686" r="14" fill="#2563EB"/>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 1</title>
+  <desc id="desc">A refined prompt card with braces on a blue-green app tile.</desc>
+  <defs>
+    <linearGradient id="tile" x1="154" y1="116" x2="870" y2="908" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="0.55" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="304" y1="216" x2="726" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E0F2FE"/>
+    </linearGradient>
+    <filter id="shadow" x="184" y="154" width="656" height="732" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="34" flood-color="#0F172A" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="212" fill="url(#tile)"/>
+  <path d="M184 228C282 148 382 120 512 120C724 120 874 278 902 470C786 384 658 354 514 399C380 441 270 400 184 300V228Z" fill="#FFFFFF" opacity="0.13"/>
+  <path d="M132 744C260 652 390 622 536 676C672 726 774 696 892 586V812C892 856 856 892 812 892H212C168 892 132 856 132 812V744Z" fill="#020617" opacity="0.18"/>
+
+  <g filter="url(#shadow)">
+    <rect x="274" y="194" width="476" height="636" rx="96" fill="url(#paper)"/>
+    <rect x="340" y="284" width="344" height="44" rx="22" fill="#BAE6FD"/>
+    <rect x="340" y="622" width="344" height="38" rx="19" fill="#BFDBFE"/>
+    <rect x="340" y="690" width="222" height="38" rx="19" fill="#A7F3D0"/>
+  </g>
+
+  <g fill="none" stroke="#1D4ED8" stroke-linecap="round" stroke-linejoin="round" stroke-width="46">
+    <path d="M438 398C398 398 378 421 378 456V468C378 497 360 512 334 512C360 512 378 527 378 556V568C378 603 398 626 438 626"/>
+    <path d="M586 398C626 398 646 421 646 456V468C646 497 664 512 690 512C664 512 646 527 646 556V568C646 603 626 626 586 626"/>
+  </g>
+  <path d="M472 512H552" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-width="48"/>
+</svg>

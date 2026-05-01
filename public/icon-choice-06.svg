@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 6</title>
+  <desc id="desc">A bold command cursor inside variable braces.</desc>
+  <defs>
+    <linearGradient id="tile" x1="162" y1="116" x2="862" y2="908" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="0.55" stop-color="#164E63"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <filter id="shadow" x="166" y="186" width="692" height="662" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="36" flood-color="#020617" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="224" fill="url(#tile)"/>
+  <path d="M152 254C266 168 410 144 554 182C688 218 792 200 872 126V378C742 312 626 302 512 342C372 392 262 360 152 254Z" fill="#67E8F9" opacity="0.16"/>
+  <path d="M150 742C280 646 402 620 538 668C672 716 780 680 874 582V814C874 848 846 876 812 876H212C178 876 150 848 150 814V742Z" fill="#020617" opacity="0.28"/>
+
+  <g filter="url(#shadow)">
+    <rect x="224" y="246" width="576" height="532" rx="132" fill="#F8FAFC"/>
+    <rect x="292" y="610" width="440" height="70" rx="35" fill="#DBEAFE"/>
+  </g>
+
+  <path d="M410 344C348 344 316 382 316 436V456C316 496 292 514 260 514C292 514 316 534 316 574V594C316 648 348 686 410 686" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round" stroke-width="50"/>
+  <path d="M614 344C676 344 708 382 708 436V456C708 496 732 514 764 514C732 514 708 534 708 574V594C708 648 676 686 614 686" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="50"/>
+  <path d="M476 428L566 512L476 596" fill="none" stroke="#0F172A" stroke-linecap="round" stroke-linejoin="round" stroke-width="58"/>
+  <rect x="548" y="570" width="82" height="38" rx="19" fill="#0F172A"/>
+</svg>

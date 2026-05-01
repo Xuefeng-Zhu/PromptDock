@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 8</title>
+  <desc id="desc">A search launcher lens over prompt placeholder braces.</desc>
+  <defs>
+    <linearGradient id="tile" x1="140" y1="126" x2="886" y2="896" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="0.5" stop-color="#1E3A8A"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="302" y1="224" x2="666" y2="634" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DFFBFF"/>
+    </linearGradient>
+    <filter id="shadow" x="146" y="160" width="736" height="734" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="34" flood-color="#020617" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="url(#tile)"/>
+  <path d="M142 260C286 152 438 128 584 180C714 226 814 202 882 132V336C756 282 634 282 506 326C366 374 248 348 142 260Z" fill="#38BDF8" opacity="0.17"/>
+  <path d="M146 734C260 654 388 638 522 684C664 732 770 698 878 588V814C878 850 850 878 814 878H210C174 878 146 850 146 814V734Z" fill="#020617" opacity="0.24"/>
+
+  <g filter="url(#shadow)">
+    <circle cx="474" cy="450" r="230" fill="url(#lens)"/>
+    <path d="M632 610L772 750" fill="none" stroke="#F8FAFC" stroke-linecap="round" stroke-width="86"/>
+    <path d="M632 610L772 750" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-width="54"/>
+  </g>
+
+  <path d="M420 356L360 416L420 476" fill="none" stroke="#2563EB" stroke-linecap="round" stroke-linejoin="round" stroke-width="44"/>
+  <path d="M528 356L588 416L528 476" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-linejoin="round" stroke-width="44"/>
+  <rect x="392" y="524" width="164" height="42" rx="21" fill="#DBEAFE"/>
+  <path d="M430 545H518" fill="none" stroke="#1D4ED8" stroke-linecap="round" stroke-width="24"/>
+</svg>

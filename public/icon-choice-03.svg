@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">PromptDock icon option 3</title>
+  <desc id="desc">A stacked prompt recipe deck with a highlighted variable token.</desc>
+  <defs>
+    <linearGradient id="tile" x1="154" y1="112" x2="872" y2="920" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F766E"/>
+      <stop offset="0.52" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#312E81"/>
+    </linearGradient>
+    <linearGradient id="front" x1="326" y1="250" x2="724" y2="738" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <filter id="shadow" x="152" y="164" width="720" height="720" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="30" stdDeviation="32" flood-color="#020617" flood-opacity="0.26"/>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="210" fill="url(#tile)"/>
+  <path d="M138 380C244 292 374 272 522 326C670 380 782 350 894 244V160C894 126 866 98 832 98H226C178 98 138 138 138 186V380Z" fill="#FFFFFF" opacity="0.12"/>
+  <path d="M128 738C246 660 376 644 514 690C660 739 784 698 896 590V812C896 858 858 896 812 896H212C166 896 128 858 128 812V738Z" fill="#020617" opacity="0.17"/>
+
+  <g filter="url(#shadow)">
+    <rect x="282" y="236" width="456" height="536" rx="88" fill="#93C5FD" transform="rotate(-8 510 504)"/>
+    <rect x="306" y="220" width="456" height="536" rx="88" fill="#C4B5FD" transform="rotate(5 534 488)"/>
+    <rect x="260" y="252" width="504" height="520" rx="92" fill="url(#front)"/>
+  </g>
+
+  <rect x="340" y="344" width="344" height="42" rx="21" fill="#BFDBFE"/>
+  <rect x="340" y="438" width="220" height="42" rx="21" fill="#A7F3D0"/>
+  <rect x="340" y="532" width="344" height="42" rx="21" fill="#C4B5FD" opacity="0.78"/>
+
+  <g fill="none" stroke="#1D4ED8" stroke-linecap="round" stroke-linejoin="round" stroke-width="42">
+    <path d="M438 618C404 618 388 637 388 666C388 695 372 714 342 714C372 714 388 733 388 762"/>
+    <path d="M586 618C620 618 636 637 636 666C636 695 652 714 682 714C652 714 636 733 636 762"/>
+  </g>
+  <rect x="448" y="678" width="128" height="52" rx="26" fill="#DBEAFE"/>
+  <path d="M484 704H540" fill="none" stroke="#0F766E" stroke-linecap="round" stroke-width="30"/>
+</svg>

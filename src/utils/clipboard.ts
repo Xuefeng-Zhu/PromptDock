@@ -69,12 +69,16 @@ export async function copyToClipboard(text: string): Promise<void> {
 
 /**
  * Copies text to the clipboard and then pastes it into the active application.
- * First copies via `copyToClipboard`, then invokes the Tauri `paste_to_active_app`
- * command. If the paste command fails (e.g. outside Tauri), the text remains
- * on the clipboard for manual pasting.
+ * First copies via `copyToClipboard`, optionally lets the caller hide or blur
+ * its window, then invokes the Tauri `paste_to_active_app` command. If the paste
+ * command fails (e.g. outside Tauri), the text remains on the clipboard.
  */
-export async function pasteToActiveApp(text: string): Promise<void> {
+export async function pasteToActiveApp(
+  text: string,
+  beforePaste?: () => Promise<void>,
+): Promise<void> {
   await copyToClipboard(text);
+  await beforePaste?.();
   try {
     await invoke('paste_to_active_app');
   } catch {

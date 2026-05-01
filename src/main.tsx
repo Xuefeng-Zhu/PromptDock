@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { QuickLauncherWindow } from "./screens/QuickLauncherWindow";
+import { QuickLauncherApp } from "./screens/QuickLauncherApp";
 import "./styles.css";
 
 /**
@@ -28,7 +28,7 @@ async function mount() {
   if (label === "quick-launcher") {
     root.render(
       <React.StrictMode>
-        <QuickLauncherWindow />
+        <QuickLauncherApp />
       </React.StrictMode>,
     );
   } else {

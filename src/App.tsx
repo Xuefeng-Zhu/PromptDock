@@ -20,9 +20,17 @@ import { applyTheme } from './utils/theme';
 // ─── App Initialization ────────────────────────────────────────────────────────
 
 let initialized = false;
+let initializationPromise: Promise<void> | null = null;
 let syncServiceInstance: SyncService | null = null;
 let conflictServiceInstance: ConflictService | null = null;
 let authServiceInstance: AuthService | null = null;
+
+export interface AppInitializationOptions {
+  seedDefaultData?: boolean;
+  registerGlobalHotkey?: boolean;
+  enableBackgroundServices?: boolean;
+  restoreAuthSession?: boolean;
+}
 
 /** Get the shared ConflictService instance (available after initialization). */
 export function getConflictService(): ConflictService | null {
@@ -39,8 +47,28 @@ export function getAuthService(): AuthService | null {
   return authServiceInstance;
 }
 
-async function initializeApp(): Promise<void> {
-  if (initialized) return;
+export function initializeApp(options: AppInitializationOptions = {}): Promise<void> {
+  if (initialized) return Promise.resolve();
+  if (initializationPromise) return initializationPromise;
+
+  initializationPromise = runAppInitialization(options)
+    .then(() => {
+      initialized = true;
+    })
+    .finally(() => {
+      initializationPromise = null;
+    });
+
+  return initializationPromise;
+}
+
+async function runAppInitialization(options: AppInitializationOptions): Promise<void> {
+  const {
+    seedDefaultData = true,
+    registerGlobalHotkey = true,
+    enableBackgroundServices = true,
+    restoreAuthSession = enableBackgroundServices,
+  } = options;
 
   // 1. Pick the right storage backend based on runtime environment
   const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -62,125 +90,133 @@ async function initializeApp(): Promise<void> {
   const settingsStore = initSettingsStore(settingsRepo);
 
   // 4. Seed default prompts on first launch
-  await seedDefaultPrompts(promptRepo);
+  if (seedDefaultData) {
+    await seedDefaultPrompts(promptRepo);
+  }
 
   // 5. Load initial data into stores
   await promptStore.getState().loadPrompts();
   await settingsStore.getState().loadSettings();
 
   // 6. Register global hotkey from settings (best-effort — ignore failures at startup)
-  try {
-    const { hotkeyCombo } = settingsStore.getState().settings;
-    await registerHotkey(hotkeyCombo);
-  } catch {
-    // Hotkey registration may fail outside Tauri or if the combo is invalid.
-    // The user can re-register from SettingsScreen.
+  if (registerGlobalHotkey) {
+    try {
+      const { hotkeyCombo } = settingsStore.getState().settings;
+      await registerHotkey(hotkeyCombo);
+    } catch {
+      // Hotkey registration may fail outside Tauri or if the combo is invalid.
+      // The user can re-register from SettingsScreen.
+    }
   }
 
   // 7. Create ConflictService (shared instance)
-  conflictServiceInstance = new ConflictService();
+  if (enableBackgroundServices) {
+    conflictServiceInstance = new ConflictService();
+  }
 
   // 8. Subscribe to AppModeStore mode changes to instantiate/teardown SyncService
-  appModeStore.subscribe((state, prevState) => {
-    const modeChanged = state.mode !== prevState.mode;
-    if (!modeChanged) return;
+  if (enableBackgroundServices) {
+    appModeStore.subscribe((state, prevState) => {
+      const modeChanged = state.mode !== prevState.mode;
+      if (!modeChanged) return;
 
-    if (state.mode === 'synced' && !syncServiceInstance) {
-      // Instantiate SyncService when transitioning to synced mode
-      syncServiceInstance = new SyncService({
-        appModeStore: appModeStore.getState(),
-        onRemotePromptsChanged: (prompts) => {
-          // 7.2: Update PromptStore with remote prompt list
-          promptStore.setState({ prompts });
-        },
-        onConflictDetected: (local, remote) => {
-          // 7.3: Delegate conflict detection to ConflictService
-          conflictServiceInstance?.processConflict(local, remote);
-        },
-      });
-
-      // 7.4: Configure PromptRepository to delegate to FirestoreBackend
-      const firestoreBackend = syncServiceInstance.getFirestoreBackend();
-      if (firestoreBackend) {
-        promptRepo.setFirestoreDelegate(firestoreBackend);
-      }
-
-      // Trigger the sync transition: migrate local prompts and start snapshot listeners
-      const userId = state.userId ?? '';
-      const workspaceId = userId; // default workspace = user ID
-      const currentPrompts = promptStore.getState().prompts;
-      syncServiceInstance.transitionToSynced(
-        userId,
-        workspaceId,
-        currentPrompts,
-        'migrate',
-      ).then(() => {
-        // Wire PromptRepository to FirestoreBackend after transition completes
-        const fb = syncServiceInstance?.getFirestoreBackend();
-        if (fb) {
-          promptRepo.setFirestoreDelegate(fb);
-        }
-      }).catch((err) => {
-        console.error('Failed to transition to synced mode:', err);
-      });
-    } else if (state.mode === 'local' && syncServiceInstance) {
-      // Teardown SyncService when transitioning back to local mode
-      syncServiceInstance.dispose();
-      syncServiceInstance = null;
-      // Revert PromptRepository to local-only mode
-      promptRepo.setFirestoreDelegate(null);
-    }
-  });
-
-  // 9. Restore auth session — if a valid user exists, transition to synced mode
-  try {
-    authServiceInstance = new AuthService();
-    const result = await authServiceInstance.restoreSession();
-    if (result && result.success) {
-      const appMode = appModeStore.getState();
-      appMode.setUserId(result.user.uid);
-      appMode.setMode('synced');
-
-      // After mode transition, instantiate SyncService and start sync
-      if (!syncServiceInstance) {
+      if (state.mode === 'synced' && !syncServiceInstance) {
+        // Instantiate SyncService when transitioning to synced mode
         syncServiceInstance = new SyncService({
           appModeStore: appModeStore.getState(),
           onRemotePromptsChanged: (prompts) => {
+            // 7.2: Update PromptStore with remote prompt list
             promptStore.setState({ prompts });
           },
           onConflictDetected: (local, remote) => {
+            // 7.3: Delegate conflict detection to ConflictService
             conflictServiceInstance?.processConflict(local, remote);
           },
         });
-      }
 
-      // Start the sync transition with the user's workspace
-      const workspaceId = result.user.uid; // default workspace = user ID
-      const currentPrompts = promptStore.getState().prompts;
-      await syncServiceInstance.transitionToSynced(
-        result.user.uid,
-        workspaceId,
-        currentPrompts,
-        'migrate',
-      );
+        // 7.4: Configure PromptRepository to delegate to FirestoreBackend
+        const firestoreBackend = syncServiceInstance.getFirestoreBackend();
+        if (firestoreBackend) {
+          promptRepo.setFirestoreDelegate(firestoreBackend);
+        }
 
-      // Wire PromptRepository to FirestoreBackend
-      const firestoreBackend = syncServiceInstance.getFirestoreBackend();
-      if (firestoreBackend) {
-        promptRepo.setFirestoreDelegate(firestoreBackend);
+        // Trigger the sync transition: migrate local prompts and start snapshot listeners
+        const userId = state.userId ?? '';
+        const workspaceId = userId; // default workspace = user ID
+        const currentPrompts = promptStore.getState().prompts;
+        syncServiceInstance.transitionToSynced(
+          userId,
+          workspaceId,
+          currentPrompts,
+          'migrate',
+        ).then(() => {
+          // Wire PromptRepository to FirestoreBackend after transition completes
+          const fb = syncServiceInstance?.getFirestoreBackend();
+          if (fb) {
+            promptRepo.setFirestoreDelegate(fb);
+          }
+        }).catch((err) => {
+          console.error('Failed to transition to synced mode:', err);
+        });
+      } else if (state.mode === 'local' && syncServiceInstance) {
+        // Teardown SyncService when transitioning back to local mode
+        syncServiceInstance.dispose();
+        syncServiceInstance = null;
+        // Revert PromptRepository to local-only mode
+        promptRepo.setFirestoreDelegate(null);
       }
-    }
-  } catch {
-    // Session restore failure is non-fatal — stay in local mode
+    });
   }
 
-  initialized = true;
+  // 9. Restore auth session — if a valid user exists, transition to synced mode
+  if (restoreAuthSession) {
+    try {
+      authServiceInstance = new AuthService();
+      const result = await authServiceInstance.restoreSession();
+      if (result && result.success) {
+        const appMode = appModeStore.getState();
+        appMode.setUserId(result.user.uid);
+        appMode.setMode('synced');
+
+        // After mode transition, instantiate SyncService and start sync
+        if (!syncServiceInstance) {
+          syncServiceInstance = new SyncService({
+            appModeStore: appModeStore.getState(),
+            onRemotePromptsChanged: (prompts) => {
+              promptStore.setState({ prompts });
+            },
+            onConflictDetected: (local, remote) => {
+              conflictServiceInstance?.processConflict(local, remote);
+            },
+          });
+        }
+
+        // Start the sync transition with the user's workspace
+        const workspaceId = result.user.uid; // default workspace = user ID
+        const currentPrompts = promptStore.getState().prompts;
+        await syncServiceInstance.transitionToSynced(
+          result.user.uid,
+          workspaceId,
+          currentPrompts,
+          'migrate',
+        );
+
+        // Wire PromptRepository to FirestoreBackend
+        const firestoreBackend = syncServiceInstance.getFirestoreBackend();
+        if (firestoreBackend) {
+          promptRepo.setFirestoreDelegate(firestoreBackend);
+        }
+      }
+    } catch {
+      // Session restore failure is non-fatal — stay in local mode
+    }
+  }
 }
 
 // ─── Theme Manager ─────────────────────────────────────────────────────────────
 // Rendered only after stores are initialised so useSettingsStore is safe to call.
 
-function ThemeManager() {
+export function ThemeManager() {
   const theme = useSettingsStore((s) => s.settings.theme);
 
   // Apply theme whenever the setting changes

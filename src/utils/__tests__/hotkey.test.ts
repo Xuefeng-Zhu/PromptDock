@@ -23,14 +23,26 @@ describe('registerHotkey', () => {
     await registerHotkey('CommandOrControl+Shift+P');
 
     expect(mockInvoke).toHaveBeenCalledWith('register_hotkey', {
-      combo: 'CommandOrControl+Shift+P',
+      shortcut: 'CommandOrControl+Shift+P',
     });
   });
 
-  it('skips invocation when combo is an empty string', async () => {
+  it('unregisters the active hotkey when combo is an empty string', async () => {
+    mockInvoke.mockResolvedValueOnce(undefined);
+
     await registerHotkey('');
 
-    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockInvoke).toHaveBeenCalledWith('unregister_hotkey');
+  });
+
+  it('normalizes display-only modifier tokens before registering', async () => {
+    mockInvoke.mockResolvedValueOnce(undefined);
+
+    await registerHotkey('⌘+Shift+P');
+
+    expect(mockInvoke).toHaveBeenCalledWith('register_hotkey', {
+      shortcut: 'CommandOrControl+Shift+P',
+    });
   });
 
   it('propagates errors from the Tauri command', async () => {

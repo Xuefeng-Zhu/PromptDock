@@ -4,6 +4,7 @@ import { SearchEngine } from '../services/search-engine';
 import { VariableParser } from '../services/variable-parser';
 import { VariableFillModal } from '../components/VariableFillModal';
 import { usePromptStore } from '../stores/prompt-store';
+import { useSettingsStore } from '../stores/settings-store';
 import { copyToClipboard, pasteToActiveApp } from '../utils/clipboard';
 import type { PromptRecipe } from '../types/index';
 
@@ -26,6 +27,9 @@ function formatActionError(action: string, err: unknown): string {
  */
 export function QuickLauncherWindow() {
   const prompts = usePromptStore((s) => s.prompts);
+  const isLoading = usePromptStore((s) => s.isLoading);
+  const loadPrompts = usePromptStore((s) => s.loadPrompts);
+  const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
 
   const [query, setQuery] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState<PromptRecipe | null>(null);
@@ -33,11 +37,46 @@ export function QuickLauncherWindow() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const promptCountRef = useRef(prompts.length);
 
-  // ── Auto-focus search input on mount ─────────────────────────────────────
   useEffect(() => {
+    promptCountRef.current = prompts.length;
+  }, [prompts.length]);
+
+  const refreshPrompts = useCallback(async () => {
+    try {
+      await loadPrompts();
+    } catch (err) {
+      setActionError(formatActionError('load prompts', err));
+    }
+  }, [loadPrompts]);
+
+  // ── Auto-focus search input and refresh prompts when shown ───────────────
+  useEffect(() => {
+    const focusAndRefresh = () => {
+      searchInputRef.current?.focus();
+      void refreshPrompts();
+    };
+
     searchInputRef.current?.focus();
-  }, []);
+    if (promptCountRef.current === 0) {
+      void refreshPrompts();
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        focusAndRefresh();
+      }
+    };
+
+    window.addEventListener('focus', focusAndRefresh);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', focusAndRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshPrompts]);
 
   // ── Search results ───────────────────────────────────────────────────────
   const results = useMemo(
@@ -95,8 +134,7 @@ export function QuickLauncherWindow() {
   const pasteAndClose = useCallback(async (text: string) => {
     setActionError(null);
     try {
-      await pasteToActiveApp(text);
-      await hideWindow();
+      await pasteToActiveApp(text, hideWindow);
     } catch (err) {
       setActionError(formatActionError('paste prompt', err));
       throw err;
@@ -109,12 +147,14 @@ export function QuickLauncherWindow() {
       const variables = variableParser.parse(prompt.body);
       if (variables.length > 0) {
         setSelectedPrompt(prompt);
+      } else if (defaultAction === 'paste') {
+        void pasteAndClose(prompt.body).catch(() => {});
       } else {
         // No variables — copy body directly and close
         void copyAndClose(prompt.body).catch(() => {});
       }
     },
-    [copyAndClose],
+    [copyAndClose, defaultAction, pasteAndClose],
   );
 
   // ── Keyboard navigation in results list ──────────────────────────────────
@@ -128,7 +168,8 @@ export function QuickLauncherWindow() {
         setHighlightIndex((prev) => Math.max(prev - 1, 0));
       } else if (e.key === 'Enter' && results.length > 0) {
         e.preventDefault();
-        handleSelectPrompt(results[highlightIndex]);
+        const highlightedPrompt = results[highlightIndex] ?? results[0];
+        handleSelectPrompt(highlightedPrompt);
       }
     },
     [results, highlightIndex, handleSelectPrompt],
@@ -184,7 +225,11 @@ export function QuickLauncherWindow() {
 
       {/* Results list */}
       <div className="flex-1 overflow-y-auto" role="listbox" aria-label="Search results">
-        {results.length === 0 ? (
+        {isLoading && prompts.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+            Loading prompts…
+          </div>
+        ) : results.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
             {query.trim() ? 'No prompts found.' : 'Start typing to search…'}
           </div>

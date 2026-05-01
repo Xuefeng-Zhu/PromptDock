@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import type { PromptRecipe } from '../../types/index';
-import type { IPromptRepository } from '../../repositories/interfaces';
+import type { PromptRecipe, UserSettings } from '../../types/index';
+import type { IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
 import { initPromptStore } from '../../stores/prompt-store';
+import { DEFAULT_SETTINGS, initSettingsStore } from '../../stores/settings-store';
 
 // ─── Tauri mock ────────────────────────────────────────────────────────────────
 
@@ -19,7 +20,9 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 const { mockCopyToClipboard, mockPasteToActiveApp } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn(() => Promise.resolve()),
-  mockPasteToActiveApp: vi.fn(() => Promise.resolve()),
+  mockPasteToActiveApp: vi.fn(async (_text: string, beforePaste?: () => Promise<void>) => {
+    await beforePaste?.();
+  }),
 }));
 
 vi.mock('../../utils/clipboard', () => ({
@@ -103,10 +106,28 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
   };
 }
 
-async function setupStore(prompts: PromptRecipe[] = [PROMPT_NO_VARS, PROMPT_WITH_VARS]) {
+function createMockSettingsRepo(
+  settings: UserSettings = { ...DEFAULT_SETTINGS },
+): ISettingsRepository {
+  let currentSettings = { ...settings };
+  return {
+    get: vi.fn(async () => ({ ...currentSettings })),
+    update: vi.fn(async (changes) => {
+      currentSettings = { ...currentSettings, ...changes };
+      return { ...currentSettings };
+    }),
+  };
+}
+
+async function setupStore(
+  prompts: PromptRecipe[] = [PROMPT_NO_VARS, PROMPT_WITH_VARS],
+  settings: UserSettings = { ...DEFAULT_SETTINGS },
+) {
   const repo = createMockRepo(prompts);
   const store = initPromptStore(repo);
+  const settingsStore = initSettingsStore(createMockSettingsRepo(settings));
   await store.getState().loadPrompts();
+  await settingsStore.getState().loadSettings();
   return store;
 }
 
@@ -120,7 +141,11 @@ describe('QuickLauncherWindow', () => {
     mockCopyToClipboard.mockReset();
     mockCopyToClipboard.mockResolvedValue(undefined);
     mockPasteToActiveApp.mockReset();
-    mockPasteToActiveApp.mockResolvedValue(undefined);
+    mockPasteToActiveApp.mockImplementation(
+      async (_text: string, beforePaste?: () => Promise<void>) => {
+        await beforePaste?.();
+      },
+    );
   });
 
   describe('12.1 — reads prompts from PromptStore', () => {
@@ -286,7 +311,10 @@ describe('QuickLauncherWindow', () => {
         fireEvent.click(pasteButton);
       });
 
-      expect(mockPasteToActiveApp).toHaveBeenCalledWith('Hello Bob, welcome to Office');
+      expect(mockPasteToActiveApp).toHaveBeenCalledWith(
+        'Hello Bob, welcome to Office',
+        expect.any(Function),
+      );
     });
   });
 
@@ -353,6 +381,24 @@ describe('QuickLauncherWindow', () => {
         fireEvent.click(screen.getByRole('button', { name: /Paste/i }));
       });
 
+      expect(mockInvoke).toHaveBeenCalledWith('toggle_quick_launcher');
+    });
+
+    it('uses the paste action for prompt selection when configured as the default', async () => {
+      await setupStore([PROMPT_NO_VARS], {
+        ...DEFAULT_SETTINGS,
+        defaultAction: 'paste',
+      });
+      render(<QuickLauncherWindow />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Simple Prompt'));
+      });
+
+      expect(mockPasteToActiveApp).toHaveBeenCalledWith(
+        'Just plain text content',
+        expect.any(Function),
+      );
       expect(mockInvoke).toHaveBeenCalledWith('toggle_quick_launcher');
     });
 

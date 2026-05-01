@@ -512,8 +512,8 @@ function HotkeyCard({ hotkey, onHotkeyChange, error }: HotkeyCardProps) {
       e.preventDefault();
 
       const parts: string[] = [];
-      if (e.metaKey) parts.push('⌘');
-      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.metaKey) parts.push('CommandOrControl');
+      if (e.ctrlKey) parts.push('Control');
       if (e.altKey) parts.push('Alt');
       if (e.shiftKey) parts.push('Shift');
 
@@ -525,7 +525,8 @@ function HotkeyCard({ hotkey, onHotkeyChange, error }: HotkeyCardProps) {
         'Shift',
       ]);
       if (!modifierKeys.has(e.key)) {
-        parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+        const key = e.key === ' ' ? 'Space' : e.key;
+        parts.push(key.length === 1 ? key.toUpperCase() : key);
         onHotkeyChange(parts.join('+'));
         setIsCapturing(false);
       }

@@ -393,9 +393,37 @@ describe('SettingsScreen + hotkey registration', () => {
       fireEvent.click(clearButton);
     });
 
-    // registerHotkey is called with '' which is a no-op inside the utility,
-    // but the SettingsScreen still invokes it after updating the store.
+    // SettingsScreen still delegates the empty combo so the utility can
+    // unregister the native shortcut in Tauri.
     expect(mockRegisterHotkey).toHaveBeenCalledWith('');
+  });
+
+  it('captures hotkeys using Tauri-compatible modifier names', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyInput = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.focus(hotkeyInput);
+    });
+
+    await waitFor(() => {
+      expect((hotkeyInput as HTMLInputElement).value).toBe('Press a key combination…');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(hotkeyInput, {
+        key: 'p',
+        metaKey: true,
+        shiftKey: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRegisterHotkey).toHaveBeenCalledWith('CommandOrControl+Shift+P');
+    });
+    expect(mockRepo.update).toHaveBeenCalledWith({
+      hotkeyCombo: 'CommandOrControl+Shift+P',
+    });
   });
 
   it('does not display an error when registerHotkey succeeds', async () => {

@@ -59,7 +59,9 @@ export function createPromptStore(repo: IPromptRepository) {
       set({ isLoading: true });
       try {
         const { activeWorkspaceId } = get();
-        const prompts = await repo.getAll(activeWorkspaceId);
+        const prompts = repo.reloadAll
+          ? await repo.reloadAll(activeWorkspaceId)
+          : await repo.getAll(activeWorkspaceId);
         set({ prompts, isLoading: false });
       } catch (err) {
         set({ isLoading: false });

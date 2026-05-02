@@ -91,10 +91,23 @@ function normalizeToken(value: string): string {
     .replace(/[^a-z0-9]+/g, '');
 }
 
+function normalizeLegacyFolderKey(folderId: string): string {
+  return normalizeToken(folderId.replace(/^folder-/, '').replace(/-\d{10,}$/, ''));
+}
+
 function matchesFolder(prompt: PromptRecipe, folders: FolderFilter[]): boolean {
   if (!prompt.folderId) return false;
-  const folderKey = normalizeToken(prompt.folderId);
-  return folders.some((folder) => folderKey === normalizeToken(folder));
+
+  const folderId = prompt.folderId;
+  const folderIdKey = normalizeToken(folderId);
+  const legacyFolderKey = normalizeLegacyFolderKey(folderId);
+
+  return folders.some((folder) => {
+    if (folder === folderId) return true;
+
+    const selectedFolderKey = normalizeToken(folder);
+    return selectedFolderKey === folderIdKey || selectedFolderKey === legacyFolderKey;
+  });
 }
 
 function matchesTag(prompt: PromptRecipe, tags: TagFilter[]): boolean {

@@ -518,6 +518,37 @@ describe('AppShell', () => {
       expect(results.map((prompt) => prompt.id)).toEqual(['foldered']);
     });
 
+    it('matches timestamped user folder ids from folder filters', () => {
+      const prompts = [
+        makePrompt({
+          id: 'timestamped-folder',
+          folderId: 'folder-client-work-1700000000000',
+          tags: ['client'],
+        }),
+        makePrompt({
+          id: 'other-folder',
+          folderId: 'folder-client-workshop-1700000000000',
+          tags: ['client'],
+        }),
+      ];
+
+      const results = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: '',
+          statuses: [],
+          folders: ['client-work'],
+          tags: [],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+
+      expect(results.map((prompt) => prompt.id)).toEqual(['timestamped-folder']);
+    });
+
     it('filters prompts by title or keyword query', () => {
       const prompts = [
         makePrompt({

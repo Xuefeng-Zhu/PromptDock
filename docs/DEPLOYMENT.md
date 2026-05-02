@@ -91,9 +91,13 @@ Remember: `VITE_` variables are baked into the frontend bundle.
 
 ## CI/CD Notes
 
-The repository includes `.github/workflows/release-macos.yml` for signed and
-notarized macOS releases. It runs on tag pushes that match `v*` and can also be
-started manually from GitHub Actions.
+The repository includes:
+
+- `.github/workflows/release-macos.yml` for signed and notarized macOS releases.
+- `.github/workflows/release-windows.yml` for Windows installer builds.
+
+Both workflows run on tag pushes that match `v*` and can also be started
+manually from GitHub Actions.
 
 Recommended CI jobs:
 
@@ -153,10 +157,23 @@ xcrun stapler validate PromptDock.app
 xcrun stapler validate PromptDock_0.1.0_aarch64.dmg
 ```
 
+### Windows installer builds
+
+Windows release assets are built on the `windows-latest` GitHub Actions runner
+with `tauri-apps/tauri-action`. The workflow collects installer artifacts from:
+
+```text
+src-tauri/target/release/bundle/
+```
+
+Expected release assets are `.msi` and/or `.exe` installers, depending on the
+bundle targets Tauri produces for the current configuration.
+
 ## Current Build Status
 
-`npm run build` passed locally during the macOS signing workflow update. Keep
-the release workflow green before publishing signed desktop assets.
+`npm run tauri build`, `npm test`, and `cargo check` passed locally during the
+Windows support update. Keep the release workflows green before publishing
+desktop assets.
 
 ## Rollback Strategy
 

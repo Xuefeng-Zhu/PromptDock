@@ -1,12 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
+import { isTauriRuntime } from './runtime';
 
 export interface PasteResult {
   copied: true;
   pasted: boolean;
-}
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
 function copyViaSelection(text: string): boolean {

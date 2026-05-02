@@ -177,6 +177,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  Reflect.deleteProperty(window, '__TAURI_INTERNALS__');
   mockRepo = createMockRepo();
   testStore = createSettingsStore(mockRepo);
   testAppModeStore = createAppModeStore();
@@ -190,6 +191,13 @@ beforeEach(() => {
 afterEach(() => {
   vi.clearAllMocks();
 });
+
+function mockTauriRuntime() {
+  Object.defineProperty(window, '__TAURI_INTERNALS__', {
+    configurable: true,
+    value: {},
+  });
+}
 
 // ─── Basic rendering tests ─────────────────────────────────────────────────────
 
@@ -205,13 +213,29 @@ describe('SettingsScreen', () => {
     const nav = screen.getByRole('navigation', { name: 'Settings navigation' });
     expect(nav.textContent).toContain('Account & Sync');
     expect(nav.textContent).toContain('Appearance');
-    expect(nav.textContent).toContain('Hotkey');
+    expect(nav.textContent).not.toContain('Hotkey');
     expect(nav.textContent).toContain('Default Behavior');
     expect(nav.textContent).toContain('Import/Export');
     expect(nav.textContent).toContain('About');
   });
 
-  it('renders setting cards for Account, Appearance, Hotkey, Import/Export, About', () => {
+  it('hides the hotkey settings in browser mode', () => {
+    render(<SettingsScreen onBack={() => {}} />);
+
+    expect(screen.queryByRole('button', { name: 'Hotkey' })).toBeNull();
+    expect(screen.queryByLabelText('Global hotkey combination')).toBeNull();
+  });
+
+  it('renders the hotkey settings in Tauri mode', () => {
+    mockTauriRuntime();
+    render(<SettingsScreen onBack={() => {}} />);
+
+    const nav = screen.getByRole('navigation', { name: 'Settings navigation' });
+    expect(nav.textContent).toContain('Hotkey');
+    expect(screen.getByLabelText('Global hotkey combination')).toBeDefined();
+  });
+
+  it('renders setting cards for Account, Appearance, Import/Export, About', () => {
     render(<SettingsScreen onBack={() => {}} />);
     // In local mode (not signed in), the Account card shows a sign-in form
     expect(screen.getByLabelText('Email')).toBeDefined();
@@ -274,9 +298,10 @@ describe('SettingsScreen + SettingsStore integration', () => {
   });
 
   it('reads hotkeyCombo from SettingsStore and displays it', () => {
+    mockTauriRuntime();
     render(<SettingsScreen onBack={() => {}} />);
-    const hotkeyInput = screen.getByLabelText('Global hotkey combination') as HTMLInputElement;
-    expect(hotkeyInput.value).toBe('CommandOrControl+Shift+P');
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+    expect(hotkeyRecorder.getAttribute('data-hotkey-value')).toBe('CommandOrControl+Shift+P');
   });
 
   it('reads defaultAction from SettingsStore and displays the correct active option', () => {
@@ -308,6 +333,7 @@ describe('SettingsScreen + SettingsStore integration', () => {
   });
 
   it('calls updateSettings({ hotkeyCombo }) when hotkey Clear button is clicked', async () => {
+    mockTauriRuntime();
     render(<SettingsScreen onBack={() => {}} />);
     const clearButton = screen.getByRole('button', { name: 'Clear hotkey' });
 
@@ -342,17 +368,19 @@ describe('SettingsScreen + SettingsStore integration', () => {
   });
 
   it('reflects updated hotkeyCombo from store after change', async () => {
+    mockTauriRuntime();
     render(<SettingsScreen onBack={() => {}} />);
 
     await act(async () => {
       await testStore.getState().updateSettings({ hotkeyCombo: 'Alt+Space' });
     });
 
-    const hotkeyInput = screen.getByLabelText('Global hotkey combination') as HTMLInputElement;
-    expect(hotkeyInput.value).toBe('Alt+Space');
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+    expect(hotkeyRecorder.getAttribute('data-hotkey-value')).toBe('Alt+Space');
   });
 
   it('reads custom initial settings from store', async () => {
+    mockTauriRuntime();
     const customSettings: UserSettings = {
       hotkeyCombo: 'Ctrl+K',
       theme: 'light',
@@ -374,14 +402,18 @@ describe('SettingsScreen + SettingsStore integration', () => {
     const pasteRadio = screen.getByRole('radio', { name: /Paste into Active App/i }) as HTMLInputElement;
     expect(pasteRadio.checked).toBe(true);
 
-    const hotkeyInput = screen.getByLabelText('Global hotkey combination') as HTMLInputElement;
-    expect(hotkeyInput.value).toBe('Ctrl+K');
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+    expect(hotkeyRecorder.getAttribute('data-hotkey-value')).toBe('Ctrl+K');
   });
 });
 
 // ─── Hotkey registration integration tests ─────────────────────────────────────
 
 describe('SettingsScreen + hotkey registration', () => {
+  beforeEach(() => {
+    mockTauriRuntime();
+  });
+
   it('calls registerHotkey when the hotkey Clear button is clicked (empty combo)', async () => {
     render(<SettingsScreen onBack={() => {}} />);
     const clearButton = screen.getByRole('button', { name: 'Clear hotkey' });
@@ -397,18 +429,18 @@ describe('SettingsScreen + hotkey registration', () => {
 
   it('captures hotkeys using Tauri-compatible modifier names', async () => {
     render(<SettingsScreen onBack={() => {}} />);
-    const hotkeyInput = screen.getByLabelText('Global hotkey combination');
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
 
     await act(async () => {
-      fireEvent.focus(hotkeyInput);
+      fireEvent.click(hotkeyRecorder);
     });
 
     await waitFor(() => {
-      expect((hotkeyInput as HTMLInputElement).value).toBe('Press a key combination…');
+      expect(hotkeyRecorder.textContent).toContain('Recording');
     });
 
     await act(async () => {
-      fireEvent.keyDown(hotkeyInput, {
+      fireEvent.keyDown(hotkeyRecorder, {
         key: 'p',
         metaKey: true,
         shiftKey: true,
@@ -421,6 +453,28 @@ describe('SettingsScreen + hotkey registration', () => {
     expect(mockRepo.update).toHaveBeenCalledWith({
       hotkeyCombo: 'CommandOrControl+Shift+P',
     });
+  });
+
+  it('rejects incomplete hotkeys before registering them', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(hotkeyRecorder, { key: 'p' });
+    });
+
+    expect(mockRegisterHotkey).not.toHaveBeenCalledWith('P');
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Use a modifier plus another key',
+    );
   });
 
   it('does not display an error when registerHotkey succeeds', async () => {

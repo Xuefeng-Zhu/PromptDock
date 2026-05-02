@@ -278,8 +278,59 @@ describe('LibraryScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
     expect(onFilterChange).toHaveBeenCalledWith(
       expect.objectContaining({
-        folders: ['engineering'],
+        folders: ['folder-engineering'],
         tags: ['meeting'],
+      }),
+    );
+  });
+
+  it('derives folder and tag dropdown options from prompt data', () => {
+    const onFilterChange = vi.fn();
+    const customPrompts: PromptRecipe[] = [
+      {
+        id: 'p-legal',
+        workspaceId: 'local',
+        title: 'Contract Review',
+        description: '',
+        body: 'Review this agreement',
+        tags: ['legal', 'compliance'],
+        folderId: 'folder-legal',
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        lastUsedAt: null,
+        createdBy: 'local',
+        version: 1,
+      },
+    ];
+
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={customPrompts}
+        onFilterChange={onFilterChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select folders' }));
+    expect(screen.getByRole('option', { name: 'Legal' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: 'Engineering' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Legal' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select tags' }));
+    expect(screen.getByRole('option', { name: '#compliance' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: '#meeting' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: '#compliance' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folders: ['folder-legal'],
+        tags: ['compliance'],
       }),
     );
   });

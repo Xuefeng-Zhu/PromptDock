@@ -674,6 +674,8 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           {screen.name === 'library' && (
             <LibraryScreen
               prompts={filteredPrompts}
+              filterSourcePrompts={prompts}
+              folders={derivedFolders}
               selectedPromptId={selectedPromptId}
               activeFilter={activeFilter}
               onSelectPrompt={handleSelectPrompt}

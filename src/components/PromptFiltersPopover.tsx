@@ -16,9 +16,11 @@ import { Button } from './ui/Button';
 interface PromptFiltersPopoverProps {
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
+  folderOptions: Array<PromptFilterOption<FolderFilter>>;
+  tagOptions: Array<PromptFilterOption<TagFilter>>;
 }
 
-interface FilterOption<T extends string> {
+export interface PromptFilterOption<T extends string> {
   label: string;
   value: T;
 }
@@ -30,23 +32,6 @@ const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Has variables', value: 'hasVariables' },
 ];
 
-const FOLDER_OPTIONS: Array<FilterOption<FolderFilter>> = [
-  { label: 'Work', value: 'work' },
-  { label: 'Writing', value: 'writing' },
-  { label: 'Product', value: 'product' },
-  { label: 'Engineering', value: 'engineering' },
-  { label: 'Personal', value: 'personal' },
-];
-
-const TAG_OPTIONS: Array<FilterOption<TagFilter>> = [
-  { label: 'Writing', value: 'writing' },
-  { label: 'Summarization', value: 'summarization' },
-  { label: 'Email', value: 'email' },
-  { label: 'Code', value: 'code' },
-  { label: 'Meeting', value: 'meeting' },
-  { label: 'Ideation', value: 'ideation' },
-];
-
 const LAST_USED_OPTIONS: Array<{ label: string; value: LastUsedFilter }> = [
   { label: 'Any time', value: 'any' },
   { label: 'Today', value: 'today' },
@@ -55,8 +40,6 @@ const LAST_USED_OPTIONS: Array<{ label: string; value: LastUsedFilter }> = [
 ];
 
 const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((option) => [option.value, option.label])) as Record<StatusFilter, string>;
-const FOLDER_LABELS = Object.fromEntries(FOLDER_OPTIONS.map((option) => [option.value, option.label])) as Record<FolderFilter, string>;
-const TAG_LABELS = Object.fromEntries(TAG_OPTIONS.map((option) => [option.value, option.label])) as Record<TagFilter, string>;
 const LAST_USED_LABELS = Object.fromEntries(LAST_USED_OPTIONS.map((option) => [option.value, option.label])) as Record<LastUsedFilter, string>;
 
 type ActiveFilterChip =
@@ -72,7 +55,22 @@ function toggleFilterValue<T extends string>(values: T[], value: T): T[] {
     : [...values, value];
 }
 
-function getActiveFilterChips(filters: PromptFilters): ActiveFilterChip[] {
+function fallbackFilterLabel(value: string): string {
+  const cleaned = value
+    .replace(/^folder-/, '')
+    .replace(/[-_]+/g, ' ')
+    .trim();
+
+  if (cleaned === '') return value;
+
+  return cleaned.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getActiveFilterChips(
+  filters: PromptFilters,
+  folderLabels: Record<string, string>,
+  tagLabels: Record<string, string>,
+): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
 
   if (filters.query.trim() !== '') {
@@ -95,7 +93,7 @@ function getActiveFilterChips(filters: PromptFilters): ActiveFilterChip[] {
   for (const folder of filters.folders) {
     chips.push({
       id: `folder-${folder}`,
-      label: `Folder: ${FOLDER_LABELS[folder]}`,
+      label: `Folder: ${folderLabels[folder] ?? fallbackFilterLabel(folder)}`,
       kind: 'folder',
       value: folder,
     });
@@ -104,7 +102,7 @@ function getActiveFilterChips(filters: PromptFilters): ActiveFilterChip[] {
   for (const tag of filters.tags) {
     chips.push({
       id: `tag-${tag}`,
-      label: `#${TAG_LABELS[tag].toLowerCase()}`,
+      label: `#${(tagLabels[tag] ?? tag).toLowerCase()}`,
       kind: 'tag',
       value: tag,
     });
@@ -121,13 +119,29 @@ function getActiveFilterChips(filters: PromptFilters): ActiveFilterChip[] {
   return chips;
 }
 
-export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFiltersPopoverProps) {
+export function PromptFiltersPopover({
+  activeFilter,
+  onFilterChange,
+  folderOptions,
+  tagOptions,
+}: PromptFiltersPopoverProps) {
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
   const [draftFilters, setDraftFilters] = useState<PromptFilters>(() => appliedFilters);
   const filterPopoverRef = useRef<HTMLDivElement>(null);
   const activeFilterCount = countActivePromptFilters(appliedFilters);
-  const draftFilterChips = useMemo(() => getActiveFilterChips(draftFilters), [draftFilters]);
+  const folderLabels = useMemo(
+    () => Object.fromEntries(folderOptions.map((option) => [option.value, option.label])),
+    [folderOptions],
+  );
+  const tagLabels = useMemo(
+    () => Object.fromEntries(tagOptions.map((option) => [option.value, option.label])),
+    [tagOptions],
+  );
+  const draftFilterChips = useMemo(
+    () => getActiveFilterChips(draftFilters, folderLabels, tagLabels),
+    [draftFilters, folderLabels, tagLabels],
+  );
 
   useEffect(() => {
     if (!filterPopoverOpen) {
@@ -320,7 +334,7 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
               <FilterSection title="Folders">
                 <SearchableMultiSelect
                   label="folders"
-                  options={FOLDER_OPTIONS}
+                  options={folderOptions}
                   selectedValues={draftFilters.folders}
                   onChange={(folders) => updateDraftFilters({ folders })}
                   placeholder="Select folders"
@@ -332,7 +346,7 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
               <FilterSection title="Tags">
                 <SearchableMultiSelect
                   label="tags"
-                  options={TAG_OPTIONS}
+                  options={tagOptions}
                   selectedValues={draftFilters.tags}
                   onChange={(tags) => updateDraftFilters({ tags })}
                   placeholder="Select tags"
@@ -438,13 +452,13 @@ function ChoiceRow({ label, selected, type, onClick }: ChoiceRowProps) {
 
 interface SearchableMultiSelectProps<T extends string> {
   label: string;
-  options: Array<FilterOption<T>>;
+  options: Array<PromptFilterOption<T>>;
   selectedValues: T[];
   onChange: (values: T[]) => void;
   placeholder: string;
   searchPlaceholder: string;
   emptyMessage: string;
-  formatSelected?: (option: FilterOption<T>) => string;
+  formatSelected?: (option: PromptFilterOption<T>) => string;
 }
 
 type DropdownPlacement = 'top' | 'bottom';

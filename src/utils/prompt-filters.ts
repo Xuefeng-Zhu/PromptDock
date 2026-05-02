@@ -2,8 +2,8 @@ import type { PromptRecipe } from '../types/index';
 
 export type SortFilter = 'lastUsed' | 'updated' | 'created' | 'az';
 export type StatusFilter = 'favorites' | 'recent' | 'archived' | 'hasVariables';
-export type FolderFilter = 'work' | 'writing' | 'product' | 'engineering' | 'personal';
-export type TagFilter = 'writing' | 'summarization' | 'email' | 'code' | 'meeting' | 'ideation';
+export type FolderFilter = string;
+export type TagFilter = string;
 export type LastUsedFilter = 'any' | 'today' | 'last7Days' | 'last30Days';
 
 export interface PromptFilters {

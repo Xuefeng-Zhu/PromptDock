@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { LayoutGrid, List, Plus } from 'lucide-react';
-import type { PromptRecipe } from '../types/index';
+import type { Folder, PromptRecipe } from '../types/index';
 import {
   normalizePromptFilters,
   sortPromptsByFilter,
@@ -8,13 +8,15 @@ import {
 } from '../utils/prompt-filters';
 import { Button } from './ui/Button';
 import { PromptGrid } from './PromptGrid';
-import { PromptFiltersPopover } from './PromptFiltersPopover';
+import { PromptFiltersPopover, type PromptFilterOption } from './PromptFiltersPopover';
 import { PromptSortDropdown } from './PromptSortDropdown';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface LibraryScreenProps {
   prompts: PromptRecipe[];
+  filterSourcePrompts?: PromptRecipe[];
+  folders?: Folder[];
   selectedPromptId: string | null;
   activeFilter: FilterType;
   onSelectPrompt: (id: string) => void;
@@ -26,10 +28,71 @@ export interface LibraryScreenProps {
   loading?: boolean;
 }
 
+function formatFolderLabel(folderId: string): string {
+  const cleaned = folderId
+    .replace(/^folder-/, '')
+    .replace(/[-_]+/g, ' ')
+    .trim();
+
+  if (cleaned === '') return folderId;
+
+  return cleaned.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function sortFilterOptions<T extends string>(
+  options: Array<PromptFilterOption<T>>,
+): Array<PromptFilterOption<T>> {
+  return [...options].sort((a, b) => a.label.localeCompare(b.label, undefined, {
+    sensitivity: 'base',
+  }));
+}
+
+function deriveFolderFilterOptions(
+  prompts: PromptRecipe[],
+  folders: Folder[] = [],
+): Array<PromptFilterOption<string>> {
+  const optionMap = new Map<string, PromptFilterOption<string>>();
+
+  for (const folder of folders) {
+    optionMap.set(folder.id, { label: folder.name, value: folder.id });
+  }
+
+  for (const prompt of prompts) {
+    if (prompt.folderId && !optionMap.has(prompt.folderId)) {
+      optionMap.set(prompt.folderId, {
+        label: formatFolderLabel(prompt.folderId),
+        value: prompt.folderId,
+      });
+    }
+  }
+
+  return sortFilterOptions(Array.from(optionMap.values()));
+}
+
+function deriveTagFilterOptions(prompts: PromptRecipe[]): Array<PromptFilterOption<string>> {
+  const optionMap = new Map<string, PromptFilterOption<string>>();
+
+  for (const prompt of prompts) {
+    for (const tag of prompt.tags) {
+      const normalizedTag = tag.trim();
+      if (normalizedTag !== '' && !optionMap.has(normalizedTag)) {
+        optionMap.set(normalizedTag, {
+          label: normalizedTag,
+          value: normalizedTag,
+        });
+      }
+    }
+  }
+
+  return sortFilterOptions(Array.from(optionMap.values()));
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function LibraryScreen({
   prompts,
+  filterSourcePrompts,
+  folders,
   selectedPromptId,
   activeFilter,
   onSelectPrompt,
@@ -43,6 +106,15 @@ export function LibraryScreen({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
   const displayCount = totalPromptCount ?? prompts.length;
+  const filterOptionSourcePrompts = filterSourcePrompts ?? prompts;
+  const folderFilterOptions = useMemo(
+    () => deriveFolderFilterOptions(filterOptionSourcePrompts, folders),
+    [filterOptionSourcePrompts, folders],
+  );
+  const tagFilterOptions = useMemo(
+    () => deriveTagFilterOptions(filterOptionSourcePrompts),
+    [filterOptionSourcePrompts],
+  );
 
   const sortedPrompts = useMemo(
     () => sortPromptsByFilter(prompts, appliedFilters.sortBy),
@@ -114,6 +186,8 @@ export function LibraryScreen({
           <PromptFiltersPopover
             activeFilter={activeFilter}
             onFilterChange={onFilterChange}
+            folderOptions={folderFilterOptions}
+            tagOptions={tagFilterOptions}
           />
           <PromptSortDropdown
             activeFilter={activeFilter}

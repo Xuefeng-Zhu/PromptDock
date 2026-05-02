@@ -217,5 +217,51 @@
         <p>PromptDock</p>
       </section>
     </main>
+    <script>
+      const analyticsMeasurementId = 'G-M1Z8P53RRS';
+
+      function initializeLandingAnalytics() {
+        if (window.location.protocol !== 'https:') return;
+
+        try {
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            window.dataLayer.push(arguments);
+          }
+
+          gtag('js', new Date());
+          gtag('config', analyticsMeasurementId, {
+            page_title: document.title,
+            page_location: window.location.href,
+            page_path: window.location.pathname,
+          });
+
+          document.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+
+            const link = target.closest('a[href]');
+            if (!(link instanceof HTMLAnchorElement)) return;
+
+            gtag('event', 'select_content', {
+              content_type: 'landing_link',
+              item_id: link.textContent.trim().replace(/\s+/g, ' '),
+              link_url: link.href,
+            });
+          });
+
+          const tag = document.createElement('script');
+          tag.async = true;
+          tag.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(
+            analyticsMeasurementId,
+          )}`;
+          document.head.append(tag);
+        } catch {
+          // Keep the landing page fully usable if Analytics is blocked or unavailable.
+        }
+      }
+
+      initializeLandingAnalytics();
+    </script>
   </body>
 </html>

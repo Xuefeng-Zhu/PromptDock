@@ -345,7 +345,7 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
 
             <div className="space-y-6 p-5">
               <FilterSection title="Last used">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   {LAST_USED_OPTIONS.map((option) => (
                     <button
                       key={option.value}

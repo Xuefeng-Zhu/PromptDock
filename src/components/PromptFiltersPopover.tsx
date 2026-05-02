@@ -449,6 +449,28 @@ interface SearchableMultiSelectProps<T extends string> {
 
 type DropdownPlacement = 'top' | 'bottom';
 
+interface DropdownPosition {
+  left: number;
+  top: number;
+  width: number;
+  maxHeight: number;
+}
+
+const DROPDOWN_GAP = 8;
+const DROPDOWN_MAX_HEIGHT = 240;
+const DROPDOWN_MIN_HEIGHT = 144;
+const VIEWPORT_PADDING = 12;
+const DEFAULT_DROPDOWN_POSITION: DropdownPosition = {
+  left: 0,
+  top: 0,
+  width: 0,
+  maxHeight: DROPDOWN_MAX_HEIGHT,
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function SearchableMultiSelect<T extends string>({
   label,
   options,
@@ -461,6 +483,9 @@ function SearchableMultiSelect<T extends string>({
 }: SearchableMultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [placement, setPlacement] = useState<DropdownPlacement>('bottom');
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>(
+    DEFAULT_DROPDOWN_POSITION,
+  );
   const [query, setQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -480,21 +505,32 @@ function SearchableMultiSelect<T extends string>({
       if (!buttonRef.current) return;
 
       const buttonRect = buttonRef.current.getBoundingClientRect();
-      const scrollContainer = buttonRef.current.closest('.overflow-y-auto');
-      const containerRect = scrollContainer?.getBoundingClientRect();
-      const viewportTop = containerRect ? Math.max(0, containerRect.top) : 0;
-      const viewportBottom = containerRect
-        ? Math.min(window.innerHeight, containerRect.bottom)
-        : window.innerHeight;
-      const estimatedMenuHeight = 240;
-      const availableBelow = viewportBottom - buttonRect.bottom;
-      const availableAbove = buttonRect.top - viewportTop;
+      const availableBelow = window.innerHeight
+        - buttonRect.bottom
+        - VIEWPORT_PADDING
+        - DROPDOWN_GAP;
+      const availableAbove = buttonRect.top - VIEWPORT_PADDING - DROPDOWN_GAP;
+      const nextPlacement = availableBelow < DROPDOWN_MAX_HEIGHT && availableAbove > availableBelow
+        ? 'top'
+        : 'bottom';
+      const availableHeight = nextPlacement === 'top' ? availableAbove : availableBelow;
+      const maxHeight = clamp(availableHeight, DROPDOWN_MIN_HEIGHT, DROPDOWN_MAX_HEIGHT);
+      const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - VIEWPORT_PADDING - buttonRect.width);
+      const left = clamp(buttonRect.left, VIEWPORT_PADDING, maxLeft);
+      const top = nextPlacement === 'top'
+        ? Math.max(VIEWPORT_PADDING, buttonRect.top - DROPDOWN_GAP - maxHeight)
+        : Math.min(
+          buttonRect.bottom + DROPDOWN_GAP,
+          window.innerHeight - VIEWPORT_PADDING - maxHeight,
+        );
 
-      setPlacement(
-        availableBelow < estimatedMenuHeight && availableAbove > availableBelow
-          ? 'top'
-          : 'bottom',
-      );
+      setPlacement(nextPlacement);
+      setDropdownPosition({
+        left,
+        top,
+        width: buttonRect.width,
+        maxHeight,
+      });
     }
 
     updatePlacement();
@@ -558,9 +594,10 @@ function SearchableMultiSelect<T extends string>({
       {open && (
         <div
           className={[
-            'absolute left-0 right-0 z-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-2 shadow-xl',
-            placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+            'fixed z-[80] rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-2 shadow-xl',
+            placement === 'top' ? 'origin-bottom' : 'origin-top',
           ].join(' ')}
+          style={dropdownPosition}
         >
           <div className="mb-2 flex items-center gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
@@ -574,7 +611,12 @@ function SearchableMultiSelect<T extends string>({
             />
           </div>
 
-          <div className="max-h-44 overflow-y-auto" role="listbox" aria-label={label}>
+          <div
+            className="overflow-y-auto"
+            role="listbox"
+            aria-label={label}
+            style={{ maxHeight: Math.max(88, dropdownPosition.maxHeight - 58) }}
+          >
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => {
                 const selected = selectedSet.has(option.value);

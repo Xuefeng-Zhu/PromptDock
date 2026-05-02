@@ -281,7 +281,7 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
             </div>
           </div>
 
-          <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-[1fr_1.35fr_0.9fr]">
+          <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-3">
             <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
               <FilterSection title="Status">
                 <div className="space-y-1">

@@ -500,6 +500,10 @@ function createMockAuthService(overrides: Partial<IAuthService> = {}): IAuthServ
       success: true,
       user: { uid: 'user-456', email: 'new@example.com', displayName: null },
     })),
+    signInWithGoogle: vi.fn(async (): Promise<AuthResult> => ({
+      success: true,
+      user: { uid: 'google-user', email: 'google@example.com', displayName: 'Google User' },
+    })),
     signOut: vi.fn(async () => {}),
     restoreSession: vi.fn(async () => null),
     sendPasswordReset: vi.fn(async () => {}),
@@ -578,6 +582,19 @@ describe('SettingsScreen + AuthService integration', () => {
     // AppModeStore should be updated to synced mode with user ID
     expect(testAppModeStore.getState().mode).toBe('synced');
     expect(testAppModeStore.getState().userId).toBe('user-456');
+  });
+
+  it('calls AuthService.signInWithGoogle and updates AppModeStore', async () => {
+    const authService = createMockAuthService();
+    render(<SettingsScreen onBack={() => {}} authService={authService} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    });
+
+    expect(authService.signInWithGoogle).toHaveBeenCalled();
+    expect(testAppModeStore.getState().mode).toBe('synced');
+    expect(testAppModeStore.getState().userId).toBe('google-user');
   });
 
   it('displays error message for invalid-credentials on sign-in failure', async () => {

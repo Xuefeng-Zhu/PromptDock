@@ -101,7 +101,15 @@ export type AuthResult =
   | { success: true; user: AuthUser }
   | { success: false; error: AuthError };
 
-export type AuthError = 'invalid-credentials' | 'email-in-use' | 'weak-password' | 'unknown';
+export type AuthError =
+  | 'invalid-credentials'
+  | 'email-in-use'
+  | 'weak-password'
+  | 'missing-configuration'
+  | 'network'
+  | 'popup-blocked'
+  | 'popup-cancelled'
+  | 'unknown';
 
 export interface AuthUser {
   uid: string;

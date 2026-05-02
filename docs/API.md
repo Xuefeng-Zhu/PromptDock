@@ -113,8 +113,8 @@ Firestore is optional and used only in synced mode.
 |---|---|
 | `/users/{userId}` | User can read/write only their own document. |
 | `/settings/{userId}` | User can read/write only their own settings document. |
-| `/workspaces/{workspaceId}` | Workspace members can read; owners can update/delete; authenticated users can create. |
-| `/workspaces/{workspaceId}/members/{memberId}` | Workspace members can read; owners can create/update/delete. |
+| `/workspaces/{workspaceId}` | Workspace members can read; owners can update/delete; authenticated users can create workspaces they own. |
+| `/workspaces/{workspaceId}/members/{memberId}` | Workspace members can read; owners can create/update/delete; the initial owner can create their own bootstrap membership. |
 | `/workspaces/{workspaceId}/prompts/{promptId}` | Members can read; owners/editors can create/update/delete. |
 | `/workspaces/{workspaceId}/prompts/{promptId}/versions/{versionId}` | Members can read; owners/editors can write. |
 | `/workspaces/{workspaceId}/folders/{folderId}` | Members can read; owners/editors can write. |
@@ -123,10 +123,7 @@ Firestore is optional and used only in synced mode.
 Important assumption:
 
 - The default workspace ID is currently treated as the Firebase user ID in `src/App.tsx`.
-
-TODO:
-
-- Bootstrap `/workspaces/{workspaceId}` and `/workspaces/{workspaceId}/members/{uid}` after signup/signin. See [Deferred Issues](Issues.md).
+- `AuthService` bootstraps `/users/{uid}`, `/workspaces/{uid}`, and `/workspaces/{uid}/members/{uid}` after email/password or Google sign-in.
 
 ## Import/Export JSON Format
 
@@ -188,7 +185,7 @@ Duplicate detection compares incoming prompts with existing prompts by title, bo
 
 ## Authentication and Authorization
 
-Authentication is Firebase email/password auth through `AuthService`.
+Authentication is Firebase email/password auth and Google sign-in through `AuthService`.
 
 Mapped auth errors:
 
@@ -197,6 +194,10 @@ Mapped auth errors:
 | Invalid email, user not found, wrong password, invalid credential | `invalid-credentials` |
 | Email already in use | `email-in-use` |
 | Weak password | `weak-password` |
+| Missing Firebase env config | `missing-configuration` |
+| Network request failed | `network` |
+| Popup blocked | `popup-blocked` |
+| Popup closed/cancelled | `popup-cancelled` |
 | Anything else | `unknown` |
 
 Authorization is enforced by Firestore rules. Local mode has no server-side authorization because data remains on the user's device.

@@ -97,6 +97,8 @@ This runs Vite first, then launches the Tauri shell with the main window and hid
 | `VITE_EMULATOR_AUTH_HOST` | No | `http://localhost:9099` | Auth emulator URL. |
 | `VITE_EMULATOR_FIRESTORE_HOST` | No | `localhost:8080` | Firestore emulator host and port. |
 
+Firebase sync supports Email/Password and Google sign-in. Enable both providers in the Firebase Authentication console for production projects.
+
 See [Configuration](docs/CONFIGURATION.md) for examples and config-file details.
 
 ## Common Commands
@@ -160,7 +162,7 @@ See [Deployment](docs/DEPLOYMENT.md) before publishing a release; desktop releas
 
 - If `npm run dev` fails because port 1420 is busy, stop the other process first; the Vite config uses `strictPort`.
 - If sync throws `Firebase configuration is missing`, either stay in local mode or fill the Firebase variables in `.env.local`.
-- If Firestore returns `permission-denied`, review the workspace bootstrap issue in [Deferred Issues](docs/Issues.md).
+- If Firestore returns `permission-denied`, deploy the latest `firestore.rules` and confirm the user has a `/workspaces/{uid}/members/{uid}` owner document.
 - If the global hotkey does not work, check for OS-level shortcut conflicts and rerun the app through Tauri rather than the browser-only Vite runtime.
 - If paste into the active app fails on macOS, check system privacy permissions for automation/accessibility-style input simulation.
 - If paste into the active app fails on Windows, make sure the target app accepts Ctrl+V and that no security tool is blocking simulated keyboard input.

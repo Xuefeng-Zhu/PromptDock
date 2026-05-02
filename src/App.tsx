@@ -136,6 +136,10 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
     conflictServiceInstance = new ConflictService();
   }
 
+  // AuthService is cheap to construct and Firebase remains lazy until a user
+  // actually signs in or a session restore is requested.
+  authServiceInstance = new AuthService();
+
   // 8. Subscribe to AppModeStore mode changes to instantiate/teardown SyncService
   if (enableBackgroundServices) {
     appModeStore.subscribe((state, prevState) => {
@@ -143,6 +147,20 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
       if (!modeChanged) return;
 
       if (state.mode === 'synced' && !syncServiceInstance) {
+        const userId = state.userId ?? '';
+        const workspaceId = userId; // default workspace = user ID
+
+        if (!userId) {
+          appModeStore.getState().setMode('local');
+          appModeStore.getState().setSyncStatus('local');
+          return;
+        }
+
+        promptStore.getState().setActiveWorkspaceId(workspaceId);
+        void settingsStore.getState().updateSettings({ activeWorkspaceId: workspaceId }).catch((err) => {
+          console.error('Failed to persist active workspace after sign-in:', err);
+        });
+
         // Instantiate SyncService when transitioning to synced mode
         syncServiceInstance = new SyncService({
           appModeStore: appModeStore.getState(),
@@ -163,8 +181,6 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         }
 
         // Trigger the sync transition: migrate local prompts and start snapshot listeners
-        const userId = state.userId ?? '';
-        const workspaceId = userId; // default workspace = user ID
         const currentPrompts = promptStore.getState().prompts;
         syncServiceInstance.transitionToSynced(
           userId,
@@ -186,6 +202,10 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         syncServiceInstance = null;
         // Revert PromptRepository to local-only mode
         promptRepo.setFirestoreDelegate(null);
+        promptStore.getState().setActiveWorkspaceId('local');
+        void settingsStore.getState().updateSettings({ activeWorkspaceId: 'local' }).catch((err) => {
+          console.error('Failed to persist active workspace after sign-out:', err);
+        });
         conflictServiceInstance?.clearAll();
         void promptStore.getState().loadPrompts().catch((err) => {
           console.error('Failed to reload local prompts after leaving synced mode:', err);
@@ -197,7 +217,6 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
   // 9. Restore auth session — if a valid user exists, transition to synced mode
   if (restoreAuthSession) {
     try {
-      authServiceInstance = new AuthService();
       const result = await authServiceInstance.restoreSession();
       if (result && result.success) {
         const appMode = appModeStore.getState();

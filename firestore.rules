@@ -37,6 +37,17 @@ service cloud.firestore {
         && (getMemberRole(workspaceId) == 'owner' || getMemberRole(workspaceId) == 'editor');
     }
 
+    // Check whether this write creates the first owner membership for a
+    // workspace owned by the authenticated user.
+    function isSelfOwnerBootstrap(workspaceId, memberId) {
+      return isAuthenticated()
+        && memberId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.role == 'owner'
+        && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId == request.auth.uid;
+    }
+
     // ─── /users/{userId} ────────────────────────────────────────────────────────
     // Requirement 9.1: Users can read/write only their own user document.
     // Requirement 9.5: Deny all access to unauthenticated requests.
@@ -61,8 +72,9 @@ service cloud.firestore {
       // Any workspace member can read the workspace document.
       allow read: if isWorkspaceMember(workspaceId);
 
-      // Any authenticated user can create a workspace (they become the owner).
-      allow create: if isAuthenticated();
+      // Any authenticated user can create a workspace they own.
+      allow create: if isAuthenticated()
+        && request.resource.data.ownerId == request.auth.uid;
 
       // Only the workspace owner can update or delete the workspace.
       allow update: if isWorkspaceOwner(workspaceId);
@@ -76,8 +88,11 @@ service cloud.firestore {
         // Any workspace member can read the members list.
         allow read: if isWorkspaceMember(workspaceId);
 
-        // Only the workspace owner can create, update, or delete members.
-        allow create, update, delete: if isWorkspaceOwner(workspaceId);
+        // The first owner may create their own membership during bootstrap.
+        // After that, only workspace owners can manage members.
+        allow create: if isWorkspaceOwner(workspaceId)
+          || isSelfOwnerBootstrap(workspaceId, memberId);
+        allow update, delete: if isWorkspaceOwner(workspaceId);
       }
 
       // ─── /workspaces/{workspaceId}/prompts/{promptId} ──────────────────────

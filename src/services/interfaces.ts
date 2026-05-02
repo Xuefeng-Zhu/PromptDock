@@ -46,6 +46,7 @@ export interface IImportExportService {
 export interface IAuthService {
   signUp(email: string, password: string): Promise<AuthResult>;
   signIn(email: string, password: string): Promise<AuthResult>;
+  signInWithGoogle(): Promise<AuthResult>;
   signOut(): Promise<void>;
   restoreSession(): Promise<AuthResult | null>;
   sendPasswordReset(email: string): Promise<void>;

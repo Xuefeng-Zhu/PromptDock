@@ -149,7 +149,7 @@ Firebase rules and indexes:
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-See [Deployment](docs/DEPLOYMENT.md) before publishing a release; macOS release signing and notarization run through `.github/workflows/release-macos.yml`.
+See [Deployment](docs/DEPLOYMENT.md) before publishing a release; desktop release builds run through `.github/workflows/release-macos.yml` and `.github/workflows/release-windows.yml`.
 
 ## Troubleshooting
 
@@ -158,6 +158,7 @@ See [Deployment](docs/DEPLOYMENT.md) before publishing a release; macOS release 
 - If Firestore returns `permission-denied`, review the workspace bootstrap issue in [Deferred Issues](docs/Issues.md).
 - If the global hotkey does not work, check for OS-level shortcut conflicts and rerun the app through Tauri rather than the browser-only Vite runtime.
 - If paste into the active app fails on macOS, check system privacy permissions for automation/accessibility-style input simulation.
+- If paste into the active app fails on Windows, make sure the target app accepts Ctrl+V and that no security tool is blocking simulated keyboard input.
 - If tests or builds fail, compare against the current known failures in [Testing](docs/TESTING.md) and [Troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## License

@@ -2697,6 +2697,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-store",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

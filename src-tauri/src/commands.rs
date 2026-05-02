@@ -8,7 +8,7 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 pub struct CurrentHotkey(pub Mutex<Option<String>>);
 
 #[derive(Default)]
-pub struct LastActiveApp(pub Mutex<Option<i32>>);
+pub struct LastActiveApp(pub Mutex<Option<isize>>);
 
 // ---------------------------------------------------------------------------
 // Clipboard & Paste Commands
@@ -254,11 +254,36 @@ fn remember_frontmost_app(last_active_app: &LastActiveApp) {
     }
 
     if let Ok(mut stored_pid) = last_active_app.0.lock() {
-        *stored_pid = Some(pid);
+        *stored_pid = Some(pid as isize);
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+fn remember_frontmost_app(last_active_app: &LastActiveApp) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowThreadProcessId,
+    };
+
+    let hwnd = unsafe { GetForegroundWindow() };
+    if hwnd.is_null() || is_current_process_window(hwnd) {
+        return;
+    }
+
+    let mut process_id = 0;
+    unsafe {
+        GetWindowThreadProcessId(hwnd, &mut process_id);
+    }
+
+    if process_id == 0 {
+        return;
+    }
+
+    if let Ok(mut stored_hwnd) = last_active_app.0.lock() {
+        *stored_hwnd = Some(hwnd as isize);
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn remember_frontmost_app(_last_active_app: &LastActiveApp) {}
 
 #[cfg(target_os = "macos")]
@@ -267,7 +292,14 @@ fn activate_last_active_app(last_active_app: &LastActiveApp) {
 
     let stored_pid = last_active_app.0.lock().ok().and_then(|pid| *pid);
 
-    let Some(pid) = stored_pid else {
+    let Some(stored_pid) = stored_pid else {
+        return;
+    };
+
+    let Ok(pid) = i32::try_from(stored_pid) else {
+        if let Ok(mut stored_pid) = last_active_app.0.lock() {
+            *stored_pid = None;
+        }
         return;
     };
 
@@ -297,7 +329,33 @@ fn activate_last_active_app(last_active_app: &LastActiveApp) {
     let _ = target_app.activateWithOptions(options);
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+fn activate_last_active_app(last_active_app: &LastActiveApp) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        IsWindow, SetForegroundWindow, ShowWindow, SW_RESTORE,
+    };
+
+    let stored_hwnd = last_active_app.0.lock().ok().and_then(|hwnd| *hwnd);
+
+    let Some(hwnd) = stored_hwnd else {
+        return;
+    };
+    let hwnd = hwnd as windows_sys::Win32::Foundation::HWND;
+
+    if hwnd.is_null() || unsafe { IsWindow(hwnd) } == 0 || is_current_process_window(hwnd) {
+        if let Ok(mut stored_hwnd) = last_active_app.0.lock() {
+            *stored_hwnd = None;
+        }
+        return;
+    }
+
+    unsafe {
+        ShowWindow(hwnd, SW_RESTORE);
+        SetForegroundWindow(hwnd);
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn activate_last_active_app(_last_active_app: &LastActiveApp) {}
 
 #[cfg(target_os = "macos")]
@@ -314,6 +372,19 @@ fn current_process_id() -> i32 {
     i32::try_from(std::process::id()).unwrap_or(-1)
 }
 
+#[cfg(target_os = "windows")]
+fn is_current_process_window(hwnd: windows_sys::Win32::Foundation::HWND) -> bool {
+    use windows_sys::Win32::System::Threading::GetCurrentProcessId;
+    use windows_sys::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId;
+
+    let mut process_id = 0;
+    unsafe {
+        GetWindowThreadProcessId(hwnd, &mut process_id);
+    }
+
+    process_id != 0 && process_id == unsafe { GetCurrentProcessId() }
+}
+
 fn format_paste_error<E: std::fmt::Display>(error: E) -> String {
     #[cfg(target_os = "macos")]
     {
@@ -322,7 +393,12 @@ fn format_paste_error<E: std::fmt::Display>(error: E) -> String {
         )
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    {
+        format!("Paste failed: {error}. On Windows, make sure PromptDock is allowed to send simulated keyboard input and that the target app accepts Ctrl+V.")
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         format!("Paste failed: {error}")
     }

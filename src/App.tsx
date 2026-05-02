@@ -33,7 +33,16 @@ export interface AppInitializationOptions {
   enableBackgroundServices?: boolean;
   restoreAuthSession?: boolean;
   syncMigrationChoice?: MigrationChoice;
-  analyticsSurface?: 'main' | 'quick_launcher';
+  analyticsSurface?: AnalyticsSurface;
+}
+
+export type AnalyticsSurface = 'main' | 'quick_launcher';
+
+export function shouldTrackAppOpen(
+  enableBackgroundServices: boolean,
+  analyticsSurface: AnalyticsSurface,
+): boolean {
+  return enableBackgroundServices && analyticsSurface === 'main';
 }
 
 /** Get the shared ConflictService instance (available after initialization). */
@@ -86,7 +95,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
   }
   await backend.initialize();
 
-  if (enableBackgroundServices) {
+  if (shouldTrackAppOpen(enableBackgroundServices, analyticsSurface)) {
     initializeAnalyticsTracking({
       runtime: isTauri ? 'tauri' : 'browser',
       surface: analyticsSurface,

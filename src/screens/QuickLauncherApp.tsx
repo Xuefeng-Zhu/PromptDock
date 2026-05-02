@@ -18,6 +18,7 @@ export function QuickLauncherApp() {
       enableBackgroundServices: true,
       restoreAuthSession: true,
       syncMigrationChoice: 'fresh',
+      analyticsSurface: 'quick_launcher',
     })
       .then(() => setReady(true))
       .catch((err) => {

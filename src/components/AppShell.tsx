@@ -21,6 +21,7 @@ import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
 import { readFolders, createFolder } from '../utils/folder-storage';
 import { getConflictService } from '../App';
 import { SearchEngine } from '../services/search-engine';
+import { trackPromptAction, trackScreenView } from '../services/analytics-service';
 import type { ConflictService } from '../services/conflict-service';
 import type { PromptRecipe } from '../types/index';
 
@@ -190,6 +191,10 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const [activeSidebarItem, setActiveSidebarItem] = useState('library');
   const [userFolders, setUserFolders] = useState<import('../types/index').Folder[]>(() => readFolders());
   const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    trackScreenView(screen.name);
+  }, [screen.name]);
 
   // ── Global ⌘K / Ctrl+K keyboard shortcut ──────────────────────────────────
 
@@ -410,6 +415,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     try {
       if (screen.name === 'editor' && screen.promptId) {
         await updatePrompt(screen.promptId, data);
+        trackPromptAction('updated');
       } else {
         await createPrompt({
           workspaceId: 'local',
@@ -425,6 +431,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           createdBy: 'local',
           version: 1,
         });
+        trackPromptAction('created');
       }
       setEditorHasUnsavedChanges(false);
       setScreen({ name: 'library' });
@@ -472,24 +479,30 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   // ── Archive and Duplicate callbacks ────────────────────────────────────────
 
   const handleArchivePrompt = useCallback((id: string) => {
-    archivePrompt(id).catch((err: unknown) => {
-      addToast(`Failed to archive prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
-    });
+    archivePrompt(id)
+      .then(() => trackPromptAction('archived'))
+      .catch((err: unknown) => {
+        addToast(`Failed to archive prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      });
     if (selectedPromptId === id) {
       setSelectedPromptId(null);
     }
   }, [archivePrompt, selectedPromptId, addToast]);
 
   const handleDuplicatePrompt = useCallback((id: string) => {
-    duplicatePrompt(id).catch((err: unknown) => {
-      addToast(`Failed to duplicate prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
-    });
+    duplicatePrompt(id)
+      .then(() => trackPromptAction('duplicated'))
+      .catch((err: unknown) => {
+        addToast(`Failed to duplicate prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      });
   }, [duplicatePrompt, addToast]);
 
   const handleDeletePrompt = useCallback((id: string) => {
-    deletePrompt(id).catch((err: unknown) => {
-      addToast(`Failed to delete prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
-    });
+    deletePrompt(id)
+      .then(() => trackPromptAction('deleted'))
+      .catch((err: unknown) => {
+        addToast(`Failed to delete prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      });
     if (selectedPromptId === id) {
       setSelectedPromptId(null);
     }
@@ -507,6 +520,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
             console.error('Failed to update last used timestamp:', err);
           });
         }
+        trackPromptAction('copied', { source: 'prompt_body' });
         addToast('Prompt body copied to clipboard', 'success');
       })
       .catch((err: unknown) => {
@@ -539,6 +553,9 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           void markPromptUsed(prompt.id).catch((err: unknown) => {
             console.error('Failed to update last used timestamp:', err);
           });
+          trackPromptAction(result?.pasted === false ? 'copied' : 'pasted', {
+            source: 'command_palette',
+          });
           addToast(result?.pasted === false ? 'Prompt copied to clipboard' : 'Prompt pasted', 'success');
         })
         .catch((err: unknown) => {
@@ -550,6 +567,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           void markPromptUsed(prompt.id).catch((err: unknown) => {
             console.error('Failed to update last used timestamp:', err);
           });
+          trackPromptAction('copied', { source: 'command_palette' });
           addToast('Prompt copied to clipboard', 'success');
         })
         .catch((err: unknown) => {
@@ -572,6 +590,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           console.error('Failed to update last used timestamp:', err);
         });
       }
+      trackPromptAction('copied', { source: 'variable_fill' });
       addToast('Prompt copied to clipboard', 'success');
     } catch (err) {
       addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
@@ -587,6 +606,9 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           console.error('Failed to update last used timestamp:', err);
         });
       }
+      trackPromptAction(result?.pasted === false ? 'copied' : 'pasted', {
+        source: 'variable_fill',
+      });
       addToast(result?.pasted === false ? 'Prompt copied to clipboard' : 'Prompt pasted', 'success');
     } catch (err) {
       addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');

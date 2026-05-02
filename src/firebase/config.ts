@@ -1,20 +1,23 @@
 /**
  * Firebase configuration module with lazy initialization.
  *
- * Firebase SDK is NOT imported or initialized until the user opts into sync.
- * This keeps the local-mode bundle lean and avoids any Firebase operations
- * when the app is running in Local Mode.
+ * Firebase SDK is NOT imported or initialized until the user opts into sync
+ * or Analytics is configured for this build. This keeps the local-mode bundle
+ * lean and avoids Firebase operations when no Firebase-backed feature is active.
  *
  * Requirements: 25.1, 25.2, 25.3, 25.4, 1.4
  */
 
 import type { FirebaseApp } from 'firebase/app';
+import type { Analytics } from 'firebase/analytics';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 
 // ─── Cached instances ──────────────────────────────────────────────────────────
 
 let _app: FirebaseApp | null = null;
+let _analytics: Analytics | null = null;
+let _analyticsSupported: boolean | null = null;
 let _auth: Auth | null = null;
 let _firestore: Firestore | null = null;
 
@@ -24,6 +27,10 @@ export interface FirebaseConfig {
   apiKey: string;
   authDomain: string;
   projectId: string;
+  appId?: string;
+  measurementId?: string;
+  messagingSenderId?: string;
+  storageBucket?: string;
 }
 
 /**
@@ -34,12 +41,24 @@ export function getFirebaseConfig(): FirebaseConfig | null {
   const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
   const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+  const appId = import.meta.env.VITE_FIREBASE_APP_ID;
+  const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID;
+  const messagingSenderId = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID;
+  const storageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
 
   if (!apiKey || !authDomain || !projectId) {
     return null;
   }
 
-  return { apiKey, authDomain, projectId };
+  return {
+    apiKey,
+    authDomain,
+    projectId,
+    ...(appId ? { appId } : {}),
+    ...(measurementId ? { measurementId } : {}),
+    ...(messagingSenderId ? { messagingSenderId } : {}),
+    ...(storageBucket ? { storageBucket } : {}),
+  };
 }
 
 /**
@@ -47,6 +66,22 @@ export function getFirebaseConfig(): FirebaseConfig | null {
  */
 export function shouldUseEmulator(): boolean {
   return import.meta.env.VITE_USE_EMULATOR === 'true';
+}
+
+/**
+ * Check whether Firebase Analytics should collect events for this build.
+ * Analytics is disabled in emulator mode to avoid local development traffic.
+ */
+export function shouldEnableFirebaseAnalytics(): boolean {
+  return import.meta.env.VITE_FIREBASE_ANALYTICS_ENABLED !== 'false' && !shouldUseEmulator();
+}
+
+/**
+ * Check whether the configured Firebase app can initialize Analytics.
+ */
+export function isFirebaseAnalyticsConfigured(): boolean {
+  const config = getFirebaseConfig();
+  return Boolean(config?.appId && config.measurementId);
 }
 
 /**
@@ -79,6 +114,27 @@ export async function getFirebaseApp(): Promise<FirebaseApp> {
   const { initializeApp } = await import('firebase/app');
   _app = initializeApp(config);
   return _app;
+}
+
+/**
+ * Get or initialize the Firebase Analytics instance.
+ * Returns null when Analytics is disabled, unconfigured, or unsupported by the runtime.
+ */
+export async function getFirebaseAnalytics(): Promise<Analytics | null> {
+  if (_analytics) return _analytics;
+  if (!shouldEnableFirebaseAnalytics() || !isFirebaseAnalyticsConfigured()) return null;
+
+  const { getAnalytics, isSupported } = await import('firebase/analytics');
+
+  if (_analyticsSupported === null) {
+    _analyticsSupported = await isSupported().catch(() => false);
+  }
+
+  if (!_analyticsSupported) return null;
+
+  const app = await getFirebaseApp();
+  _analytics = getAnalytics(app);
+  return _analytics;
 }
 
 /**
@@ -134,6 +190,8 @@ export async function getFirebaseFirestore(): Promise<Firestore> {
  */
 export function resetFirebaseInstances(): void {
   _app = null;
+  _analytics = null;
+  _analyticsSupported = null;
   _auth = null;
   _firestore = null;
 }

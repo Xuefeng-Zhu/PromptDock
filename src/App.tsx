@@ -13,6 +13,7 @@ import { AuthService } from './services/auth-service';
 import { SyncService } from './services/sync-service';
 import type { MigrationChoice } from './services/sync-service';
 import { ConflictService } from './services/conflict-service';
+import { initializeAnalyticsTracking } from './services/analytics-service';
 import { AppModeProvider } from './contexts/AppModeProvider';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -32,6 +33,7 @@ export interface AppInitializationOptions {
   enableBackgroundServices?: boolean;
   restoreAuthSession?: boolean;
   syncMigrationChoice?: MigrationChoice;
+  analyticsSurface?: 'main' | 'quick_launcher';
 }
 
 /** Get the shared ConflictService instance (available after initialization). */
@@ -71,6 +73,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
     enableBackgroundServices = true,
     restoreAuthSession = enableBackgroundServices,
     syncMigrationChoice = 'migrate',
+    analyticsSurface = 'main',
   } = options;
 
   // 1. Pick the right storage backend based on runtime environment
@@ -82,6 +85,13 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
     backend = new BrowserStorageBackend();
   }
   await backend.initialize();
+
+  if (enableBackgroundServices) {
+    initializeAnalyticsTracking({
+      runtime: isTauri ? 'tauri' : 'browser',
+      surface: analyticsSurface,
+    });
+  }
 
   // 2. Create repositories
   const promptRepo = new PromptRepository(backend);

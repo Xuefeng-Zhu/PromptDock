@@ -39,7 +39,7 @@ Browser hosting requirements:
 - Static file hosting is enough for the frontend.
 - Browser runtime uses `window.localStorage`.
 - Desktop-only features such as global hotkeys, tray, Tauri Store, and paste simulation are unavailable.
-- Optional Firebase sync requires `VITE_FIREBASE_*` values at build time.
+- Optional Firebase sync and Analytics require `VITE_FIREBASE_*` values at build time.
 
 ## Tauri Desktop Build
 

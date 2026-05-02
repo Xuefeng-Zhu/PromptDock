@@ -2,7 +2,7 @@
 
 PromptDock has three configuration surfaces:
 
-- Vite environment variables for optional Firebase sync.
+- Vite environment variables for optional Firebase sync and Analytics.
 - Tauri desktop configuration for windows, capabilities, plugins, and bundling.
 - Firebase configuration for emulators, Firestore rules, and Firestore indexes.
 
@@ -19,6 +19,11 @@ cp .env.example .env.local
 | `VITE_FIREBASE_API_KEY` | Sync only | none | `src/firebase/config.ts` | Firebase web API key. |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Sync only | none | `src/firebase/config.ts` | Firebase Auth domain. |
 | `VITE_FIREBASE_PROJECT_ID` | Sync only | none | `src/firebase/config.ts` | Firebase project ID. |
+| `VITE_FIREBASE_APP_ID` | Analytics only | none | `src/firebase/config.ts` | Firebase web app ID. |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Analytics only | none | `src/firebase/config.ts` | Google Analytics measurement ID for the Firebase web app. |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | No | none | `src/firebase/config.ts` | Optional Firebase web app config field. |
+| `VITE_FIREBASE_STORAGE_BUCKET` | No | none | `src/firebase/config.ts` | Optional Firebase web app config field. |
+| `VITE_FIREBASE_ANALYTICS_ENABLED` | No | `true` | `src/firebase/config.ts` | Set to `false` to disable Analytics even when configured. Analytics is also disabled in emulator mode. |
 | `VITE_USE_EMULATOR` | No | `false` | `src/firebase/config.ts` | Set to `true` to connect Firebase SDKs to local emulators. |
 | `VITE_EMULATOR_AUTH_HOST` | No | `http://localhost:9099` | `src/firebase/config.ts` | Auth emulator URL. |
 | `VITE_EMULATOR_FIRESTORE_HOST` | No | `localhost:8080` | `src/firebase/config.ts` | Firestore emulator host and port. |
@@ -34,6 +39,11 @@ VITE_USE_EMULATOR=false
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MEASUREMENT_ID=
+VITE_FIREBASE_ANALYTICS_ENABLED=true
 VITE_EMULATOR_AUTH_HOST=http://localhost:9099
 VITE_EMULATOR_FIRESTORE_HOST=localhost:8080
 ```
@@ -45,11 +55,22 @@ VITE_USE_EMULATOR=true
 VITE_FIREBASE_API_KEY=demo-api-key
 VITE_FIREBASE_AUTH_DOMAIN=demo-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=demo-project
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MEASUREMENT_ID=
+VITE_FIREBASE_ANALYTICS_ENABLED=true
 VITE_EMULATOR_AUTH_HOST=http://localhost:9099
 VITE_EMULATOR_FIRESTORE_HOST=localhost:8080
 ```
 
 Assumption: The exact demo values do not matter for emulator-only work, but a Firebase app config object is still required by the SDK.
+
+Firebase Analytics:
+
+- Analytics initializes only when `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, and `VITE_FIREBASE_MEASUREMENT_ID` are present.
+- Analytics sends app open, screen view, and generic prompt action events. Prompt titles, bodies, tags, and variable values are not sent.
+- `VITE_USE_EMULATOR=true` disables Analytics so emulator traffic does not pollute production reports.
 
 ## Secrets Handling
 

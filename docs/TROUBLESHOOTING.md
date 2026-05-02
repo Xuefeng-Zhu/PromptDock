@@ -135,6 +135,15 @@ Fix:
 - Stay in local mode, or
 - Fill `.env.local`, restart Vite/Tauri, and retry sync.
 
+Analytics also requires these variables plus:
+
+```text
+VITE_FIREBASE_APP_ID
+VITE_FIREBASE_MEASUREMENT_ID
+```
+
+If either Analytics-only value is missing, sync can still work but Analytics remains disabled.
+
 ### Emulator connection fails
 
 Check:

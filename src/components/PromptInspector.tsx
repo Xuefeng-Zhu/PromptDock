@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Star, MoreHorizontal, Copy, Plus, ChevronDown, ChevronRight, Pencil, Files, FolderInput, Archive, Trash2 } from 'lucide-react';
 import type { PromptRecipe, Folder } from '../types/index';
+import { formatDate, formatRelativeShort } from '../utils/date-format';
+import { splitPromptTemplateParts } from '../utils/prompt-template';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -16,45 +18,23 @@ export interface PromptInspectorProps {
   onCopyBody?: (body: string, promptId?: string) => void;
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatDate(date: Date | null): string {
-  if (!date) return '—';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function formatRelativeShort(date: Date | null): string {
-  if (!date) return '—';
-  const diff = Date.now() - date.getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return 'just now';
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return formatDate(date);
-}
-
 /**
  * Renders body text with `{{variable_name}}` highlighted in blue.
  */
 function HighlightedBody({ text }: { text: string }) {
-  const parts = text.split(/(\{\{\w+\}\})/g);
+  const parts = splitPromptTemplateParts(text);
   return (
     <pre className="whitespace-pre-wrap font-[var(--font-mono)] text-xs leading-relaxed text-[var(--color-text-main)]">
       {parts.map((part, i) =>
-        /^\{\{\w+\}\}$/.test(part) ? (
+        part.isVariable ? (
           <span
             key={i}
             className="text-[var(--color-primary)] font-medium"
           >
-            {part}
+            {part.text}
           </span>
         ) : (
-          <span key={i}>{part}</span>
+          <span key={i}>{part.text}</span>
         ),
       )}
     </pre>

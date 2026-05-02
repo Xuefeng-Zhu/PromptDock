@@ -1,21 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search } from 'lucide-react';
 import type { PromptRecipe } from '../types/index';
-import { SearchEngine } from '../services/search-engine';
+import type { SearchOptions } from '../services/search-engine';
+import { useHighlightedIndex } from '../hooks/use-highlighted-index';
+import {
+  searchPromptResults,
+  usePromptSearchResults,
+} from '../hooks/use-prompt-search-results';
+
+export { clampIndex } from '../utils/list-navigation';
 
 // ─── Exported Utility Functions ────────────────────────────────────────────────
 
-/**
- * Clamps an index after applying a delta, keeping it within [0, listLength - 1].
- * Returns 0 if listLength is 0.
- */
-export function clampIndex(current: number, delta: number, listLength: number): number {
-  if (listLength <= 0) return 0;
-  const next = current + delta;
-  if (next < 0) return 0;
-  if (next >= listLength) return listLength - 1;
-  return next;
-}
+const COMMAND_PALETTE_SEARCH_OPTIONS: SearchOptions = {
+  fields: ['title', 'tags', 'description'],
+};
 
 /**
  * Filters prompts for the command palette by case-insensitive substring match
@@ -25,12 +24,8 @@ export function filterCommandPaletteResults(
   prompts: PromptRecipe[],
   query: string,
 ): PromptRecipe[] {
-  return commandPaletteSearch.search(prompts, query, {
-    fields: ['title', 'tags', 'description'],
-  });
+  return searchPromptResults(prompts, query, COMMAND_PALETTE_SEARCH_OPTIONS);
 }
-
-const commandPaletteSearch = new SearchEngine();
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -56,14 +51,19 @@ export function CommandPalette({
   onSelectPrompt,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const resultsListRef = useRef<HTMLUListElement>(null);
 
-  const filtered = filterCommandPaletteResults(prompts, query);
+  const filtered = usePromptSearchResults(prompts, query, COMMAND_PALETTE_SEARCH_OPTIONS);
+  const {
+    highlightedIndex,
+    moveHighlightedIndex,
+    resetHighlightedIndex,
+    setHighlightedIndex,
+  } = useHighlightedIndex(filtered.length);
 
   // ── Save previous focus on open, restore on close ──────────────────────────
 
@@ -93,15 +93,9 @@ export function CommandPalette({
   useEffect(() => {
     if (isOpen) {
       setQuery('');
-      setHighlightedIndex(0);
+      resetHighlightedIndex();
     }
-  }, [isOpen]);
-
-  // ── Clamp highlighted index when filtered results change ───────────────────
-
-  useEffect(() => {
-    setHighlightedIndex((prev) => clampIndex(prev, 0, filtered.length));
-  }, [filtered.length]);
+  }, [isOpen, resetHighlightedIndex]);
 
   // ── Scroll highlighted item into view ──────────────────────────────────────
 
@@ -120,11 +114,11 @@ export function CommandPalette({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setHighlightedIndex((prev) => clampIndex(prev, 1, filtered.length));
+          moveHighlightedIndex(1);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setHighlightedIndex((prev) => clampIndex(prev, -1, filtered.length));
+          moveHighlightedIndex(-1);
           break;
         case 'Enter':
           e.preventDefault();
@@ -138,7 +132,7 @@ export function CommandPalette({
           break;
       }
     },
-    [filtered, highlightedIndex, onSelectPrompt, onClose],
+    [filtered, highlightedIndex, moveHighlightedIndex, onSelectPrompt, onClose],
   );
 
   // ── Backdrop click handler ─────────────────────────────────────────────────

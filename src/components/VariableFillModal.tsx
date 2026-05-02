@@ -4,6 +4,10 @@ import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import type { PromptRecipe, UserSettings } from '../types/index';
+import {
+  areAllPromptVariablesFilled,
+  renderPromptTemplate,
+} from '../utils/prompt-template';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -14,29 +18,6 @@ export interface VariableFillModalProps {
   defaultAction?: UserSettings['defaultAction'];
   onCopy: (renderedText: string) => void | Promise<void>;
   onPaste: (renderedText: string) => void | Promise<void>;
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Renders a prompt body by replacing all {{variable_name}} placeholders
- * with the corresponding values from the values map.
- * Returns the body with unfilled variables left as-is.
- */
-function renderBody(body: string, values: Record<string, string>): string {
-  return body.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => {
-    return values[name] || `{{${name}}}`;
-  });
-}
-
-/**
- * Checks whether all variables have been filled with non-empty values.
- */
-function allVariablesFilled(
-  variables: string[],
-  values: Record<string, string>,
-): boolean {
-  return variables.every((v) => (values[v] ?? '').trim().length > 0);
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -76,12 +57,12 @@ export function VariableFillModal({
 
   // ── Computed values ────────────────────────────────────────────────────────
   const isComplete = useMemo(
-    () => allVariablesFilled(variables, values),
+    () => areAllPromptVariablesFilled(variables, values),
     [variables, values],
   );
 
   const renderedText = useMemo(
-    () => renderBody(prompt.body, values),
+    () => renderPromptTemplate(prompt.body, values),
     [prompt.body, values],
   );
 

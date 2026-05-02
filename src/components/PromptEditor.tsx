@@ -5,48 +5,23 @@ import {
   Archive,
   Files,
   ChevronDown,
-  Code,
-  Info,
-  Maximize2,
-  Minimize2,
   Plus,
   Star,
-  X,
-  Lightbulb,
 } from 'lucide-react';
 import type { PromptRecipe, Folder } from '../types/index';
 import { Select } from './ui/Select';
 import { Toggle } from './ui/Toggle';
 import { Button } from './ui/Button';
-import { VariableParser } from '../services/variable-parser';
+import { extractVariables } from '../utils/prompt-template';
+import { formatDate, formatRelativeShort } from '../utils/date-format';
+import { countChars, countWords } from '../utils/text-counts';
+import { BodyTemplateEditor } from './prompt-editor/BodyTemplateEditor';
+import { LivePreviewPanel } from './prompt-editor/LivePreviewPanel';
 
 // ─── Helper Functions (exported for testability) ───────────────────────────────
 
-/**
- * Extract unique variable names from `{{variable_name}}` placeholders
- * in first-appearance order.
- */
-export function extractVariables(body: string): string[] {
-  return variableParser.parse(body);
-}
-
-const variableParser = new VariableParser();
-
-/**
- * Count non-empty tokens from whitespace split.
- * Empty string returns 0.
- */
-export function countWords(text: string): number {
-  if (text.length === 0) return 0;
-  return text.split(/\s+/).filter((t) => t.length > 0).length;
-}
-
-/**
- * Return string.length. Empty string returns 0.
- */
-export function countChars(text: string): number {
-  return text.length;
-}
+export { extractVariables } from '../utils/prompt-template';
+export { countChars, countWords } from '../utils/text-counts';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -60,69 +35,6 @@ export interface PromptEditorProps {
   onDuplicate?: () => void;
   onArchive?: () => void;
   onCopy?: () => void;
-}
-
-// ─── Line Numbers Helper ───────────────────────────────────────────────────────
-
-function LineNumbers({ count }: { count: number }) {
-  return (
-    <div
-      className="select-none pr-3 text-right font-[var(--font-mono)] text-xs leading-[1.625rem] text-[var(--color-text-placeholder)]"
-      aria-hidden="true"
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i + 1}>{i + 1}</div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Highlighted Body Overlay ──────────────────────────────────────────────────
-
-/**
- * Renders body text with `{{variable_name}}` highlighted in blue.
- * Used as a visual overlay behind the textarea.
- */
-function HighlightedBody({ text }: { text: string }) {
-  const parts = text.split(/(\{\{\w+\}\})/g);
-  return (
-    <div className="whitespace-pre-wrap font-[var(--font-mono)] text-sm leading-[1.625rem] text-[var(--color-text-main)]">
-      {parts.map((part, i) =>
-        /^\{\{\w+\}\}$/.test(part) ? (
-          <span
-            key={i}
-            className="rounded px-0.5 text-[var(--color-primary)] bg-[var(--color-primary-light)] font-medium"
-          >
-            {part}
-          </span>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
-    </div>
-  );
-}
-
-// ─── Format Date Helper ────────────────────────────────────────────────────────
-
-function formatDate(date: Date | null): string {
-  if (!date) return '—';
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function formatRelativeShort(date: Date | null): string {
-  if (!date) return '—';
-  const diff = Date.now() - date.getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return 'just now';
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return formatDate(date);
 }
 
 function areTagsEqual(left: string[], right: string[]): boolean {
@@ -530,94 +442,18 @@ export function PromptEditor({
           </div>
         </div>
 
-        {/* ── Body Section ────────────────────────────────────────────────── */}
-        <div className="mb-2">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="prompt-body-editor"
-                className="text-sm font-medium text-[var(--color-text-main)]"
-              >
-                Body
-              </label>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                Use {'{{variable}}'} to insert variables
-              </span>
-            </div>
-            <Button variant="secondary" size="sm" onClick={handleInsertVariable}>
-              <Code className="mr-1.5 h-3.5 w-3.5" />
-              Insert variable
-            </Button>
-          </div>
-
-          {/* Body Editor with line numbers */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden focus-within:border-[var(--color-primary)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20">
-            <div className="flex">
-              {/* Line numbers */}
-              <div className="border-r border-[var(--color-border)] bg-gray-50 py-3 pl-3">
-                <LineNumbers count={lineCount} />
-              </div>
-              {/* Editor area with highlighting overlay */}
-              <div className="relative flex-1">
-                {/* Highlighted overlay (behind textarea) */}
-                <div className="pointer-events-none absolute inset-0 px-4 py-3 overflow-hidden">
-                  <HighlightedBody text={body} />
-                </div>
-                {/* Actual textarea (transparent text, visible caret) */}
-                <textarea
-                  id="prompt-body-editor"
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder="Write your prompt template here. Use {{variable_name}} for variables."
-                  rows={Math.max(lineCount + 2, 12)}
-                  className="relative w-full resize-none border-none bg-transparent px-4 py-3 font-[var(--font-mono)] text-sm text-transparent caret-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none leading-[1.625rem]"
-                  style={{ caretColor: 'var(--color-text-main)' }}
-                  aria-label="Body"
-                  aria-describedby="body-footer"
-                />
-              </div>
-            </div>
-
-            {/* Body Footer */}
-            <div
-              id="body-footer"
-              className="flex items-center justify-between border-t border-[var(--color-border)] px-4 py-2 text-xs text-[var(--color-text-muted)]"
-            >
-              <button
-                type="button"
-                onClick={() => setShowFormattingHelp((prev) => !prev)}
-                className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors"
-                aria-expanded={showFormattingHelp}
-                aria-controls="formatting-help"
-              >
-                <Info className="h-3.5 w-3.5" />
-                Formatting help
-              </button>
-              <div className="flex items-center gap-3">
-                <span>{wordCount} words · {charCount} characters</span>
-                <button
-                  type="button"
-                  onClick={() => setIsEditorExpanded((prev) => !prev)}
-                  className="hover:text-[var(--color-primary)] transition-colors"
-                  aria-label={isEditorExpanded ? 'Restore preview' : 'Expand editor'}
-                  aria-pressed={isEditorExpanded}
-                >
-                  {isEditorExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-          {showFormattingHelp && (
-            <div
-              id="formatting-help"
-              className="mt-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-xs text-[var(--color-text-muted)]"
-            >
-              <p className="font-medium text-[var(--color-text-main)]">Template formatting</p>
-              <p className="mt-1">Use double braces for variables, such as {'{{topic}}'} or {'{{audience}}'}.</p>
-              <p className="mt-1">Line breaks and spacing are preserved in the final prompt.</p>
-            </div>
-          )}
-        </div>
+        <BodyTemplateEditor
+          body={body}
+          charCount={charCount}
+          isExpanded={isEditorExpanded}
+          lineCount={lineCount}
+          showFormattingHelp={showFormattingHelp}
+          wordCount={wordCount}
+          onBodyChange={setBody}
+          onInsertVariable={handleInsertVariable}
+          onToggleExpanded={() => setIsEditorExpanded((prev) => !prev)}
+          onToggleFormattingHelp={() => setShowFormattingHelp((prev) => !prev)}
+        />
 
         {/* ── Metadata Footer ─────────────────────────────────────────────── */}
         {isEditing && prompt && (
@@ -630,92 +466,15 @@ export function PromptEditor({
         </div>
       </div>
 
-      {/* ── Right Column: Live Preview ──────────────────────────────────────── */}
       {!isEditorExpanded && (
-      <aside className="w-80 shrink-0 border-l border-[var(--color-border)] bg-[var(--color-panel)] overflow-y-auto">
-        {/* Live Preview Header */}
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-          <h2 className="text-sm font-semibold text-[var(--color-text-main)]">Live Preview</h2>
-          <button
-            type="button"
-            onClick={handleResetPreview}
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
-          >
-            Reset
-          </button>
-        </div>
-
-        {/* Preview variable inputs */}
-        <div className="px-5 py-4 space-y-3">
-          <p className="text-xs text-[var(--color-text-muted)]">Preview with example values</p>
-          {variables.map((v) => (
-            <div
-              key={v}
-              className="relative rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
-            >
-              <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5">
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </label>
-              <div className="flex items-start justify-between gap-2">
-                <input
-                  type="text"
-                  value={variableValues[v] ?? ''}
-                  onChange={(e) => handleVariableValueChange(v, e.target.value)}
-                  placeholder={`Enter ${v}…`}
-                  className="flex-1 bg-transparent text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none"
-                  aria-label={`Preview value for ${v}`}
-                />
-                {variableValues[v] && (
-                  <button
-                    type="button"
-                    onClick={() => handleVariableValueChange(v, '')}
-                    className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors"
-                    aria-label={`Clear ${v}`}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {variables.length === 0 && (
-            <p className="text-xs text-[var(--color-text-placeholder)] italic">
-              No variables detected yet
-            </p>
-          )}
-        </div>
-
-        {/* Preview Result */}
-        <div className="border-t border-[var(--color-border)] px-5 py-4">
-          <h3 className="mb-3 text-sm font-semibold text-[var(--color-text-main)]">Preview Result</h3>
-          {body ? (
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3 max-h-64 overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-[var(--font-mono)] text-xs leading-relaxed text-[var(--color-text-main)]">
-                {renderedPreview}
-              </pre>
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--color-text-placeholder)] italic">
-              Start typing in the body editor to see a preview…
-            </p>
-          )}
-        </div>
-
-        {/* Tips */}
-        <div className="border-t border-[var(--color-border)] px-5 py-4 bg-amber-50">
-          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[var(--color-text-main)]">
-            <Lightbulb className="h-4 w-4 text-amber-500" />
-            Tips
-          </h3>
-          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-            Variables make your prompt reusable. Use clear names like{' '}
-            <span className="text-[var(--color-primary)]">audience</span>,{' '}
-            <span className="text-[var(--color-primary)]">format</span>, or{' '}
-            <span className="text-[var(--color-primary)]">text</span>{' '}
-            for best results.
-          </p>
-        </div>
-      </aside>
+        <LivePreviewPanel
+          body={body}
+          renderedPreview={renderedPreview}
+          variableValues={variableValues}
+          variables={variables}
+          onResetPreview={handleResetPreview}
+          onVariableValueChange={handleVariableValueChange}
+        />
       )}
     </div>
   );

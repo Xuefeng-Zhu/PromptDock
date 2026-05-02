@@ -1,0 +1,147 @@
+import { Code, Info, Maximize2, Minimize2 } from 'lucide-react';
+import { Button } from '../ui/Button';
+import { splitPromptTemplateParts } from '../../utils/prompt-template';
+
+interface BodyTemplateEditorProps {
+  body: string;
+  charCount: number;
+  isExpanded: boolean;
+  lineCount: number;
+  showFormattingHelp: boolean;
+  wordCount: number;
+  onBodyChange: (body: string) => void;
+  onInsertVariable: () => void;
+  onToggleExpanded: () => void;
+  onToggleFormattingHelp: () => void;
+}
+
+function LineNumbers({ count }: { count: number }) {
+  return (
+    <div
+      className="select-none pr-3 text-right font-[var(--font-mono)] text-xs leading-[1.625rem] text-[var(--color-text-placeholder)]"
+      aria-hidden="true"
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i + 1}>{i + 1}</div>
+      ))}
+    </div>
+  );
+}
+
+function HighlightedBody({ text }: { text: string }) {
+  const parts = splitPromptTemplateParts(text);
+  return (
+    <div className="whitespace-pre-wrap font-[var(--font-mono)] text-sm leading-[1.625rem] text-[var(--color-text-main)]">
+      {parts.map((part, index) =>
+        part.isVariable ? (
+          <span
+            key={index}
+            className="rounded px-0.5 text-[var(--color-primary)] bg-[var(--color-primary-light)] font-medium"
+          >
+            {part.text}
+          </span>
+        ) : (
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </div>
+  );
+}
+
+export function BodyTemplateEditor({
+  body,
+  charCount,
+  isExpanded,
+  lineCount,
+  showFormattingHelp,
+  wordCount,
+  onBodyChange,
+  onInsertVariable,
+  onToggleExpanded,
+  onToggleFormattingHelp,
+}: BodyTemplateEditorProps) {
+  return (
+    <div className="mb-2">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="prompt-body-editor"
+            className="text-sm font-medium text-[var(--color-text-main)]"
+          >
+            Body
+          </label>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            Use {'{{variable}}'} to insert variables
+          </span>
+        </div>
+        <Button variant="secondary" size="sm" onClick={onInsertVariable}>
+          <Code className="mr-1.5 h-3.5 w-3.5" />
+          Insert variable
+        </Button>
+      </div>
+
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden focus-within:border-[var(--color-primary)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20">
+        <div className="flex">
+          <div className="border-r border-[var(--color-border)] bg-gray-50 py-3 pl-3">
+            <LineNumbers count={lineCount} />
+          </div>
+          <div className="relative flex-1">
+            <div className="pointer-events-none absolute inset-0 px-4 py-3 overflow-hidden">
+              <HighlightedBody text={body} />
+            </div>
+            <textarea
+              id="prompt-body-editor"
+              value={body}
+              onChange={(event) => onBodyChange(event.target.value)}
+              placeholder="Write your prompt template here. Use {{variable_name}} for variables."
+              rows={Math.max(lineCount + 2, 12)}
+              className="relative w-full resize-none border-none bg-transparent px-4 py-3 font-[var(--font-mono)] text-sm text-transparent caret-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none leading-[1.625rem]"
+              style={{ caretColor: 'var(--color-text-main)' }}
+              aria-label="Body"
+              aria-describedby="body-footer"
+            />
+          </div>
+        </div>
+
+        <div
+          id="body-footer"
+          className="flex items-center justify-between border-t border-[var(--color-border)] px-4 py-2 text-xs text-[var(--color-text-muted)]"
+        >
+          <button
+            type="button"
+            onClick={onToggleFormattingHelp}
+            className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors"
+            aria-expanded={showFormattingHelp}
+            aria-controls="formatting-help"
+          >
+            <Info className="h-3.5 w-3.5" />
+            Formatting help
+          </button>
+          <div className="flex items-center gap-3">
+            <span>{wordCount} words · {charCount} characters</span>
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              className="hover:text-[var(--color-primary)] transition-colors"
+              aria-label={isExpanded ? 'Restore preview' : 'Expand editor'}
+              aria-pressed={isExpanded}
+            >
+              {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showFormattingHelp && (
+        <div
+          id="formatting-help"
+          className="mt-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 text-xs text-[var(--color-text-muted)]"
+        >
+          <p className="font-medium text-[var(--color-text-main)]">Template formatting</p>
+          <p className="mt-1">Use double braces for variables, such as {'{{topic}}'} or {'{{audience}}'}.</p>
+          <p className="mt-1">Line breaks and spacing are preserved in the final prompt.</p>
+        </div>
+      )}
+    </div>
+  );
+}

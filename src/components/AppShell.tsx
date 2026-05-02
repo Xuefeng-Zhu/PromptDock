@@ -3,7 +3,7 @@ import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { OnboardingScreen, isOnboardingComplete } from './OnboardingScreen';
 import { LibraryScreen } from './LibraryScreen';
-import { PromptEditor, extractVariables } from './PromptEditor';
+import { PromptEditor } from './PromptEditor';
 import { SettingsScreen } from './SettingsScreen';
 import { PromptInspector } from './PromptInspector';
 import { CommandPalette } from './CommandPalette';
@@ -12,25 +12,21 @@ import { ConflictCenter, ConflictBadge } from '../screens/ConflictCenter';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useAppModeStore } from '../stores/app-mode-store';
-import { PROMPT_CATEGORY_MAP, CATEGORY_COLORS } from '../data/mock-data';
 import { ToastContainer } from './ToastContainer';
 import { useToastStore } from '../stores/toast-store';
-import { copyToClipboard, pasteToActiveApp } from '../utils/clipboard';
 import { hideMainWindow } from '../utils/window';
-import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
+import { usePromptExecution } from '../hooks/use-prompt-execution';
+import { useLibraryData } from '../hooks/use-library-data';
+import { extractVariables } from '../utils/prompt-template';
 import { readFolders, createFolder } from '../utils/folder-storage';
 import { getConflictService } from '../App';
-import { SearchEngine } from '../services/search-engine';
 import { trackPromptAction, trackScreenView } from '../services/analytics-service';
 import {
-  applyPromptFilters,
   createDefaultPromptFilters,
-  hasArchivedPromptFilter,
-  isRecentPrompt,
   type FilterType,
 } from '../utils/prompt-filters';
 import type { ConflictService } from '../services/conflict-service';
-import type { AuthUser, PromptRecipe } from '../types/index';
+import type { AuthUser, Folder, PromptRecipe } from '../types/index';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,61 +38,7 @@ export type Screen =
   | { name: 'conflicts' };
 
 export type { FilterType } from '../utils/prompt-filters';
-
-// ─── Filtering Logic ───────────────────────────────────────────────────────────
-
-const TOP_LEVEL_SIDEBAR_ITEMS = new Set([
-  'library',
-  'favorites',
-  'recent',
-  'archived',
-  'tags',
-  'workspaces',
-]);
-const librarySearchEngine = new SearchEngine();
-
-/**
- * Standalone search and filter function for prompts.
- * Exported separately for testability and property-based testing.
- *
- * Filtering pipeline:
- * 1. Apply sidebar library/folder/tag filter
- * 2. Exclude archived prompts unless the archived sidebar item is selected
- * 3. Apply search query (case-insensitive substring match on title, description, tags)
- * 4. Apply attribute filters from the Filters menu
- */
-export function filterPrompts(
-  prompts: PromptRecipe[],
-  searchQuery: string,
-  activeFilter: FilterType,
-  activeSidebarItem: string,
-): PromptRecipe[] {
-  const showingArchived = activeSidebarItem === 'archived' || hasArchivedPromptFilter(activeFilter);
-  let result = prompts.filter((p) => p.archived === showingArchived);
-
-  if (activeSidebarItem === 'favorites') {
-    result = result.filter((p) => p.favorite === true);
-  } else if (activeSidebarItem === 'recent') {
-    result = result.filter((p) => isRecentPrompt(p));
-  } else if (activeSidebarItem.startsWith('tag-')) {
-    const selectedTag = activeSidebarItem.slice(4);
-    result = result.filter((p) =>
-      p.tags.some((tag) => tag.toLowerCase() === selectedTag),
-    );
-  } else if (!TOP_LEVEL_SIDEBAR_ITEMS.has(activeSidebarItem)) {
-    result = result.filter((p) => p.folderId === activeSidebarItem);
-  }
-
-  // Search filtering: case-insensitive substring match against title, description, and tags
-  if (searchQuery.trim() !== '') {
-    result = librarySearchEngine.search(result, searchQuery, {
-      includeArchived: showingArchived,
-      fields: ['title', 'tags', 'description'],
-    });
-  }
-
-  return applyPromptFilters(result, activeFilter);
-}
+export { filterPrompts } from '../utils/library-filtering';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -167,6 +109,12 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   // ── Toast store ────────────────────────────────────────────────────────────
   const addToast = useToastStore((s) => s.addToast);
 
+  const { copyText, pasteText, executePrompt } = usePromptExecution({
+    defaultAction,
+    markPromptUsed,
+    beforePaste: hideMainWindow,
+  });
+
   // ── Local navigation state (useState) ──────────────────────────────────────
 
   const [screen, setScreen] = useState<Screen>(() => ({
@@ -177,8 +125,30 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const [variableFillPromptId, setVariableFillPromptId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>(() => createDefaultPromptFilters());
   const [activeSidebarItem, setActiveSidebarItem] = useState('library');
-  const [userFolders, setUserFolders] = useState<import('../types/index').Folder[]>(() => readFolders());
+  const [userFolders, setUserFolders] = useState<Folder[]>(() => readFolders());
   const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
+
+  const {
+    categoryColorMap,
+    derivedFolders,
+    filteredPrompts,
+    promptCountByFolder,
+    selectedPrompt,
+    selectedPromptFolder,
+    selectedPromptVariables,
+    sidebarFilterCounts,
+    sidebarTagCounts,
+    variableFillPrompt,
+    variableFillVariables,
+  } = useLibraryData({
+    activeFilter,
+    activeSidebarItem,
+    prompts,
+    searchQuery,
+    selectedPromptId,
+    userFolders,
+    variableFillPromptId,
+  });
 
   useEffect(() => {
     trackScreenView(screen.name);
@@ -198,117 +168,12 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // ── Computed: folders from prompts (derive from prompt data) ───────────────
-  // For now, derive unique folders from prompt folderId values.
-  // In a future task, folders will come from a dedicated store or repository.
-
-  const derivedFolders = useMemo(() => {
-    const folderMap = new Map<string, { id: string; name: string; createdAt: Date; updatedAt: Date }>();
-    // Include user-created folders first
-    for (const folder of userFolders) {
-      folderMap.set(folder.id, folder);
-    }
-    // Also include folders derived from prompt folderId values
-    for (const prompt of prompts) {
-      if (prompt.folderId && !folderMap.has(prompt.folderId)) {
-        folderMap.set(prompt.folderId, {
-          id: prompt.folderId,
-          name: prompt.folderId.replace('folder-', '').replace(/^\w/, (c) => c.toUpperCase()),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
-    }
-    return Array.from(folderMap.values()).map((f) => ({
-      id: f.id,
-      name: f.name,
-      createdAt: f.createdAt,
-      updatedAt: f.updatedAt,
-    }));
-  }, [prompts, userFolders]);
-
-  // ── Computed: filtered prompts ─────────────────────────────────────────────
-
-  const filteredPrompts = useMemo(
-    () =>
-      filterPrompts(
-        prompts,
-        searchQuery,
-        activeFilter,
-        activeSidebarItem,
-      ),
-    [prompts, searchQuery, activeFilter, activeSidebarItem],
-  );
-
   useEffect(() => {
     if (screen.name !== 'library' || selectedPromptId === null) return;
     if (!filteredPrompts.some((prompt) => prompt.id === selectedPromptId)) {
       setSelectedPromptId(null);
     }
   }, [screen.name, selectedPromptId, filteredPrompts]);
-
-  // ── Computed: prompt count by folder ───────────────────────────────────────
-
-  const promptCountByFolder = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const prompt of prompts) {
-      if (prompt.folderId && !prompt.archived) {
-        counts[prompt.folderId] = (counts[prompt.folderId] ?? 0) + 1;
-      }
-    }
-    return counts;
-  }, [prompts]);
-
-  // ── Computed: sidebar filter counts ─────────────────────────────────────────
-
-  const sidebarFilterCounts = useMemo(
-    () => computeFilterCounts(prompts),
-    [prompts],
-  );
-
-  // ── Computed: sidebar tag counts ───────────────────────────────────────────
-
-  const sidebarTagCounts = useMemo(
-    () => computeTagCounts(prompts),
-    [prompts],
-  );
-
-  // ── Computed: category color map (prompt ID → Tailwind class string) ───────
-
-  const categoryColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const [promptId, categoryKey] of Object.entries(PROMPT_CATEGORY_MAP)) {
-      const colors = CATEGORY_COLORS[categoryKey];
-      if (colors) {
-        map[promptId] = `${colors.bg} ${colors.text}`;
-      }
-    }
-    return map;
-  }, []);
-
-  // ── Computed: selected prompt object ───────────────────────────────────────
-
-  const selectedPrompt = useMemo(
-    () => prompts.find((p) => p.id === selectedPromptId) ?? null,
-    [prompts, selectedPromptId],
-  );
-
-  // ── Computed: selected prompt's folder ─────────────────────────────────────
-
-  const selectedPromptFolder = useMemo(
-    () =>
-      selectedPrompt?.folderId
-        ? derivedFolders.find((f) => f.id === selectedPrompt.folderId)
-        : undefined,
-    [selectedPrompt, derivedFolders],
-  );
-
-  // ── Computed: selected prompt's variables ──────────────────────────────────
-
-  const selectedPromptVariables = useMemo(
-    () => (selectedPrompt ? extractVariables(selectedPrompt.body) : []),
-    [selectedPrompt],
-  );
 
   // ── Computed: editor prompt (for editor screen) ────────────────────────────
 
@@ -318,21 +183,6 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     if (!promptId) return undefined;
     return prompts.find((p) => p.id === promptId);
   }, [screen, prompts]);
-
-  // ── Computed: variable fill prompt and its variables ───────────────────────
-
-  const variableFillPrompt = useMemo(
-    () =>
-      variableFillPromptId
-        ? prompts.find((p) => p.id === variableFillPromptId) ?? null
-        : null,
-    [prompts, variableFillPromptId],
-  );
-
-  const variableFillVariables = useMemo(
-    () => (variableFillPrompt ? extractVariables(variableFillPrompt.body) : []),
-    [variableFillPrompt],
-  );
 
   // ── Callbacks ──────────────────────────────────────────────────────────────
 
@@ -503,20 +353,14 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   }, []);
 
   const handleCopyPromptBody = useCallback((body: string, promptId?: string) => {
-    copyToClipboard(body)
+    copyText({ text: body, promptId, source: 'prompt_body' })
       .then(() => {
-        if (promptId) {
-          void markPromptUsed(promptId).catch((err: unknown) => {
-            console.error('Failed to update last used timestamp:', err);
-          });
-        }
-        trackPromptAction('copied', { source: 'prompt_body' });
         addToast('Prompt body copied to clipboard', 'success');
       })
       .catch((err: unknown) => {
         addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
       });
-  }, [addToast, markPromptUsed]);
+  }, [addToast, copyText]);
 
   const handleAuthSuccess = useCallback((user: AuthUser) => {
     setUserId(user.uid);
@@ -541,34 +385,18 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     if (variables.length > 0) {
       // Prompt has variables → open VariableFillModal
       setVariableFillPromptId(prompt.id);
-    } else if (defaultAction === 'paste') {
-      pasteToActiveApp(prompt.body, hideMainWindow)
-        .then((result) => {
-          void markPromptUsed(prompt.id).catch((err: unknown) => {
-            console.error('Failed to update last used timestamp:', err);
-          });
-          trackPromptAction(result?.pasted === false ? 'copied' : 'pasted', {
-            source: 'command_palette',
-          });
-          addToast(result?.pasted === false ? 'Prompt copied to clipboard' : 'Prompt pasted', 'success');
-        })
-        .catch((err: unknown) => {
-          addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
-        });
-    } else {
-      copyToClipboard(prompt.body)
-        .then(() => {
-          void markPromptUsed(prompt.id).catch((err: unknown) => {
-            console.error('Failed to update last used timestamp:', err);
-          });
-          trackPromptAction('copied', { source: 'command_palette' });
-          addToast('Prompt copied to clipboard', 'success');
-        })
-        .catch((err: unknown) => {
-          addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
-        });
+      return;
     }
-  }, [addToast, defaultAction, markPromptUsed]);
+
+    executePrompt(prompt, { source: 'command_palette' })
+      .then((result) => {
+        addToast(result.message, 'success');
+      })
+      .catch((err: unknown) => {
+        const action = defaultAction === 'paste' ? 'paste' : 'copy';
+        addToast(`Failed to ${action}: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      });
+  }, [addToast, defaultAction, executePrompt]);
 
   // ── Variable Fill Modal callbacks ──────────────────────────────────────────
 
@@ -578,37 +406,31 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
 
   const handleVariableFillCopy = useCallback(async (renderedText: string) => {
     try {
-      await copyToClipboard(renderedText);
-      if (variableFillPromptId) {
-        void markPromptUsed(variableFillPromptId).catch((err: unknown) => {
-          console.error('Failed to update last used timestamp:', err);
-        });
-      }
-      trackPromptAction('copied', { source: 'variable_fill' });
-      addToast('Prompt copied to clipboard', 'success');
+      const result = await copyText({
+        text: renderedText,
+        promptId: variableFillPromptId ?? undefined,
+        source: 'variable_fill',
+      });
+      addToast(result.message, 'success');
     } catch (err) {
       addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw err;
     }
-  }, [addToast, markPromptUsed, variableFillPromptId]);
+  }, [addToast, copyText, variableFillPromptId]);
 
   const handleVariableFillPaste = useCallback(async (renderedText: string) => {
     try {
-      const result = await pasteToActiveApp(renderedText, hideMainWindow);
-      if (variableFillPromptId) {
-        void markPromptUsed(variableFillPromptId).catch((err: unknown) => {
-          console.error('Failed to update last used timestamp:', err);
-        });
-      }
-      trackPromptAction(result?.pasted === false ? 'copied' : 'pasted', {
+      const result = await pasteText({
+        text: renderedText,
+        promptId: variableFillPromptId ?? undefined,
         source: 'variable_fill',
       });
-      addToast(result?.pasted === false ? 'Prompt copied to clipboard' : 'Prompt pasted', 'success');
+      addToast(result.message, 'success');
     } catch (err) {
       addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw err;
     }
-  }, [addToast, markPromptUsed, variableFillPromptId]);
+  }, [addToast, pasteText, variableFillPromptId]);
 
   // ── Determine if Inspector should show ─────────────────────────────────────
 

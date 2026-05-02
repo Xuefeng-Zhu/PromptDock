@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   User,
@@ -20,13 +20,12 @@ import { HotkeyRecorder } from './ui/HotkeyRecorder';
 import { AccountPanel } from './AccountPanel';
 import { useSettingsStore } from '../stores/settings-store';
 import { useAppModeStore } from '../stores/app-mode-store';
-import { usePromptStore } from '../stores/prompt-store';
 import { registerHotkey } from '../utils/hotkey';
 import { isTauriRuntime } from '../utils/runtime';
-import { saveFile, openFile } from '../utils/file-dialog';
-import { ImportExportService } from '../services/import-export';
+import { usePromptImportExport } from '../hooks/use-prompt-import-export';
+import { useSettingsScrollSpy } from '../hooks/use-settings-scroll-spy';
 import type { IAuthService } from '../services/interfaces';
-import type { UserSettings, DuplicateInfo, PromptRecipe } from '../types/index';
+import type { UserSettings } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -303,185 +302,18 @@ function DefaultBehaviorCard({
 
 // ─── ImportExportCard ──────────────────────────────────────────────────────────
 
-const importExportService = new ImportExportService();
-
 function ImportExportCard() {
-  const prompts = usePromptStore((s) => s.prompts);
-  const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
-  const createPrompt = usePromptStore((s) => s.createPrompt);
-  const updatePrompt = usePromptStore((s) => s.updatePrompt);
-  const mode = useAppModeStore((s) => s.mode);
-  const userId = useAppModeStore((s) => s.userId);
-
-  const [importErrors, setImportErrors] = useState<string[]>([]);
-  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
-  const [pendingNonDuplicates, setPendingNonDuplicates] = useState<PromptRecipe[]>([]);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const clearMessages = useCallback(() => {
-    setImportErrors([]);
-    setSuccessMessage(null);
-  }, []);
-
-  const targetWorkspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
-  const targetCreatedBy = mode !== 'local' && userId ? userId : 'local';
-
-  // ── Export handler ─────────────────────────────────────────────────────────
-  const handleExport = useCallback(async () => {
-    clearMessages();
-    setIsExporting(true);
-    try {
-      const json = importExportService.exportToJSON(prompts);
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const saved = await saveFile(json, `promptdock-export-${timestamp}.json`);
-      if (saved) {
-        setSuccessMessage('Prompts exported successfully.');
-      }
-    } catch (err) {
-      setImportErrors([
-        `Export failed: ${err instanceof Error ? err.message : String(err)}`,
-      ]);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [prompts, clearMessages]);
-
-  // ── Import handler ─────────────────────────────────────────────────────────
-  const handleImport = useCallback(async () => {
-    clearMessages();
-    setDuplicates([]);
-    setPendingNonDuplicates([]);
-    setIsImporting(true);
-    try {
-      const content = await openFile();
-      if (!content) {
-        // User cancelled
-        return;
-      }
-
-      const result = importExportService.importFromJSON(content);
-      if (!result.success) {
-        setImportErrors(result.errors);
-        return;
-      }
-
-      // Check for duplicates
-      const dupes = importExportService.detectDuplicates(result.prompts, prompts);
-      const dupeIncomingIds = new Set(dupes.map((d) => d.incoming.id));
-      const nonDuplicates = result.prompts.filter((p) => !dupeIncomingIds.has(p.id));
-
-      if (dupes.length > 0) {
-        // Show duplicate resolution UI
-        setDuplicates(dupes);
-        setPendingNonDuplicates(nonDuplicates);
-        return;
-      }
-
-      // No duplicates — add all prompts
-      for (const p of result.prompts) {
-        await createPrompt({
-          workspaceId: targetWorkspaceId,
-          title: p.title,
-          description: p.description,
-          body: p.body,
-          tags: p.tags,
-          folderId: p.folderId,
-          favorite: p.favorite,
-          archived: p.archived,
-          archivedAt: p.archivedAt,
-          lastUsedAt: p.lastUsedAt,
-          createdBy: targetCreatedBy,
-          version: p.version,
-        });
-      }
-      setSuccessMessage(`Imported ${result.prompts.length} prompt(s) successfully.`);
-    } catch (err) {
-      setImportErrors([
-        `Import failed: ${err instanceof Error ? err.message : String(err)}`,
-      ]);
-    } finally {
-      setIsImporting(false);
-    }
-  }, [prompts, createPrompt, clearMessages, targetCreatedBy, targetWorkspaceId]);
-
-  // ── Duplicate resolution: skip all ─────────────────────────────────────────
-  const handleSkipAll = useCallback(async () => {
-    try {
-      // Only import non-duplicate prompts
-      for (const p of pendingNonDuplicates) {
-        await createPrompt({
-          workspaceId: targetWorkspaceId,
-          title: p.title,
-          description: p.description,
-          body: p.body,
-          tags: p.tags,
-          folderId: p.folderId,
-          favorite: p.favorite,
-          archived: p.archived,
-          archivedAt: p.archivedAt,
-          lastUsedAt: p.lastUsedAt,
-          createdBy: targetCreatedBy,
-          version: p.version,
-        });
-      }
-      const count = pendingNonDuplicates.length;
-      setDuplicates([]);
-      setPendingNonDuplicates([]);
-      setSuccessMessage(
-        count > 0
-          ? `Imported ${count} prompt(s), skipped ${duplicates.length} duplicate(s).`
-          : `Skipped ${duplicates.length} duplicate(s). No new prompts imported.`,
-      );
-    } catch (err) {
-      setImportErrors([
-        `Import failed: ${err instanceof Error ? err.message : String(err)}`,
-      ]);
-    }
-  }, [pendingNonDuplicates, duplicates.length, createPrompt, targetCreatedBy, targetWorkspaceId]);
-
-  // ── Duplicate resolution: overwrite all ────────────────────────────────────
-  const handleOverwriteAll = useCallback(async () => {
-    try {
-      // Overwrite existing prompts with incoming data
-      for (const dupe of duplicates) {
-        await updatePrompt(dupe.existing.id, {
-          title: dupe.incoming.title,
-          description: dupe.incoming.description,
-          body: dupe.incoming.body,
-          tags: dupe.incoming.tags,
-          folderId: dupe.incoming.folderId,
-          favorite: dupe.incoming.favorite,
-        });
-      }
-      // Also import non-duplicate prompts
-      for (const p of pendingNonDuplicates) {
-        await createPrompt({
-          workspaceId: targetWorkspaceId,
-          title: p.title,
-          description: p.description,
-          body: p.body,
-          tags: p.tags,
-          folderId: p.folderId,
-          favorite: p.favorite,
-          archived: p.archived,
-          archivedAt: p.archivedAt,
-          lastUsedAt: p.lastUsedAt,
-          createdBy: targetCreatedBy,
-          version: p.version,
-        });
-      }
-      const total = duplicates.length + pendingNonDuplicates.length;
-      setDuplicates([]);
-      setPendingNonDuplicates([]);
-      setSuccessMessage(`Imported ${total} prompt(s), overwrote ${duplicates.length} duplicate(s).`);
-    } catch (err) {
-      setImportErrors([
-        `Import failed: ${err instanceof Error ? err.message : String(err)}`,
-      ]);
-    }
-  }, [duplicates, pendingNonDuplicates, createPrompt, updatePrompt, targetCreatedBy, targetWorkspaceId]);
+  const {
+    duplicates,
+    importErrors,
+    isExporting,
+    isImporting,
+    successMessage,
+    handleExport,
+    handleImport,
+    handleOverwriteAll,
+    handleSkipAll,
+  } = usePromptImportExport();
 
   return (
     <Card padding="lg">
@@ -630,14 +462,17 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
     [canUseGlobalHotkeys],
   );
 
-  const [activeSection, setActiveSection] = useState<SectionId>('account-sync');
-
   // ── Hotkey registration error ──────────────────────────────────────────────
   const [hotkeyError, setHotkeyError] = useState<string | null>(null);
 
   // ── Settings update error (for theme, default action, etc.) ────────────────
   const [settingsError, setSettingsError] = useState<string | null>(null);
-  const contentScrollRef = useRef<HTMLDivElement | null>(null);
+  const {
+    activeSection,
+    contentScrollRef,
+    scrollToSection,
+    setSectionRef,
+  } = useSettingsScrollSpy(visibleNavItems, 'account-sync');
 
   // ── Handlers that delegate to SettingsStore ────────────────────────────────
   const handleThemeChange = useCallback(
@@ -685,69 +520,10 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
     [updateSettings],
   );
 
-  // ── Section refs for scroll-to behavior ────────────────────────────────────
-  const sectionRefs = useRef<Record<SectionId, HTMLElement | null>>({
-    'account-sync': null,
-    appearance: null,
-    hotkey: null,
-    'default-behavior': null,
-    'import-export': null,
-    about: null,
-  });
-
-  const scrollToSection = useCallback((id: SectionId) => {
-    setActiveSection(id);
-    const el = sectionRefs.current[id];
-    const container = contentScrollRef.current;
-    if (el && container) {
-      const containerTop = container.getBoundingClientRect().top;
-      const sectionTop = el.getBoundingClientRect().top;
-      const targetTop = container.scrollTop + sectionTop - containerTop;
-
-      if (typeof container.scrollTo === 'function') {
-        container.scrollTo({ top: targetTop, behavior: 'smooth' });
-      } else {
-        container.scrollTop = targetTop;
-      }
-    }
-  }, []);
-
-  const setSectionRef = useCallback(
-    (id: SectionId) => (el: HTMLElement | null) => {
-      sectionRefs.current[id] = el;
-    },
-    [],
-  );
-
   useEffect(() => {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
   }, []);
-
-  useEffect(() => {
-    const container = contentScrollRef.current;
-    if (!container) return;
-    const scrollContainer = container;
-
-    function updateActiveSection() {
-      const containerTop = scrollContainer.getBoundingClientRect().top;
-      let current: SectionId = 'account-sync';
-
-      for (const item of visibleNavItems) {
-        const section = sectionRefs.current[item.id];
-        if (!section) continue;
-        const offset = section.getBoundingClientRect().top - containerTop;
-        if (offset <= 72) {
-          current = item.id;
-        }
-      }
-
-      setActiveSection(current);
-    }
-
-    scrollContainer.addEventListener('scroll', updateActiveSection, { passive: true });
-    return () => scrollContainer.removeEventListener('scroll', updateActiveSection);
-  }, [visibleNavItems]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)]">

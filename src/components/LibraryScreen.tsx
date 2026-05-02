@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutGrid, List, Plus, Star, Clock, ChevronDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { LayoutGrid, List, Plus } from 'lucide-react';
 import type { PromptRecipe } from '../types/index';
-import type { FilterType } from './AppShell';
+import {
+  normalizePromptFilters,
+  sortPromptsByFilter,
+  type FilterType,
+} from '../utils/prompt-filters';
 import { Button } from './ui/Button';
 import { PromptGrid } from './PromptGrid';
+import { getSortFilterLabel, PromptFiltersPopover } from './PromptFiltersPopover';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -18,53 +23,6 @@ export interface LibraryScreenProps {
   categoryColorMap: Record<string, string>;
   totalPromptCount?: number;
   loading?: boolean;
-}
-
-// ─── Filter Chip Config ────────────────────────────────────────────────────────
-
-interface FilterChip {
-  label: string;
-  value: FilterType | 'filters';
-  icon?: React.ReactNode;
-}
-
-const FILTER_CHIPS: FilterChip[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Favorites', value: 'favorites', icon: <Star className="h-3 w-3" /> },
-  { label: 'Recent', value: 'recent', icon: <Clock className="h-3 w-3" /> },
-];
-
-type SortMode = 'lastUsed' | 'updated' | 'title';
-
-const SORT_LABELS: Record<SortMode, string> = {
-  lastUsed: 'Last used',
-  updated: 'Updated',
-  title: 'Title',
-};
-
-function getLastUsedSortValue(prompt: PromptRecipe): number {
-  return prompt.lastUsedAt?.getTime() ?? 0;
-}
-
-function getUpdatedSortValue(prompt: PromptRecipe): number {
-  return prompt.updatedAt.getTime();
-}
-
-function sortPrompts(prompts: PromptRecipe[], sortMode: SortMode): PromptRecipe[] {
-  return [...prompts].sort((a, b) => {
-    if (sortMode === 'title') {
-      return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-    }
-
-    const primaryA = sortMode === 'lastUsed' ? getLastUsedSortValue(a) : getUpdatedSortValue(a);
-    const primaryB = sortMode === 'lastUsed' ? getLastUsedSortValue(b) : getUpdatedSortValue(b);
-    if (primaryA !== primaryB) return primaryB - primaryA;
-
-    const updatedDiff = getUpdatedSortValue(b) - getUpdatedSortValue(a);
-    if (updatedDiff !== 0) return updatedDiff;
-
-    return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-  });
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -82,28 +40,13 @@ export function LibraryScreen({
   loading = false,
 }: LibraryScreenProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortMode, setSortMode] = useState<SortMode>('lastUsed');
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
   const displayCount = totalPromptCount ?? prompts.length;
 
   const sortedPrompts = useMemo(
-    () => sortPrompts(prompts, sortMode),
-    [prompts, sortMode],
+    () => sortPromptsByFilter(prompts, appliedFilters.sortBy),
+    [appliedFilters.sortBy, prompts],
   );
-
-  useEffect(() => {
-    if (!sortMenuOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
-        setSortMenuOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [sortMenuOpen]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -165,32 +108,15 @@ export function LibraryScreen({
           </div>
         </div>
 
-        {/* ── Filter Chips ──────────────────────────────────────────────── */}
-        <div className="mb-5 flex items-center gap-2" role="group" aria-label="Filter prompts">
-          {FILTER_CHIPS.map((chip) => {
-            const isActive = chip.value !== 'filters' && activeFilter === chip.value;
-            return (
-              <button
-                key={chip.value}
-                onClick={() => {
-                  if (chip.value !== 'filters') {
-                    onFilterChange(chip.value);
-                  }
-                }}
-                className={[
-                  'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors',
-                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
-                  isActive
-                    ? 'bg-[var(--color-primary)] text-white'
-                    : 'border border-[var(--color-border)] bg-[var(--color-panel)] text-[var(--color-text-muted)] hover:bg-gray-50',
-                ].join(' ')}
-                aria-pressed={isActive}
-              >
-                {chip.icon}
-                {chip.label}
-              </button>
-            );
-          })}
+        {/* ── Filters ───────────────────────────────────────────────────── */}
+        <div className="relative z-20 mb-5 flex items-center justify-between gap-3">
+          <PromptFiltersPopover
+            activeFilter={activeFilter}
+            onFilterChange={onFilterChange}
+          />
+          <span className="text-xs text-[var(--color-text-muted)]">
+            Sorted by {getSortFilterLabel(appliedFilters.sortBy)}
+          </span>
         </div>
 
         {/* ── Prompt Grid ───────────────────────────────────────────────── */}
@@ -222,53 +148,6 @@ export function LibraryScreen({
             viewMode={viewMode}
           />
         )}
-      </div>
-
-      {/* ── Bottom Status Bar ───────────────────────────────────────────── */}
-      <div
-        className="flex items-center justify-between border-t px-6 py-2 text-xs text-[var(--color-text-muted)]"
-        style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-panel)' }}
-      >
-        <span>{displayCount} prompts</span>
-        <div className="relative" ref={sortMenuRef}>
-          <button
-            type="button"
-            onClick={() => setSortMenuOpen((open) => !open)}
-            className="inline-flex items-center gap-1 hover:text-[var(--color-text-main)] transition-colors"
-            aria-haspopup="menu"
-            aria-expanded={sortMenuOpen}
-          >
-            Sorted by {SORT_LABELS[sortMode]}
-            <ChevronDown className="h-3 w-3" />
-          </button>
-          {sortMenuOpen && (
-            <div
-              role="menu"
-              className="absolute bottom-full right-0 mb-1 w-36 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1 shadow-lg"
-            >
-              {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={sortMode === mode}
-                  onClick={() => {
-                    setSortMode(mode);
-                    setSortMenuOpen(false);
-                  }}
-                  className={[
-                    'flex w-full items-center px-3 py-2 text-left text-xs transition-colors',
-                    sortMode === mode
-                      ? 'font-medium text-[var(--color-primary)]'
-                      : 'text-[var(--color-text-main)] hover:bg-gray-50',
-                  ].join(' ')}
-                >
-                  {SORT_LABELS[mode]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

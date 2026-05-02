@@ -473,6 +473,49 @@ describe('AppShell', () => {
       const results = filterPrompts(TEST_PROMPTS, '', 'all', 'tag-test');
       expect(results).toHaveLength(3);
     });
+
+    it('filters by multiple prompt attributes', () => {
+      const prompts = [
+        makePrompt({
+          id: 'match',
+          favorite: false,
+          folderId: null,
+          lastUsedAt: null,
+          body: 'Hello {{name}}',
+          tags: ['writing'],
+        }),
+        makePrompt({
+          id: 'favorite',
+          favorite: true,
+          folderId: null,
+          lastUsedAt: null,
+          tags: ['draft'],
+        }),
+        makePrompt({
+          id: 'foldered',
+          favorite: false,
+          folderId: 'folder-writing',
+          lastUsedAt: null,
+          body: 'Hello {{name}}',
+          tags: ['writing'],
+        }),
+      ];
+
+      const results = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          statuses: ['hasVariables'],
+          folders: ['writing'],
+          tags: ['writing'],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+
+      expect(results.map((prompt) => prompt.id)).toEqual(['foldered']);
+    });
   });
 
   describe('selected prompt visibility', () => {

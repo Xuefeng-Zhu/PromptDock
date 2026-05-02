@@ -22,6 +22,13 @@ import { readFolders, createFolder } from '../utils/folder-storage';
 import { getConflictService } from '../App';
 import { SearchEngine } from '../services/search-engine';
 import { trackPromptAction, trackScreenView } from '../services/analytics-service';
+import {
+  applyPromptFilters,
+  createDefaultPromptFilters,
+  hasArchivedPromptFilter,
+  isRecentPrompt,
+  type FilterType,
+} from '../utils/prompt-filters';
 import type { ConflictService } from '../services/conflict-service';
 import type { PromptRecipe } from '../types/index';
 
@@ -34,11 +41,10 @@ export type Screen =
   | { name: 'settings' }
   | { name: 'conflicts' };
 
-export type FilterType = 'all' | 'favorites' | 'recent';
+export type { FilterType } from '../utils/prompt-filters';
 
 // ─── Filtering Logic ───────────────────────────────────────────────────────────
 
-const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const TOP_LEVEL_SIDEBAR_ITEMS = new Set([
   'library',
   'favorites',
@@ -49,11 +55,6 @@ const TOP_LEVEL_SIDEBAR_ITEMS = new Set([
 ]);
 const librarySearchEngine = new SearchEngine();
 
-function isRecentPrompt(prompt: PromptRecipe, referenceDate: Date = new Date()): boolean {
-  if (!prompt.lastUsedAt) return false;
-  return prompt.lastUsedAt.getTime() > referenceDate.getTime() - RECENT_WINDOW_MS;
-}
-
 /**
  * Standalone search and filter function for prompts.
  * Exported separately for testability and property-based testing.
@@ -62,7 +63,7 @@ function isRecentPrompt(prompt: PromptRecipe, referenceDate: Date = new Date()):
  * 1. Apply sidebar library/folder/tag filter
  * 2. Exclude archived prompts unless the archived sidebar item is selected
  * 3. Apply search query (case-insensitive substring match on title, description, tags)
- * 4. Apply filter chip ("all", "favorites", "recent")
+ * 4. Apply attribute filters from the Filters menu
  */
 export function filterPrompts(
   prompts: PromptRecipe[],
@@ -70,7 +71,7 @@ export function filterPrompts(
   activeFilter: FilterType,
   activeSidebarItem: string,
 ): PromptRecipe[] {
-  const showingArchived = activeSidebarItem === 'archived';
+  const showingArchived = activeSidebarItem === 'archived' || hasArchivedPromptFilter(activeFilter);
   let result = prompts.filter((p) => p.archived === showingArchived);
 
   if (activeSidebarItem === 'favorites') {
@@ -94,24 +95,7 @@ export function filterPrompts(
     });
   }
 
-  // Filter chip logic
-  switch (activeFilter) {
-    case 'favorites':
-      result = result.filter((p) => p.favorite === true);
-      break;
-    case 'recent':
-      result = result.filter((p) => isRecentPrompt(p)).sort((a, b) => {
-        const aTime = a.lastUsedAt ? a.lastUsedAt.getTime() : 0;
-        const bTime = b.lastUsedAt ? b.lastUsedAt.getTime() : 0;
-        return bTime - aTime;
-      });
-      break;
-    case 'all':
-    default:
-      break;
-  }
-
-  return result;
+  return applyPromptFilters(result, activeFilter);
 }
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -187,7 +171,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [variableFillPromptId, setVariableFillPromptId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>(() => createDefaultPromptFilters());
   const [activeSidebarItem, setActiveSidebarItem] = useState('library');
   const [userFolders, setUserFolders] = useState<import('../types/index').Folder[]>(() => readFolders());
   const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
@@ -369,7 +353,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
     setActiveSidebarItem(item);
     setScreen({ name: 'library' });
     if (item === 'library' || item === 'favorites' || item === 'recent' || item === 'archived') {
-      setActiveFilter('all');
+      setActiveFilter(createDefaultPromptFilters());
     }
   }, [blockIfEditorHasUnsavedChanges]);
 

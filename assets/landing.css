@@ -118,8 +118,15 @@ a {
   color: #ffffff;
 }
 
+.nav-links .web-link {
+  background: var(--green);
+  color: #ffffff;
+}
+
 .nav-links .release-link:hover,
-.nav-links .release-link:focus-visible {
+.nav-links .release-link:focus-visible,
+.nav-links .web-link:hover,
+.nav-links .web-link:focus-visible {
   background: var(--green-dark);
 }
 
@@ -191,6 +198,15 @@ a {
   font-weight: 650;
 }
 
+.hero-actions,
+.bottom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
 .store-button {
   display: inline-grid;
   min-width: min(280px, 100%);
@@ -202,6 +218,16 @@ a {
   color: #ffffff;
   padding: 0.68rem 1.1rem 0.78rem;
   text-align: left;
+}
+
+.hero-actions .store-button,
+.bottom-actions .store-button {
+  margin-top: 0;
+}
+
+.store-button-secondary {
+  background: rgba(255, 253, 247, 0.82);
+  color: var(--ink);
 }
 
 .store-button span {
@@ -216,10 +242,19 @@ a {
   line-height: 1.1;
 }
 
+.store-button-secondary span {
+  color: var(--muted);
+}
+
 .store-button:hover,
 .store-button:focus-visible {
   background: var(--green-dark);
   outline: none;
+}
+
+.store-button-secondary:hover,
+.store-button-secondary:focus-visible {
+  background: #ffffff;
 }
 
 .featured-row {
@@ -535,7 +570,7 @@ details a {
   text-align: center;
 }
 
-.bottom-cta .store-button {
+.bottom-actions {
   margin-top: 0;
 }
 
@@ -604,7 +639,7 @@ details a {
 
   .nav-links {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .nav-links a {
@@ -627,6 +662,11 @@ details a {
 
   .store-button {
     min-width: min(100%, 270px);
+  }
+
+  .hero-actions,
+  .bottom-actions {
+    width: min(100%, 270px);
   }
 
   .ambient-stage {

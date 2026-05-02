@@ -27,8 +27,11 @@
       <nav class="nav-links" aria-label="Site navigation">
         <a href="#features">Features</a>
         <a href="#faq">FAQs</a>
+        <a class="web-link" href="https://promptdock-95e31.web.app">
+          Web App
+        </a>
         <a class="release-link" href="https://github.com/Xuefeng-Zhu/PromptDock/releases">
-          GitHub Releases
+          Releases
         </a>
       </nav>
     </header>
@@ -99,10 +102,19 @@
             Save your best AI prompts, fill the variables, and paste the finished
             result without breaking focus.
           </p>
-          <a class="store-button" href="https://github.com/Xuefeng-Zhu/PromptDock/releases">
-            <span>Download from</span>
-            <strong>GitHub Releases</strong>
-          </a>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="store-button" href="https://promptdock-95e31.web.app">
+              <span>Open the hosted app</span>
+              <strong>Launch PromptDock</strong>
+            </a>
+            <a
+              class="store-button store-button-secondary"
+              href="https://github.com/Xuefeng-Zhu/PromptDock/releases"
+            >
+              <span>Download from</span>
+              <strong>GitHub Releases</strong>
+            </a>
+          </div>
           <div class="featured-row" aria-label="Project highlights">
             <span>Built with</span>
             <b>Tauri</b>
@@ -167,7 +179,11 @@
           </details>
           <details>
             <summary>Can it run outside Tauri?</summary>
-            <p>Yes. The browser runtime falls back to localStorage and web clipboard APIs.</p>
+            <p>
+              Yes. The browser runtime falls back to localStorage and web clipboard APIs.
+              You can open the hosted app at
+              <a href="https://promptdock-95e31.web.app">promptdock-95e31.web.app</a>.
+            </p>
           </details>
           <details>
             <summary>Where do I download it?</summary>
@@ -181,10 +197,19 @@
       </section>
 
       <section class="bottom-cta">
-        <a class="store-button" href="https://github.com/Xuefeng-Zhu/PromptDock/releases">
-          <span>Get PromptDock from</span>
-          <strong>GitHub Releases</strong>
-        </a>
+        <div class="bottom-actions" aria-label="PromptDock links">
+          <a class="store-button" href="https://promptdock-95e31.web.app">
+            <span>Use PromptDock in</span>
+            <strong>Web App</strong>
+          </a>
+          <a
+            class="store-button store-button-secondary"
+            href="https://github.com/Xuefeng-Zhu/PromptDock/releases"
+          >
+            <span>Get PromptDock from</span>
+            <strong>GitHub Releases</strong>
+          </a>
+        </div>
         <p>PromptDock</p>
       </section>
     </main>

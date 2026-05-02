@@ -10,6 +10,7 @@ const firebaseAuthMocks = vi.hoisted(() => ({
   createUserWithEmailAndPassword: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signInWithPopup: vi.fn(),
+  signOut: vi.fn(),
   onAuthStateChanged: vi.fn(),
 }));
 
@@ -32,6 +33,8 @@ beforeEach(() => {
   firebaseAuthMocks.createUserWithEmailAndPassword.mockReset();
   firebaseAuthMocks.signInWithEmailAndPassword.mockReset();
   firebaseAuthMocks.signInWithPopup.mockReset();
+  firebaseAuthMocks.signOut.mockReset();
+  firebaseAuthMocks.signOut.mockResolvedValue(undefined);
   firebaseAuthMocks.onAuthStateChanged.mockReset();
   firebaseFirestoreMocks.doc.mockImplementation((...path: string[]) => path.join('/'));
   firebaseFirestoreMocks.serverTimestamp.mockReturnValue('server-timestamp');
@@ -47,7 +50,7 @@ afterEach(() => {
 });
 
 describe('AuthService', () => {
-  it('does not block sign-in on workspace bootstrap', async () => {
+  it('returns a network error and signs out if sign-in workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     firebaseAuthMocks.signInWithEmailAndPassword.mockResolvedValue({
@@ -68,17 +71,14 @@ describe('AuthService', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     await expect(result).resolves.toEqual({
-      success: true,
-      user: {
-        uid: 'user-123',
-        email: 'user@example.com',
-        displayName: 'Test User',
-      },
+      success: false,
+      error: 'network',
     });
+    expect(firebaseAuthMocks.signOut).toHaveBeenCalledWith({ name: 'auth' });
     consoleError.mockRestore();
   });
 
-  it('does not block sign-up on workspace bootstrap', async () => {
+  it('returns a network error and signs out if sign-up workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     firebaseAuthMocks.createUserWithEmailAndPassword.mockResolvedValue({
@@ -99,13 +99,10 @@ describe('AuthService', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     await expect(result).resolves.toEqual({
-      success: true,
-      user: {
-        uid: 'new-user',
-        email: 'new@example.com',
-        displayName: null,
-      },
+      success: false,
+      error: 'network',
     });
+    expect(firebaseAuthMocks.signOut).toHaveBeenCalledWith({ name: 'auth' });
     consoleError.mockRestore();
   });
 
@@ -135,10 +132,49 @@ describe('AuthService', () => {
     await vi.advanceTimersByTimeAsync(3000);
 
     await expect(result).resolves.toBeNull();
+    expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('delivers a late restored session after the startup timeout once bootstrap succeeds', async () => {
+    vi.useFakeTimers();
+    const unsubscribe = vi.fn();
+    type AuthStateCallback = (user: { uid: string; email: string | null; displayName: string | null }) => void;
+    let authCallback: AuthStateCallback | null = null;
+    firebaseAuthMocks.onAuthStateChanged.mockImplementation((_auth, callback) => {
+      authCallback = callback;
+      return unsubscribe;
+    });
+    const lateRestore = vi.fn();
+
+    const result = new AuthService().restoreSession(lateRestore);
+
+    await vi.dynamicImportSettled();
+    await vi.advanceTimersByTimeAsync(3000);
+
+    await expect(result).resolves.toBeNull();
+    expect(unsubscribe).not.toHaveBeenCalled();
+
+    expect(authCallback).not.toBeNull();
+    const emitAuthState = authCallback as unknown as AuthStateCallback;
+    emitAuthState({
+      uid: 'user-123',
+      email: 'user@example.com',
+      displayName: 'Test User',
+    });
+    await vi.dynamicImportSettled();
+
+    expect(lateRestore).toHaveBeenCalledWith({
+      success: true,
+      user: {
+        uid: 'user-123',
+        email: 'user@example.com',
+        displayName: 'Test User',
+      },
+    });
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('does not block session restore on workspace bootstrap', async () => {
+  it('waits for restored session bootstrap before resolving success', async () => {
     const unsubscribe = vi.fn();
     firebaseAuthMocks.onAuthStateChanged.mockImplementation((_auth, callback) => {
       callback({
@@ -147,10 +183,6 @@ describe('AuthService', () => {
         displayName: 'Test User',
       });
       return unsubscribe;
-    });
-    firebaseFirestoreMocks.writeBatch.mockReturnValue({
-      set: vi.fn(),
-      commit: vi.fn(() => new Promise(() => {})),
     });
 
     await expect(new AuthService().restoreSession()).resolves.toEqual({

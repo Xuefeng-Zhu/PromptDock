@@ -216,13 +216,17 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
 
   // 9. Restore auth session — if a valid user exists, transition to synced mode
   if (restoreAuthSession) {
-    try {
-      const result = await authServiceInstance.restoreSession();
+    const applyRestoredAuth = (result: Awaited<ReturnType<AuthService['restoreSession']>>) => {
       if (result && result.success) {
         const appMode = appModeStore.getState();
         appMode.setUserId(result.user.uid);
         appMode.setMode('synced');
       }
+    };
+
+    try {
+      const result = await authServiceInstance.restoreSession(applyRestoredAuth);
+      applyRestoredAuth(result);
     } catch {
       // Session restore failure is non-fatal — stay in local mode
     }

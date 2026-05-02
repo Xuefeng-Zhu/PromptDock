@@ -138,27 +138,21 @@ export class AuthService implements IAuthService {
     displayName: string | null;
   }): Promise<AuthResult> {
     const user = toAuthUser(credentialUser);
-    let loggedBootstrapFailure = false;
-    const logBootstrapFailure = (error: unknown) => {
-      if (loggedBootstrapFailure) return;
-      loggedBootstrapFailure = true;
-      console.error('Failed to bootstrap Firebase user workspace:', error);
-    };
-
-    const bootstrapPromise = this.bootstrapUserWorkspace(user);
-    void bootstrapPromise.catch(logBootstrapFailure);
 
     try {
       await withTimeout(
-        bootstrapPromise,
+        this.bootstrapUserWorkspace(user),
         WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
         'Firebase workspace bootstrap timed out.',
       );
+      return { success: true, user };
     } catch (error) {
-      logBootstrapFailure(error);
+      console.error('Failed to bootstrap Firebase user workspace:', error);
+      await this.signOut().catch((signOutError) => {
+        console.error('Failed to sign out after workspace bootstrap failure:', signOutError);
+      });
+      return { success: false, error: mapFirebaseAuthError(error) };
     }
-
-    return { success: true, user };
   }
 
   /**
@@ -243,46 +237,62 @@ export class AuthService implements IAuthService {
    * Returns the current user if a session exists, or null if not.
    * Silently falls back to Local Mode on failure (no error thrown).
    */
-  async restoreSession(): Promise<AuthResult | null> {
+  async restoreSession(onLateRestore?: (result: AuthResult | null) => void): Promise<AuthResult | null> {
     try {
       const { getFirebaseAuth } = await import('../firebase/config');
       const { onAuthStateChanged: firebaseOnAuthStateChanged } = await import('firebase/auth');
 
       const auth = await getFirebaseAuth();
 
-      // Wait for the auth state to be resolved
+      // Wait briefly for auth state plus workspace bootstrap. If Firebase is
+      // slow, let app startup continue in local mode but keep the listener until
+      // the first auth event arrives so a valid session can still recover.
       return new Promise<AuthResult | null>((resolve) => {
-        let settled = false;
+        let initialResolved = false;
+        let timedOut = false;
         let unsubscribe: (() => void) | null = null;
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-        const finish = (result: AuthResult | null) => {
-          if (settled) return;
-          settled = true;
+        const resolveInitial = (result: AuthResult | null): boolean => {
+          if (initialResolved) return false;
+          initialResolved = true;
           if (timeoutId !== null) {
             clearTimeout(timeoutId);
           }
-          unsubscribe?.();
           resolve(result);
+          return true;
+        };
+
+        const finish = (result: AuthResult | null) => {
+          const resolvedInitial = resolveInitial(result);
+          if (!resolvedInitial && timedOut) {
+            onLateRestore?.(result);
+          }
+          unsubscribe?.();
         };
 
         timeoutId = setTimeout(() => {
-          finish(null);
+          timedOut = true;
+          resolveInitial(null);
         }, AUTH_RESTORE_TIMEOUT_MS);
 
         unsubscribe = firebaseOnAuthStateChanged(auth, (firebaseUser) => {
-          if (firebaseUser) {
-            const user = toAuthUser(firebaseUser);
-            void this.bootstrapUserWorkspace(user)
-              .catch((error) => {
+          void (async () => {
+            if (firebaseUser) {
+              const user = toAuthUser(firebaseUser);
+              try {
+                await this.bootstrapUserWorkspace(user);
+                finish({ success: true, user });
+              } catch (error) {
                 console.error('Failed to bootstrap restored Firebase user workspace:', error);
-              });
-            finish({ success: true, user });
-          } else {
-            finish(null);
-          }
+                finish({ success: false, error: mapFirebaseAuthError(error) });
+              }
+            } else {
+              finish(null);
+            }
+          })();
         });
-        if (settled) {
+        if (initialResolved && !timedOut) {
           unsubscribe();
         }
       });

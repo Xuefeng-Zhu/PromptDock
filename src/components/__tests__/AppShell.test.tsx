@@ -473,6 +473,137 @@ describe('AppShell', () => {
       const results = filterPrompts(TEST_PROMPTS, '', 'all', 'tag-test');
       expect(results).toHaveLength(3);
     });
+
+    it('filters by multiple prompt attributes', () => {
+      const prompts = [
+        makePrompt({
+          id: 'match',
+          favorite: false,
+          folderId: null,
+          lastUsedAt: null,
+          body: 'Hello {{name}}',
+          tags: ['writing'],
+        }),
+        makePrompt({
+          id: 'favorite',
+          favorite: true,
+          folderId: null,
+          lastUsedAt: null,
+          tags: ['draft'],
+        }),
+        makePrompt({
+          id: 'foldered',
+          favorite: false,
+          folderId: 'folder-writing',
+          lastUsedAt: null,
+          body: 'Hello {{name}}',
+          tags: ['writing'],
+        }),
+      ];
+
+      const results = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: '',
+          statuses: ['hasVariables'],
+          folders: ['writing'],
+          tags: ['writing'],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+
+      expect(results.map((prompt) => prompt.id)).toEqual(['foldered']);
+    });
+
+    it('matches timestamped user folder ids from folder filters', () => {
+      const prompts = [
+        makePrompt({
+          id: 'timestamped-folder',
+          folderId: 'folder-client-work-1700000000000',
+          tags: ['client'],
+        }),
+        makePrompt({
+          id: 'other-folder',
+          folderId: 'folder-client-workshop-1700000000000',
+          tags: ['client'],
+        }),
+      ];
+
+      const results = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: '',
+          statuses: [],
+          folders: ['client-work'],
+          tags: [],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+
+      expect(results.map((prompt) => prompt.id)).toEqual(['timestamped-folder']);
+    });
+
+    it('filters prompts by title or keyword query', () => {
+      const prompts = [
+        makePrompt({
+          id: 'title-match',
+          title: 'Client Email Draft',
+          description: 'Write a note',
+          body: 'Hello',
+          tags: ['communication'],
+        }),
+        makePrompt({
+          id: 'keyword-match',
+          title: 'Follow-up',
+          description: 'For renewal outreach',
+          body: 'Prepare a customer retention plan',
+          tags: ['sales'],
+        }),
+        makePrompt({
+          id: 'miss',
+          title: 'Code Review',
+          description: 'Engineering feedback',
+          body: 'Review implementation',
+          tags: ['code'],
+        }),
+      ];
+
+      const titleResults = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: 'email',
+          statuses: [],
+          folders: [],
+          tags: [],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+      expect(titleResults.map((prompt) => prompt.id)).toEqual(['title-match']);
+
+      const keywordResults = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: 'retention',
+          statuses: [],
+          folders: [],
+          tags: [],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+      expect(keywordResults.map((prompt) => prompt.id)).toEqual(['keyword-match']);
+    });
   });
 
   describe('selected prompt visibility', () => {

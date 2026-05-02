@@ -77,7 +77,7 @@ src/
 │   ├── ErrorBoundary.tsx      # React error boundary
 │   ├── ToastContainer.tsx     # Toast notification renderer
 │   ├── TopBar.tsx             # App header with search
-│   ├── ui/                    # Primitive UI components (Button, Card, Input, etc.)
+│   ├── ui/                    # Shared reusable UI components (Button, Card, Input, etc.)
 │   └── __tests__/             # Component tests and property-based tests
 ├── screens/                   # Full-screen views
 │   ├── QuickLauncherWindow.tsx # Separate Tauri window for quick launcher
@@ -152,6 +152,16 @@ Zustand stores use a factory + singleton pattern:
 ### Firebase Lazy Loading
 
 Firebase SDK is never imported at module level. All Firebase imports use dynamic `import()` inside async functions in `firebase/config.ts`. Firebase is only loaded when the user opts into sync.
+
+### Component Reusability
+
+Prefer small reusable components over growing screen files. Before adding non-trivial UI, check `src/components/ui/` and nearby components for an existing pattern to reuse or extend.
+
+- Put app-agnostic controls in `src/components/ui/` (for example buttons, inputs, selects, reusable searchable dropdowns, toggles, cards).
+- Keep screen components focused on data flow, layout composition, and feature-specific state.
+- Extract repeated or generally useful interactions into typed components with clear props instead of hard-coding options, labels, or prompt-specific data inside the UI primitive.
+- Keep domain-specific composition in `src/components/` and reusable visual primitives in `src/components/ui/`.
+- When extracting UI, preserve accessibility roles/labels and move focused component tests or add coverage at the level where behavior is owned.
 
 ## Commands
 

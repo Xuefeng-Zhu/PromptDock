@@ -24,16 +24,13 @@ describe('LibraryScreen', () => {
 
   it('renders the prompt count', () => {
     render(<LibraryScreen {...defaultProps} />);
-    // Count appears in both header and status bar
     const countElements = screen.getAllByText('6 prompts');
-    expect(countElements.length).toBeGreaterThanOrEqual(1);
+    expect(countElements).toHaveLength(1);
   });
 
-  it('renders filter chips with icons', () => {
+  it('renders the Filters menu button', () => {
     render(<LibraryScreen {...defaultProps} />);
-    expect(screen.getByText('All')).toBeDefined();
-    expect(screen.getByText('Favorites')).toBeDefined();
-    expect(screen.getByText('Recent')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Filters/ })).toBeDefined();
   });
 
   it('renders the New Prompt button', () => {
@@ -64,12 +61,24 @@ describe('LibraryScreen', () => {
     expect(screen.getByRole('button', { name: 'List view' }).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('renders bottom status bar with sort indicator', () => {
+  it('renders the sort control with the Filters button', () => {
     render(<LibraryScreen {...defaultProps} />);
-    expect(screen.getByText(/Sorted by Last used/)).toBeDefined();
+    expect(screen.getByRole('button', { name: /Sorted by Last used/ })).toBeDefined();
   });
 
-  it('opens the sort menu and sorts prompts by title', () => {
+  it('calls onFilterChange when a sort option is selected from the right dropdown', () => {
+    const onFilterChange = vi.fn();
+    render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Sorted by Last used/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'A-Z' }));
+
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'az' }),
+    );
+  });
+
+  it('sorts prompts by A-Z when that filter is applied', () => {
     const prompts: PromptRecipe[] = [
       {
         id: 'p-z',
@@ -107,16 +116,22 @@ describe('LibraryScreen', () => {
       },
     ];
 
-    render(<LibraryScreen {...defaultProps} prompts={prompts} />);
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={prompts}
+        activeFilter={{
+          sortBy: 'az',
+          query: '',
+          statuses: [],
+          folders: [],
+          tags: [],
+          lastUsed: 'any',
+        }}
+      />,
+    );
 
-    let cards = screen.getAllByRole('option');
-    expect(within(cards[0]).getByText('Zulu Prompt')).toBeDefined();
-
-    fireEvent.click(screen.getByRole('button', { name: /Sorted by Last used/ }));
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Title' }));
-
-    expect(screen.getByRole('button', { name: /Sorted by Title/ })).toBeDefined();
-    cards = screen.getAllByRole('option');
+    const cards = screen.getAllByRole('option');
     expect(within(cards[0]).getByText('Alpha Prompt')).toBeDefined();
   });
 
@@ -190,11 +205,134 @@ describe('LibraryScreen', () => {
     expect(screen.queryByText('Code Review Assistant')).toBeNull();
   });
 
-  it('calls onFilterChange when a filter chip is clicked', () => {
+  it('opens the filters popover with all filter sections', () => {
+    render(<LibraryScreen {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Filters' });
+    expect(dialog).toBeDefined();
+    expect(within(dialog).getByRole('heading', { name: 'Status' })).toBeDefined();
+    expect(within(dialog).getByRole('heading', { name: 'Folders' })).toBeDefined();
+    expect(within(dialog).getByRole('heading', { name: 'Tags' })).toBeDefined();
+    expect(within(dialog).getByRole('heading', { name: 'Last used' })).toBeDefined();
+    expect(within(dialog).queryByRole('heading', { name: 'Sort by' })).toBeNull();
+  });
+
+  it('closes the filters popover on Escape and outside click', () => {
+    render(<LibraryScreen {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBeDefined();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Filters' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole('dialog', { name: 'Filters' })).toBeNull();
+  });
+
+  it('calls onFilterChange when filters are applied', () => {
     const onFilterChange = vi.fn();
     render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
-    fireEvent.click(screen.getByText('Favorites'));
-    expect(onFilterChange).toHaveBeenCalledWith('favorites');
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Favorites only' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({ statuses: ['favorites'] }),
+    );
+  });
+
+  it('applies a title or keyword search from the filters popover', () => {
+    const onFilterChange = vi.fn();
+    render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    fireEvent.change(screen.getByLabelText('Search title or keywords'), {
+      target: { value: 'email' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'email' }),
+    );
+  });
+
+  it('searches folder and tag dropdown options before applying filters', () => {
+    const onFilterChange = vi.fn();
+    render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select folders' }));
+    fireEvent.change(screen.getByLabelText('Search folders'), { target: { value: 'eng' } });
+    expect(screen.getByRole('option', { name: 'Engineering' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: 'Writing' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Engineering' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select tags' }));
+    fireEvent.change(screen.getByLabelText('Search tags'), { target: { value: 'meet' } });
+    expect(screen.getByRole('option', { name: '#meeting' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: '#writing' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: '#meeting' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folders: ['folder-engineering'],
+        tags: ['meeting'],
+      }),
+    );
+  });
+
+  it('derives folder and tag dropdown options from prompt data', () => {
+    const onFilterChange = vi.fn();
+    const customPrompts: PromptRecipe[] = [
+      {
+        id: 'p-legal',
+        workspaceId: 'local',
+        title: 'Contract Review',
+        description: '',
+        body: 'Review this agreement',
+        tags: ['legal', 'compliance'],
+        folderId: 'folder-legal',
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        lastUsedAt: null,
+        createdBy: 'local',
+        version: 1,
+      },
+    ];
+
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={customPrompts}
+        onFilterChange={onFilterChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select folders' }));
+    expect(screen.getByRole('option', { name: 'Legal' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: 'Engineering' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Legal' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select tags' }));
+    expect(screen.getByRole('option', { name: '#compliance' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: '#meeting' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: '#compliance' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folders: ['folder-legal'],
+        tags: ['compliance'],
+      }),
+    );
   });
 
   it('calls onNewPrompt when New Prompt button is clicked', () => {
@@ -213,12 +351,58 @@ describe('LibraryScreen', () => {
     expect(onSelectPrompt).toHaveBeenCalledWith('prompt-summarize');
   });
 
-  it('highlights the active filter chip', () => {
+  it('checks the active filter option', () => {
     render(<LibraryScreen {...defaultProps} activeFilter="favorites" />);
-    const favoritesButton = screen.getByText('Favorites').closest('button');
-    expect(favoritesButton?.getAttribute('aria-pressed')).toBe('true');
-    const allButton = screen.getByText('All').closest('button');
-    expect(allButton?.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    expect(screen.getByRole('checkbox', { name: 'Favorites only' }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('shows active filter chips and removes individual chips', () => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        activeFilter={{
+          sortBy: 'lastUsed',
+          query: 'client',
+          statuses: ['hasVariables'],
+          folders: ['writing'],
+          tags: [],
+          lastUsed: 'last7Days',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    expect(screen.getByRole('button', { name: /Remove Search: client/ })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Remove Folder: Writing/ })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Remove Status: Has variables/ })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Remove Last used: Last 7 days/ })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /Remove Folder: Writing/ }));
+    expect(screen.queryByRole('button', { name: /Remove Folder: Writing/ })).toBeNull();
+  });
+
+  it('resets draft filters from the popover', () => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        activeFilter={{
+          sortBy: 'lastUsed',
+          query: '',
+          statuses: ['hasVariables'],
+          folders: ['writing'],
+          tags: [],
+          lastUsed: 'last7Days',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+
+    expect(screen.queryByRole('button', { name: /Remove Folder: Writing/ })).toBeNull();
+    expect(screen.getByText('No active filters')).toBeDefined();
   });
 
   it('renders folder-filtered prompts correctly', () => {

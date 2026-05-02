@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ListFilter, Search, X } from 'lucide-react';
 import {
   countActivePromptFilters,
@@ -447,6 +447,8 @@ interface SearchableMultiSelectProps<T extends string> {
   formatSelected?: (option: FilterOption<T>) => string;
 }
 
+type DropdownPlacement = 'top' | 'bottom';
+
 function SearchableMultiSelect<T extends string>({
   label,
   options,
@@ -458,8 +460,10 @@ function SearchableMultiSelect<T extends string>({
   formatSelected,
 }: SearchableMultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<DropdownPlacement>('bottom');
   const [query, setQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
   const selectedOptions = options.filter((option) => selectedSet.has(option.value));
   const filteredOptions = options.filter((option) =>
@@ -468,6 +472,39 @@ function SearchableMultiSelect<T extends string>({
   const summary = selectedOptions.length > 0
     ? selectedOptions.map((option) => formatSelected?.(option) ?? option.label).join(', ')
     : placeholder;
+
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+
+    function updatePlacement() {
+      if (!buttonRef.current) return;
+
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const scrollContainer = buttonRef.current.closest('.overflow-y-auto');
+      const containerRect = scrollContainer?.getBoundingClientRect();
+      const viewportTop = containerRect ? Math.max(0, containerRect.top) : 0;
+      const viewportBottom = containerRect
+        ? Math.min(window.innerHeight, containerRect.bottom)
+        : window.innerHeight;
+      const estimatedMenuHeight = 240;
+      const availableBelow = viewportBottom - buttonRect.bottom;
+      const availableAbove = buttonRect.top - viewportTop;
+
+      setPlacement(
+        availableBelow < estimatedMenuHeight && availableAbove > availableBelow
+          ? 'top'
+          : 'bottom',
+      );
+    }
+
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -502,6 +539,7 @@ function SearchableMultiSelect<T extends string>({
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((current) => !current)}
         className={[
@@ -518,7 +556,12 @@ function SearchableMultiSelect<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-40 mt-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-2 shadow-xl">
+        <div
+          className={[
+            'absolute left-0 right-0 z-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-2 shadow-xl',
+            placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+          ].join(' ')}
+        >
           <div className="mb-2 flex items-center gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
             <input

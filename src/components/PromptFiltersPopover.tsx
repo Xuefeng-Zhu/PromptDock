@@ -337,6 +337,20 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
                   ))}
                 </div>
               </FilterSection>
+            </div>
+
+            <div className="space-y-6 p-5">
+              <FilterSection title="Folders">
+                <SearchableMultiSelect
+                  label="folders"
+                  options={FOLDER_OPTIONS}
+                  selectedValues={draftFilters.folders}
+                  onChange={(folders) => updateDraftFilters({ folders })}
+                  placeholder="Select folders"
+                  searchPlaceholder="Search folders..."
+                  emptyMessage="No folders found"
+                />
+              </FilterSection>
 
               <FilterSection title="Tags">
                 <SearchableMultiSelect
@@ -348,20 +362,6 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
                   searchPlaceholder="Search tags..."
                   emptyMessage="No tags found"
                   formatSelected={(option) => `#${option.label.toLowerCase()}`}
-                />
-              </FilterSection>
-            </div>
-
-            <div className="p-5">
-              <FilterSection title="Folders">
-                <SearchableMultiSelect
-                  label="folders"
-                  options={FOLDER_OPTIONS}
-                  selectedValues={draftFilters.folders}
-                  onChange={(folders) => updateDraftFilters({ folders })}
-                  placeholder="Select folders"
-                  searchPlaceholder="Search folders..."
-                  emptyMessage="No folders found"
                 />
               </FilterSection>
             </div>

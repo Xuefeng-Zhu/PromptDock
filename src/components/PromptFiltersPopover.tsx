@@ -281,43 +281,7 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
             </div>
           </div>
 
-          <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-[0.9fr_1.35fr_1fr]">
-            <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
-              <FilterSection title="Search">
-                <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 focus-within:border-[var(--color-primary)]">
-                  <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
-                  <input
-                    type="text"
-                    value={draftFilters.query}
-                    onChange={(event) => updateDraftFilters({ query: event.target.value })}
-                    placeholder="Title or keywords"
-                    className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-placeholder)]"
-                    aria-label="Search title or keywords"
-                  />
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Last used">
-                <div className="grid grid-cols-2 gap-2">
-                  {LAST_USED_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateDraftFilters({ lastUsed: option.value })}
-                      className={[
-                        'rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
-                        draftFilters.lastUsed === option.value
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                          : 'border-[var(--color-border)] text-[var(--color-text-main)] hover:bg-gray-50',
-                      ].join(' ')}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </FilterSection>
-            </div>
-
+          <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-[1fr_1.35fr_0.9fr]">
             <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
               <FilterSection title="Status">
                 <div className="space-y-1">
@@ -338,7 +302,21 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
               </FilterSection>
             </div>
 
-            <div className="space-y-6 p-5">
+            <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
+              <FilterSection title="Search">
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 focus-within:border-[var(--color-primary)]">
+                  <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
+                  <input
+                    type="text"
+                    value={draftFilters.query}
+                    onChange={(event) => updateDraftFilters({ query: event.target.value })}
+                    placeholder="Title or keywords"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-placeholder)]"
+                    aria-label="Search title or keywords"
+                  />
+                </div>
+              </FilterSection>
+
               <FilterSection title="Folders">
                 <SearchableMultiSelect
                   label="folders"
@@ -362,6 +340,28 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
                   emptyMessage="No tags found"
                   formatSelected={(option) => `#${option.label.toLowerCase()}`}
                 />
+              </FilterSection>
+            </div>
+
+            <div className="space-y-6 p-5">
+              <FilterSection title="Last used">
+                <div className="grid grid-cols-2 gap-2">
+                  {LAST_USED_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateDraftFilters({ lastUsed: option.value })}
+                      className={[
+                        'rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
+                        draftFilters.lastUsed === option.value
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                          : 'border-[var(--color-border)] text-[var(--color-text-main)] hover:bg-gray-50',
+                      ].join(' ')}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </FilterSection>
             </div>
           </div>

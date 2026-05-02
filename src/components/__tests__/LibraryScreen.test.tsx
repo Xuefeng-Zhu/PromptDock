@@ -63,7 +63,19 @@ describe('LibraryScreen', () => {
 
   it('renders the sort control with the Filters button', () => {
     render(<LibraryScreen {...defaultProps} />);
-    expect(screen.getByText('Sorted by Last used')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Sorted by Last used/ })).toBeDefined();
+  });
+
+  it('calls onFilterChange when a sort option is selected from the right dropdown', () => {
+    const onFilterChange = vi.fn();
+    render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Sorted by Last used/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'A-Z' }));
+
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'az' }),
+    );
   });
 
   it('sorts prompts by A-Z when that filter is applied', () => {
@@ -198,11 +210,11 @@ describe('LibraryScreen', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Filters' });
     expect(dialog).toBeDefined();
-    expect(within(dialog).getByRole('heading', { name: 'Sort by' })).toBeDefined();
     expect(within(dialog).getByRole('heading', { name: 'Status' })).toBeDefined();
     expect(within(dialog).getByRole('heading', { name: 'Folders' })).toBeDefined();
     expect(within(dialog).getByRole('heading', { name: 'Tags' })).toBeDefined();
     expect(within(dialog).getByRole('heading', { name: 'Last used' })).toBeDefined();
+    expect(within(dialog).queryByRole('heading', { name: 'Sort by' })).toBeNull();
   });
 
   it('closes the filters popover on Escape and outside click', () => {
@@ -250,7 +262,6 @@ describe('LibraryScreen', () => {
     render(<LibraryScreen {...defaultProps} activeFilter="favorites" />);
     fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
     expect(screen.getByRole('checkbox', { name: 'Favorites only' }).getAttribute('aria-checked')).toBe('true');
-    expect(screen.getByRole('radio', { name: 'Last used' }).getAttribute('aria-checked')).toBe('true');
   });
 
   it('shows active filter chips and removes individual chips', () => {

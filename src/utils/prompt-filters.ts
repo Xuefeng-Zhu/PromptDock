@@ -55,7 +55,6 @@ export function countActivePromptFilters(filter: FilterType): number {
   const normalized = normalizePromptFilters(filter);
 
   return (
-    Number(normalized.sortBy !== 'lastUsed') +
     normalized.statuses.length +
     normalized.folders.length +
     normalized.tags.length +

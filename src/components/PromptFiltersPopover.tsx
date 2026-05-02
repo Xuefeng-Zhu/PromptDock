@@ -8,7 +8,6 @@ import {
   type FolderFilter,
   type LastUsedFilter,
   type PromptFilters,
-  type SortFilter,
   type StatusFilter,
   type TagFilter,
 } from '../utils/prompt-filters';
@@ -18,13 +17,6 @@ interface PromptFiltersPopoverProps {
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
 }
-
-const SORT_OPTIONS: Array<{ label: string; value: SortFilter }> = [
-  { label: 'Last used', value: 'lastUsed' },
-  { label: 'Updated', value: 'updated' },
-  { label: 'Created', value: 'created' },
-  { label: 'A-Z', value: 'az' },
-];
 
 const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Favorites only', value: 'favorites' },
@@ -58,22 +50,16 @@ const LAST_USED_OPTIONS: Array<{ label: string; value: LastUsedFilter }> = [
   { label: 'Last 30 days', value: 'last30Days' },
 ];
 
-const SORT_LABELS = Object.fromEntries(SORT_OPTIONS.map((option) => [option.value, option.label])) as Record<SortFilter, string>;
 const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((option) => [option.value, option.label])) as Record<StatusFilter, string>;
 const FOLDER_LABELS = Object.fromEntries(FOLDER_OPTIONS.map((option) => [option.value, option.label])) as Record<FolderFilter, string>;
 const TAG_LABELS = Object.fromEntries(TAG_OPTIONS.map((option) => [option.value, option.label])) as Record<TagFilter, string>;
 const LAST_USED_LABELS = Object.fromEntries(LAST_USED_OPTIONS.map((option) => [option.value, option.label])) as Record<LastUsedFilter, string>;
 
 type ActiveFilterChip =
-  | { id: string; label: string; kind: 'sort' }
   | { id: string; label: string; kind: 'status'; value: StatusFilter }
   | { id: string; label: string; kind: 'folder'; value: FolderFilter }
   | { id: string; label: string; kind: 'tag'; value: TagFilter }
   | { id: string; label: string; kind: 'lastUsed' };
-
-export function getSortFilterLabel(sortBy: SortFilter): string {
-  return SORT_LABELS[sortBy];
-}
 
 function toggleFilterValue<T extends string>(values: T[], value: T): T[] {
   return values.includes(value)
@@ -83,10 +69,6 @@ function toggleFilterValue<T extends string>(values: T[], value: T): T[] {
 
 function getActiveFilterChips(filters: PromptFilters): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
-
-  if (filters.sortBy !== 'lastUsed') {
-    chips.push({ id: 'sort', label: `Sort: ${SORT_LABELS[filters.sortBy]}`, kind: 'sort' });
-  }
 
   for (const status of filters.statuses) {
     chips.push({
@@ -181,10 +163,6 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
 
   function removeFilterChip(chip: ActiveFilterChip) {
     setDraftFilters((current) => {
-      if (chip.kind === 'sort') {
-        return { ...current, sortBy: 'lastUsed' };
-      }
-
       if (chip.kind === 'lastUsed') {
         return { ...current, lastUsed: 'any' };
       }
@@ -286,22 +264,8 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
             </div>
           </div>
 
-          <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-[1fr_1.35fr_1fr]">
+          <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-[0.9fr_1.35fr_1fr]">
             <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
-              <FilterSection title="Sort by">
-                <div className="space-y-1">
-                  {SORT_OPTIONS.map((option) => (
-                    <ChoiceRow
-                      key={option.value}
-                      label={option.label}
-                      selected={draftFilters.sortBy === option.value}
-                      type="radio"
-                      onClick={() => updateDraftFilters({ sortBy: option.value })}
-                    />
-                  ))}
-                </div>
-              </FilterSection>
-
               <FilterSection title="Last used">
                 <div className="grid grid-cols-2 gap-2">
                   {LAST_USED_OPTIONS.map((option) => (

@@ -8,7 +8,8 @@ import {
 } from '../utils/prompt-filters';
 import { Button } from './ui/Button';
 import { PromptGrid } from './PromptGrid';
-import { getSortFilterLabel, PromptFiltersPopover } from './PromptFiltersPopover';
+import { PromptFiltersPopover } from './PromptFiltersPopover';
+import { PromptSortDropdown } from './PromptSortDropdown';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -114,9 +115,10 @@ export function LibraryScreen({
             activeFilter={activeFilter}
             onFilterChange={onFilterChange}
           />
-          <span className="text-xs text-[var(--color-text-muted)]">
-            Sorted by {getSortFilterLabel(appliedFilters.sortBy)}
-          </span>
+          <PromptSortDropdown
+            activeFilter={activeFilter}
+            onFilterChange={onFilterChange}
+          />
         </div>
 
         {/* ── Prompt Grid ───────────────────────────────────────────────── */}

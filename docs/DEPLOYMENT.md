@@ -41,6 +41,12 @@ Browser hosting requirements:
 - Desktop-only features such as global hotkeys, tray, Tauri Store, and paste simulation are unavailable.
 - Optional Firebase sync requires `VITE_FIREBASE_*` values at build time.
 
+The production Firebase Hosting site is:
+
+```text
+https://promptdock-95e31.web.app
+```
+
 ## Tauri Desktop Build
 
 ```bash
@@ -64,7 +70,30 @@ The checked-in bundle config has `"active": true` and includes PNG, ICNS, and IC
 
 ## Firebase Deployment
 
-Only needed for synced mode.
+The web app deploys to Firebase Hosting from GitHub Actions on pushes to `main`
+and can also be deployed manually from the Actions tab.
+
+Required GitHub Actions secret:
+
+| Secret | Description |
+|---|---|
+| `FIREBASE_SERVICE_ACCOUNT_PROMPTDOCK_95E31` | Firebase service account JSON used by the Hosting deploy action. |
+
+Optional GitHub Actions config for browser sync:
+
+| Name | Type | Description |
+|---|---|---|
+| `VITE_FIREBASE_API_KEY` | Secret | Firebase web API key baked into the Vite bundle. |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Variable | Firebase Auth domain. Defaults to `promptdock-95e31.firebaseapp.com` in the workflow. |
+
+Manual deploy from a local machine:
+
+```bash
+npm run build
+firebase deploy --only hosting --project promptdock-95e31
+```
+
+Firestore deployment is only needed for synced mode:
 
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes
@@ -93,11 +122,13 @@ Remember: `VITE_` variables are baked into the frontend bundle.
 
 The repository includes:
 
+- `.github/workflows/firebase-hosting.yml` for Firebase Hosting deploys on pushes to `main`.
 - `.github/workflows/release-macos.yml` for signed and notarized macOS releases.
 - `.github/workflows/release-windows.yml` for Windows installer builds.
 
-Both workflows run on tag pushes that match `v*` and can also be started
-manually from GitHub Actions.
+The Firebase Hosting workflow can be started manually from GitHub Actions. The
+desktop release workflows run on tag pushes that match `v*` and can also be
+started manually from GitHub Actions.
 
 Recommended CI jobs:
 

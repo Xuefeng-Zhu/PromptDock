@@ -99,6 +99,8 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 
 `AuthService` bootstraps the default user workspace and owner membership before synced mode starts Firestore prompt listeners.
 
+See [Sync](SYNC.md) for the detailed local-to-synced transition, migration behavior, offline handling, sign-out flow, and current caveats.
+
 ## API Boundaries
 
 | Boundary | Contract | Notes |
@@ -151,7 +153,7 @@ Stores follow a factory plus singleton pattern:
 
 ## Known Architecture Gaps
 
-- Workspace bootstrap for synced mode is incomplete and can cause Firestore permission failures.
+- Synced mode currently assumes a single default personal workspace where `workspaceId` equals the Firebase user ID.
 - Active workspace state is split across settings, prompt store, and sync assumptions.
 - User-created folder persistence currently uses a localStorage utility outside the repository abstraction.
 - No CI workflow is present in the repository.

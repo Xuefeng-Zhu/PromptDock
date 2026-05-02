@@ -9,6 +9,7 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | Document | Purpose |
 |---|---|
 | [Architecture](docs/ARCHITECTURE.md) | System design, data flow, module boundaries, and design decisions. |
+| [Sync](docs/SYNC.md) | Local-to-synced mode transition, Firestore migration, listeners, offline behavior, and caveats. |
 | [Development](docs/DEVELOPMENT.md) | Local workflow, conventions, feature workflow, and debugging tips. |
 | [Configuration](docs/CONFIGURATION.md) | Environment variables, config files, Firebase setup, and secrets handling. |
 | [Testing](docs/TESTING.md) | Test strategy, commands, current verification status, and missing tests. |

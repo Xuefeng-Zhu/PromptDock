@@ -75,6 +75,15 @@ describe('OnboardingScreen', () => {
     expect(screen.getByText('Welcome to PromptDock')).toBeDefined();
   });
 
+  it('uses an internal scroll container for constrained app windows', () => {
+    const { container } = render(<OnboardingScreen onComplete={() => {}} />);
+    const root = container.firstElementChild;
+
+    expect(root?.className).toContain('h-full');
+    expect(root?.className).toContain('min-h-0');
+    expect(root?.className).toContain('overflow-y-auto');
+  });
+
   it('renders 3 option cards with titles and CTA buttons', () => {
     render(<OnboardingScreen onComplete={() => {}} />);
     expect(screen.getByText('Get started')).toBeDefined();

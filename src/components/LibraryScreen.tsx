@@ -8,8 +8,9 @@ import {
 } from '../utils/prompt-filters';
 import { Button } from './ui/Button';
 import { PromptGrid } from './PromptGrid';
-import { PromptFiltersPopover, type PromptFilterOption } from './PromptFiltersPopover';
+import { PromptFiltersPopover } from './PromptFiltersPopover';
 import { PromptSortDropdown } from './PromptSortDropdown';
+import type { SearchableMultiSelectOption } from './ui/SearchableMultiSelect';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -40,8 +41,8 @@ function formatFolderLabel(folderId: string): string {
 }
 
 function sortFilterOptions<T extends string>(
-  options: Array<PromptFilterOption<T>>,
-): Array<PromptFilterOption<T>> {
+  options: Array<SearchableMultiSelectOption<T>>,
+): Array<SearchableMultiSelectOption<T>> {
   return [...options].sort((a, b) => a.label.localeCompare(b.label, undefined, {
     sensitivity: 'base',
   }));
@@ -50,8 +51,8 @@ function sortFilterOptions<T extends string>(
 function deriveFolderFilterOptions(
   prompts: PromptRecipe[],
   folders: Folder[] = [],
-): Array<PromptFilterOption<string>> {
-  const optionMap = new Map<string, PromptFilterOption<string>>();
+): Array<SearchableMultiSelectOption<string>> {
+  const optionMap = new Map<string, SearchableMultiSelectOption<string>>();
 
   for (const folder of folders) {
     optionMap.set(folder.id, { label: folder.name, value: folder.id });
@@ -69,8 +70,8 @@ function deriveFolderFilterOptions(
   return sortFilterOptions(Array.from(optionMap.values()));
 }
 
-function deriveTagFilterOptions(prompts: PromptRecipe[]): Array<PromptFilterOption<string>> {
-  const optionMap = new Map<string, PromptFilterOption<string>>();
+function deriveTagFilterOptions(prompts: PromptRecipe[]): Array<SearchableMultiSelectOption<string>> {
+  const optionMap = new Map<string, SearchableMultiSelectOption<string>>();
 
   for (const prompt of prompts) {
     for (const tag of prompt.tags) {

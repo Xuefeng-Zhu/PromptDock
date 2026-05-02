@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   ArrowLeft,
   User,
@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
-import { Input } from './ui/Input';
 import { Toggle } from './ui/Toggle';
+import { HotkeyRecorder } from './ui/HotkeyRecorder';
 import { AccountPanel } from './AccountPanel';
 import { useSettingsStore } from '../stores/settings-store';
 import { useAppModeStore } from '../stores/app-mode-store';
@@ -59,6 +59,10 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'import-export', label: 'Import/Export', icon: <Download size={18} /> },
   { id: 'about', label: 'About', icon: <Info size={18} /> },
 ];
+
+function isTauriRuntime(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
 
 // ─── Settings Types ────────────────────────────────────────────────────────────
 
@@ -205,82 +209,25 @@ function AppearanceCard({
 
 interface HotkeyCardProps {
   hotkey: string;
-  onHotkeyChange: (hotkey: string) => void;
+  onHotkeyChange: (hotkey: string) => boolean | Promise<boolean>;
   error?: string | null;
 }
 
 function HotkeyCard({ hotkey, onHotkeyChange, error }: HotkeyCardProps) {
-  const [isCapturing, setIsCapturing] = useState(false);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!isCapturing) return;
-      e.preventDefault();
-
-      const parts: string[] = [];
-      if (e.metaKey) parts.push('CommandOrControl');
-      if (e.ctrlKey) parts.push('Control');
-      if (e.altKey) parts.push('Alt');
-      if (e.shiftKey) parts.push('Shift');
-
-      // Only capture if a non-modifier key is pressed
-      const modifierKeys = new Set([
-        'Meta',
-        'Control',
-        'Alt',
-        'Shift',
-      ]);
-      if (!modifierKeys.has(e.key)) {
-        const key = e.key === ' ' ? 'Space' : e.key;
-        parts.push(key.length === 1 ? key.toUpperCase() : key);
-        onHotkeyChange(parts.join('+'));
-        setIsCapturing(false);
-      }
-    },
-    [isCapturing, onHotkeyChange],
-  );
-
   return (
     <Card padding="lg">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
         Hotkey
       </h3>
-      <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-        Set a global keyboard shortcut to open PromptDock from anywhere.
+      <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+        Set the global shortcut that opens PromptDock from anywhere.
       </p>
-      <div className="flex items-center gap-3">
-        <Input
-          value={isCapturing ? 'Press a key combination…' : hotkey}
-          readOnly
-          onKeyDown={handleKeyDown}
-          onFocus={() => setIsCapturing(true)}
-          onBlur={() => setIsCapturing(false)}
-          className={[
-            'max-w-xs font-mono text-center',
-            isCapturing
-              ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/20'
-              : '',
-          ].join(' ')}
-          aria-label="Global hotkey combination"
-          placeholder="Click to set hotkey"
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            onHotkeyChange('');
-            setIsCapturing(false);
-          }}
-          aria-label="Clear hotkey"
-        >
-          Clear
-        </Button>
-      </div>
-      {error && (
-        <p role="alert" className="mt-2 text-xs text-red-600">
-          {error}
-        </p>
-      )}
+      <HotkeyRecorder
+        value={hotkey}
+        onChange={onHotkeyChange}
+        error={error}
+        ariaLabel="Global hotkey combination"
+      />
     </Card>
   );
 }
@@ -677,6 +624,15 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
   // ── Density is a UI-only preference not in UserSettings ────────────────────
   const [density, setDensity] = useState<DensityOption>('comfortable');
 
+  const canUseGlobalHotkeys = isTauriRuntime();
+  const visibleNavItems = useMemo(
+    () =>
+      canUseGlobalHotkeys
+        ? NAV_ITEMS
+        : NAV_ITEMS.filter((item) => item.id !== 'hotkey'),
+    [canUseGlobalHotkeys],
+  );
+
   const [activeSection, setActiveSection] = useState<SectionId>('account-sync');
 
   // ── Hotkey registration error ──────────────────────────────────────────────
@@ -702,15 +658,17 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
   );
 
   const handleHotkeyChange = useCallback(
-    async (hotkeyCombo: string) => {
+    async (hotkeyCombo: string): Promise<boolean> => {
       setHotkeyError(null);
       try {
         await registerHotkey(hotkeyCombo);
         await updateSettings({ hotkeyCombo });
+        return true;
       } catch (err) {
         setHotkeyError(
           `Failed to register hotkey: ${err instanceof Error ? err.message : String(err)}`,
         );
+        return false;
       }
     },
     [updateSettings],
@@ -778,7 +736,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
       const containerTop = scrollContainer.getBoundingClientRect().top;
       let current: SectionId = 'account-sync';
 
-      for (const item of NAV_ITEMS) {
+      for (const item of visibleNavItems) {
         const section = sectionRefs.current[item.id];
         if (!section) continue;
         const offset = section.getBoundingClientRect().top - containerTop;
@@ -792,7 +750,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
 
     scrollContainer.addEventListener('scroll', updateActiveSection, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', updateActiveSection);
-  }, []);
+  }, [visibleNavItems]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)]">
@@ -820,7 +778,7 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
           aria-label="Settings navigation"
         >
           <ul className="space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = activeSection === item.id;
               return (
                 <li key={item.id}>
@@ -903,15 +861,20 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               />
             </section>
 
-            {/* Hotkey */}
-            <section
-              ref={setSectionRef('hotkey')}
-              id="settings-hotkey"
-              aria-label="Hotkey settings"
-              className="scroll-mt-6"
-            >
-              <HotkeyCard hotkey={settings.hotkeyCombo} onHotkeyChange={handleHotkeyChange} error={hotkeyError} />
-            </section>
+            {canUseGlobalHotkeys && (
+              <section
+                ref={setSectionRef('hotkey')}
+                id="settings-hotkey"
+                aria-label="Hotkey settings"
+                className="scroll-mt-6"
+              >
+                <HotkeyCard
+                  hotkey={settings.hotkeyCombo}
+                  onHotkeyChange={handleHotkeyChange}
+                  error={hotkeyError}
+                />
+              </section>
+            )}
 
             {/* Default Behavior */}
             <section

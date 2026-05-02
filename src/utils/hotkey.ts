@@ -30,14 +30,16 @@ function normalizeHotkeyCombo(combo: string): string {
  * @throws If the Tauri command fails (e.g. invalid combo, OS-level conflict).
  */
 export async function registerHotkey(combo: string): Promise<void> {
-  if (!combo) {
-    try {
-      await invoke('unregister_hotkey');
-    } catch (err) {
-      if (isTauriRuntime()) throw err;
-    }
+  const shortcut = normalizeHotkeyCombo(combo);
+
+  if (!isTauriRuntime()) {
     return;
   }
 
-  await invoke('register_hotkey', { shortcut: normalizeHotkeyCombo(combo) });
+  if (!shortcut) {
+    await invoke('unregister_hotkey');
+    return;
+  }
+
+  await invoke('register_hotkey', { shortcut });
 }

@@ -28,7 +28,6 @@ const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Recent', value: 'recent' },
   { label: 'Archived', value: 'archived' },
   { label: 'Has variables', value: 'hasVariables' },
-  { label: 'Shared prompts', value: 'shared' },
 ];
 
 const FOLDER_OPTIONS: Array<FilterOption<FolderFilter>> = [

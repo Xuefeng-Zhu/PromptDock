@@ -1,7 +1,7 @@
 import type { PromptRecipe } from '../types/index';
 
 export type SortFilter = 'lastUsed' | 'updated' | 'created' | 'az';
-export type StatusFilter = 'favorites' | 'recent' | 'archived' | 'hasVariables' | 'shared';
+export type StatusFilter = 'favorites' | 'recent' | 'archived' | 'hasVariables';
 export type FolderFilter = 'work' | 'writing' | 'product' | 'engineering' | 'personal';
 export type TagFilter = 'writing' | 'summarization' | 'email' | 'code' | 'meeting' | 'ideation';
 export type LastUsedFilter = 'any' | 'today' | 'last7Days' | 'last30Days';
@@ -82,10 +82,6 @@ export function isRecentPrompt(prompt: PromptRecipe, referenceDate: Date = new D
 
 export function hasPromptVariables(prompt: PromptRecipe): boolean {
   return /{{\s*[\w.-]+\s*}}/.test(prompt.body);
-}
-
-function isSharedPrompt(prompt: PromptRecipe): boolean {
-  return prompt.workspaceId !== 'local' || prompt.createdBy !== 'local';
 }
 
 function normalizeToken(value: string): string {
@@ -204,10 +200,6 @@ export function applyPromptFilters(
 
   if (normalized.statuses.includes('hasVariables')) {
     result = result.filter(hasPromptVariables);
-  }
-
-  if (normalized.statuses.includes('shared')) {
-    result = result.filter(isSharedPrompt);
   }
 
   if (normalized.folders.length > 0) {

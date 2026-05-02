@@ -88,6 +88,11 @@ This runs Vite first, then launches the Tauri shell with the main window and hid
 | `VITE_FIREBASE_API_KEY` | Sync only | none | Firebase web API key. Embedded in the client bundle. |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Sync only | none | Firebase Auth domain. |
 | `VITE_FIREBASE_PROJECT_ID` | Sync only | none | Firebase project ID used by Auth and Firestore. |
+| `VITE_FIREBASE_APP_ID` | Analytics only | none | Firebase web app ID. |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Analytics only | none | Google Analytics measurement ID for the Firebase web app. |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | No | none | Optional Firebase web app config field. |
+| `VITE_FIREBASE_STORAGE_BUCKET` | No | none | Optional Firebase web app config field. |
+| `VITE_FIREBASE_ANALYTICS_ENABLED` | No | `true` | Set to `false` to disable Analytics even when configured. Analytics is also disabled when `VITE_USE_EMULATOR=true`. |
 | `VITE_USE_EMULATOR` | No | `false` | Set to `true` to connect Auth and Firestore to local emulators. |
 | `VITE_EMULATOR_AUTH_HOST` | No | `http://localhost:9099` | Auth emulator URL. |
 | `VITE_EMULATOR_FIRESTORE_HOST` | No | `localhost:8080` | Firestore emulator host and port. |

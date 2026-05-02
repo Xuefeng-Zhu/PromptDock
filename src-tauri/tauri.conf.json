@@ -11,7 +11,7 @@
   "app": {
     "withGlobalTauri": false,
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com wss://*.firebaseio.com",
+      "csp": "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://*.googleapis.com https://*.firebaseio.com https://*.firebase.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com wss://*.firebaseio.com",
       "capabilities": [
         {
           "identifier": "main-capability",

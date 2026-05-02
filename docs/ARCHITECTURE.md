@@ -52,8 +52,8 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 | Layout and screens | `src/components/AppShell.tsx`, `src/screens/*` | Navigation, library, editor, settings, quick launcher, conflict center, modal orchestration. |
 | State | `src/stores/*` | Prompt library state, settings, app mode/sync status, transient toasts. |
 | Repositories | `src/repositories/*` | Data access contracts and concrete persistence implementations. |
-| Services | `src/services/*` | Business logic: auth, sync, conflict detection, import/export, parsing, rendering, search. |
-| Firebase | `src/firebase/config.ts` | Lazy Firebase imports and cached Auth/Firestore instances. |
+| Services | `src/services/*` | Business logic: analytics tracking, auth, sync, conflict detection, import/export, parsing, rendering, search. |
+| Firebase | `src/firebase/config.ts` | Lazy Firebase imports and cached Analytics/Auth/Firestore instances. |
 | Utilities | `src/utils/*` | Clipboard, hotkeys, theme application, file dialog fallback, sidebar counts, folder localStorage bridge. |
 | Native | `src-tauri/src/*` | Tauri command handlers, tray setup, global shortcut setup, paste simulation. |
 | Types | `src/types/index.ts` | Shared domain models and result types. |
@@ -69,7 +69,7 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 5. Default seed prompts are inserted into the `local` workspace if it is empty.
 6. Prompts and settings are loaded into stores.
 7. The global hotkey is registered best-effort in desktop mode.
-8. Background services are created and auth-session restore may transition the app to synced mode.
+8. Background services are created, optional Firebase Analytics tracking starts if configured, and auth-session restore may transition the app to synced mode.
 
 ### Local Prompt Create/Edit
 
@@ -107,7 +107,7 @@ TODO: The Firestore workspace bootstrap path is incomplete. See [Deferred Issues
 | State to data | Repository interfaces in `src/repositories/interfaces.ts` | Repositories hide local, browser, and Firestore persistence details. |
 | Business logic | Service interfaces in `src/services/interfaces.ts` | Parsing, rendering, search, import/export, auth. |
 | Web to native | Tauri `invoke()` commands | Clipboard, paste, hotkey, window commands are desktop-only and should have fallbacks or graceful failure. |
-| App to Firebase | Lazy functions in `src/firebase/config.ts` | Firebase SDK imports happen only when sync is used. |
+| App to Firebase | Lazy functions in `src/firebase/config.ts` | Firebase SDK imports happen only when sync or configured Analytics is used. |
 
 ## State Management
 

@@ -46,6 +46,7 @@ describe('QuickLauncherApp', () => {
       enableBackgroundServices: true,
       restoreAuthSession: true,
       syncMigrationChoice: 'fresh',
+      analyticsSurface: 'quick_launcher',
     });
     expect(screen.getByTestId('theme-manager')).toBeDefined();
   });

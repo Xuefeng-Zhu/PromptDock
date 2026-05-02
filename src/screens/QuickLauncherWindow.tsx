@@ -6,6 +6,7 @@ import { VariableFillModal } from '../components/VariableFillModal';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { copyToClipboard, pasteToActiveApp } from '../utils/clipboard';
+import { trackPromptAction } from '../services/analytics-service';
 import type { PromptRecipe } from '../types/index';
 
 // ─── Singleton instances ───────────────────────────────────────────────────────
@@ -132,6 +133,7 @@ export function QuickLauncherWindow() {
     try {
       await copyToClipboard(text);
       markUsed(promptId);
+      trackPromptAction('copied', { source: 'quick_launcher' });
       await hideWindow();
     } catch (err) {
       setActionError(formatActionError('copy prompt', err));
@@ -143,8 +145,9 @@ export function QuickLauncherWindow() {
   const pasteAndClose = useCallback(async (text: string, promptId?: string) => {
     setActionError(null);
     try {
-      await pasteToActiveApp(text, hideWindow);
+      const result = await pasteToActiveApp(text, hideWindow);
       markUsed(promptId);
+      trackPromptAction(result.pasted ? 'pasted' : 'copied', { source: 'quick_launcher' });
     } catch (err) {
       setActionError(formatActionError('paste prompt', err));
       throw err;

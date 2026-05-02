@@ -30,7 +30,7 @@ import {
   type FilterType,
 } from '../utils/prompt-filters';
 import type { ConflictService } from '../services/conflict-service';
-import type { PromptRecipe } from '../types/index';
+import type { AuthUser, PromptRecipe } from '../types/index';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -150,7 +150,6 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const archivePrompt = usePromptStore((s) => s.archivePrompt);
   const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
-  const loadPrompts = usePromptStore((s) => s.loadPrompts);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
   const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
 
@@ -161,6 +160,8 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const mode = useAppModeStore((s) => s.mode);
   const userId = useAppModeStore((s) => s.userId);
+  const setMode = useAppModeStore((s) => s.setMode);
+  const setUserId = useAppModeStore((s) => s.setUserId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
 
   // ── Toast store ────────────────────────────────────────────────────────────
@@ -517,11 +518,15 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
       });
   }, [addToast, markPromptUsed]);
 
-  const handleSync = useCallback(() => {
-    loadPrompts().catch((err: unknown) => {
-      addToast(`Failed to sync prompts: ${err instanceof Error ? err.message : String(err)}`, 'error');
-    });
-  }, [loadPrompts, addToast]);
+  const handleAuthSuccess = useCallback((user: AuthUser) => {
+    setUserId(user.uid);
+    setMode('synced');
+  }, [setMode, setUserId]);
+
+  const handleSignOutSuccess = useCallback(() => {
+    setUserId(null);
+    setMode('local');
+  }, [setMode, setUserId]);
 
   // ── Command Palette callbacks ──────────────────────────────────────────────
 
@@ -635,8 +640,11 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}
-        onSettingsOpen={handleSettingsOpen}
-        onSync={handleSync}
+        authService={authService}
+        mode={mode}
+        userId={userId}
+        onAuthSuccess={handleAuthSuccess}
+        onSignOutSuccess={handleSignOutSuccess}
         syncStatus={syncStatus}
       />
 

@@ -11,6 +11,29 @@
 import type { IAuthService } from './interfaces';
 import type { AuthResult, AuthUser, AuthError } from '../types/index';
 
+const AUTH_RESTORE_TIMEOUT_MS = 3000;
+const AUTH_REQUEST_TIMEOUT_MS = 15000;
+const WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 3000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+  });
+}
+
 // ─── Firebase Error Code Mapping ───────────────────────────────────────────────
 
 function mapFirebaseAuthError(error: unknown): AuthError {
@@ -19,6 +42,9 @@ function mapFirebaseAuthError(error: unknown): AuthError {
 
   if (message.includes('Firebase configuration is missing')) {
     return 'missing-configuration';
+  }
+  if (message.includes('timed out')) {
+    return 'network';
   }
 
   switch (errorCode) {
@@ -114,12 +140,19 @@ export class AuthService implements IAuthService {
     const user = toAuthUser(credentialUser);
 
     try {
-      await this.bootstrapUserWorkspace(user);
+      await withTimeout(
+        this.bootstrapUserWorkspace(user),
+        WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
+        'Firebase workspace bootstrap timed out.',
+      );
+      return { success: true, user };
     } catch (error) {
       console.error('Failed to bootstrap Firebase user workspace:', error);
+      await this.signOut().catch((signOutError) => {
+        console.error('Failed to sign out after workspace bootstrap failure:', signOutError);
+      });
+      return { success: false, error: mapFirebaseAuthError(error) };
     }
-
-    return { success: true, user };
   }
 
   /**
@@ -132,7 +165,11 @@ export class AuthService implements IAuthService {
       const { createUserWithEmailAndPassword } = await import('firebase/auth');
 
       const auth = await getFirebaseAuth();
-      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      const credential = await withTimeout(
+        createUserWithEmailAndPassword(auth, email, password),
+        AUTH_REQUEST_TIMEOUT_MS,
+        'Firebase auth request timed out.',
+      );
       return await this.finishAuth(credential.user);
     } catch (error: unknown) {
       return { success: false, error: mapFirebaseAuthError(error) };
@@ -149,7 +186,11 @@ export class AuthService implements IAuthService {
       const { signInWithEmailAndPassword } = await import('firebase/auth');
 
       const auth = await getFirebaseAuth();
-      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const credential = await withTimeout(
+        signInWithEmailAndPassword(auth, email, password),
+        AUTH_REQUEST_TIMEOUT_MS,
+        'Firebase auth request timed out.',
+      );
       return await this.finishAuth(credential.user);
     } catch (error: unknown) {
       return { success: false, error: mapFirebaseAuthError(error) };
@@ -168,7 +209,11 @@ export class AuthService implements IAuthService {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      const credential = await signInWithPopup(auth, provider);
+      const credential = await withTimeout(
+        signInWithPopup(auth, provider),
+        AUTH_REQUEST_TIMEOUT_MS,
+        'Firebase auth request timed out.',
+      );
       return await this.finishAuth(credential.user);
     } catch (error: unknown) {
       return { success: false, error: mapFirebaseAuthError(error) };
@@ -192,30 +237,64 @@ export class AuthService implements IAuthService {
    * Returns the current user if a session exists, or null if not.
    * Silently falls back to Local Mode on failure (no error thrown).
    */
-  async restoreSession(): Promise<AuthResult | null> {
+  async restoreSession(onLateRestore?: (result: AuthResult | null) => void): Promise<AuthResult | null> {
     try {
       const { getFirebaseAuth } = await import('../firebase/config');
       const { onAuthStateChanged: firebaseOnAuthStateChanged } = await import('firebase/auth');
 
       const auth = await getFirebaseAuth();
 
-      // Wait for the auth state to be resolved
+      // Wait briefly for auth state plus workspace bootstrap. If Firebase is
+      // slow, let app startup continue in local mode but keep the listener until
+      // the first auth event arrives so a valid session can still recover.
       return new Promise<AuthResult | null>((resolve) => {
-        const unsubscribe = firebaseOnAuthStateChanged(auth, (firebaseUser) => {
-          unsubscribe();
-          if (firebaseUser) {
-            const user = toAuthUser(firebaseUser);
-            void this.bootstrapUserWorkspace(user)
-              .catch((error) => {
-                console.error('Failed to bootstrap restored Firebase user workspace:', error);
-              })
-              .finally(() => {
-                resolve({ success: true, user });
-              });
-          } else {
-            resolve(null);
+        let initialResolved = false;
+        let timedOut = false;
+        let unsubscribe: (() => void) | null = null;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const resolveInitial = (result: AuthResult | null): boolean => {
+          if (initialResolved) return false;
+          initialResolved = true;
+          if (timeoutId !== null) {
+            clearTimeout(timeoutId);
           }
+          resolve(result);
+          return true;
+        };
+
+        const finish = (result: AuthResult | null) => {
+          const resolvedInitial = resolveInitial(result);
+          if (!resolvedInitial && timedOut) {
+            onLateRestore?.(result);
+          }
+          unsubscribe?.();
+        };
+
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          resolveInitial(null);
+        }, AUTH_RESTORE_TIMEOUT_MS);
+
+        unsubscribe = firebaseOnAuthStateChanged(auth, (firebaseUser) => {
+          void (async () => {
+            if (firebaseUser) {
+              const user = toAuthUser(firebaseUser);
+              try {
+                await this.bootstrapUserWorkspace(user);
+                finish({ success: true, user });
+              } catch (error) {
+                console.error('Failed to bootstrap restored Firebase user workspace:', error);
+                finish({ success: false, error: mapFirebaseAuthError(error) });
+              }
+            } else {
+              finish(null);
+            }
+          })();
         });
+        if (initialResolved && !timedOut) {
+          unsubscribe();
+        }
       });
     } catch {
       // Silently fall back to Local Mode on any failure

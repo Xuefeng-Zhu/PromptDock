@@ -1,6 +1,9 @@
-import { Search, RefreshCw, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Search, User } from 'lucide-react';
 import { SyncStatusBadge } from './SyncStatusBadge';
-import type { SyncStatus } from '../types/index';
+import { AccountPanel } from './AccountPanel';
+import type { IAuthService } from '../services/interfaces';
+import type { AppMode, AuthUser, SyncStatus } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -8,8 +11,11 @@ export interface TopBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onCommandPaletteOpen: () => void;
-  onSettingsOpen: () => void;
-  onSync?: () => void;
+  authService?: IAuthService;
+  mode?: AppMode;
+  userId?: string | null;
+  onAuthSuccess?: (user: AuthUser) => void;
+  onSignOutSuccess?: () => void;
   syncStatus?: SyncStatus;
 }
 
@@ -35,10 +41,39 @@ export function TopBar({
   searchQuery,
   onSearchChange,
   onCommandPaletteOpen,
-  onSettingsOpen,
-  onSync,
+  authService,
+  mode = 'local',
+  userId = null,
+  onAuthSuccess,
+  onSignOutSuccess,
   syncStatus,
 }: TopBarProps) {
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setAccountMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [accountMenuOpen]);
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center gap-4 border-b px-4"
@@ -95,27 +130,41 @@ export function TopBar({
         {/* Sync status badge */}
         {syncStatus && <SyncStatusBadge status={toBadgeStatus(syncStatus)} />}
 
-        {/* Sync / refresh button */}
-        <button
-          type="button"
-          aria-label="Sync"
-          onClick={() => onSync?.()}
-          className="rounded-lg p-2 transition-colors hover:bg-gray-100"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
+        {/* Account menu */}
+        <div className="relative" ref={accountMenuRef}>
+          <button
+            type="button"
+            aria-label="Account"
+            aria-expanded={accountMenuOpen}
+            aria-haspopup="dialog"
+            onClick={() => setAccountMenuOpen((current) => !current)}
+            className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            <User className="h-4 w-4" />
+          </button>
 
-        {/* Account button */}
-        <button
-          type="button"
-          aria-label="Account"
-          onClick={onSettingsOpen}
-          className="rounded-lg p-2 transition-colors hover:bg-gray-100"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          <User className="h-4 w-4" />
-        </button>
+          {accountMenuOpen && (
+            <div
+              role="dialog"
+              aria-label="Account"
+              className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3 shadow-lg"
+            >
+              <AccountPanel
+                authService={authService}
+                mode={mode}
+                userId={userId}
+                syncStatus={syncStatus}
+                variant="popover"
+                onAuthSuccess={(user) => onAuthSuccess?.(user)}
+                onSignOutSuccess={() => {
+                  onSignOutSuccess?.();
+                  setAccountMenuOpen(false);
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

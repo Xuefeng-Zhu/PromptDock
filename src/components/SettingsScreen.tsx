@@ -2,28 +2,22 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
   User,
-  Cloud,
   Palette,
   Keyboard,
   Settings2,
   Download,
   Upload,
   Info,
-  HardDrive,
-  CloudOff,
-  CheckCircle2,
   Sun,
   Moon,
   Monitor,
-  BadgeCheck,
-  LogOut,
   AlertCircle,
-  Chrome,
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Toggle } from './ui/Toggle';
+import { AccountPanel } from './AccountPanel';
 import { useSettingsStore } from '../stores/settings-store';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore } from '../stores/prompt-store';
@@ -31,7 +25,7 @@ import { registerHotkey } from '../utils/hotkey';
 import { saveFile, openFile } from '../utils/file-dialog';
 import { ImportExportService } from '../services/import-export';
 import type { IAuthService } from '../services/interfaces';
-import type { UserSettings, AuthError, DuplicateInfo, PromptRecipe } from '../types/index';
+import type { UserSettings, DuplicateInfo, PromptRecipe } from '../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -66,40 +60,13 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'about', label: 'About', icon: <Info size={18} /> },
 ];
 
-// ─── Sync State Types ──────────────────────────────────────────────────────────
+// ─── Settings Types ────────────────────────────────────────────────────────────
 
-type SyncState = 'off' | 'guest' | 'signed-in';
 type ThemeOption = UserSettings['theme'];
 type DensityOption = 'comfortable' | 'compact';
 type DefaultAction = UserSettings['defaultAction'];
 
-// ─── Auth Error Messages ───────────────────────────────────────────────────────
-
-function authErrorMessage(error: AuthError): string {
-  switch (error) {
-    case 'invalid-credentials':
-      return 'Invalid email or password. Please try again.';
-    case 'email-in-use':
-      return 'An account with this email already exists.';
-    case 'weak-password':
-      return 'Password is too weak. Use at least 6 characters.';
-    case 'missing-configuration':
-      return 'Firebase is not configured for this build. Add the Firebase environment variables and restart PromptDock.';
-    case 'network':
-      return 'Network error while contacting Firebase. Check your connection and try again.';
-    case 'popup-blocked':
-      return 'The Google sign-in popup was blocked. Allow popups for PromptDock and try again.';
-    case 'popup-cancelled':
-      return 'Google sign-in was cancelled.';
-    case 'unknown':
-    default:
-      return 'An unexpected error occurred. Please try again.';
-  }
-}
-
 // ─── AccountCard ───────────────────────────────────────────────────────────────
-
-type AuthFormMode = 'sign-in' | 'sign-up';
 
 interface AccountCardProps {
   authService?: IAuthService;
@@ -108,334 +75,26 @@ interface AccountCardProps {
 function AccountCard({ authService }: AccountCardProps) {
   const mode = useAppModeStore((s) => s.mode);
   const userId = useAppModeStore((s) => s.userId);
+  const syncStatus = useAppModeStore((s) => s.syncStatus);
   const setMode = useAppModeStore((s) => s.setMode);
   const setUserId = useAppModeStore((s) => s.setUserId);
 
-  const [formMode, setFormMode] = useState<AuthFormMode>('sign-in');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const completeAuth = useCallback(
-    (result: Awaited<ReturnType<IAuthService['signIn']>>) => {
-      if (result.success) {
-        setUserId(result.user.uid);
-        setMode('synced');
-        setEmail('');
-        setPassword('');
-      } else {
-        setAuthError(authErrorMessage(result.error));
-      }
-    },
-    [setMode, setUserId],
-  );
-
-  const handleSignIn = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!authService) return;
-      setAuthError(null);
-      setIsSubmitting(true);
-      try {
-        const result = await authService.signIn(email, password);
-        completeAuth(result);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [authService, completeAuth, email, password],
-  );
-
-  const handleSignUp = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!authService) return;
-      setAuthError(null);
-      setIsSubmitting(true);
-      try {
-        const result = await authService.signUp(email, password);
-        completeAuth(result);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [authService, completeAuth, email, password],
-  );
-
-  const handleGoogleSignIn = useCallback(async () => {
-    if (!authService) return;
-    setAuthError(null);
-    setIsSubmitting(true);
-    try {
-      const result = await authService.signInWithGoogle();
-      completeAuth(result);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [authService, completeAuth]);
-
-  const handleSignOut = useCallback(async () => {
-    if (!authService) return;
-    setIsSubmitting(true);
-    setAuthError(null);
-    try {
-      await authService.signOut();
-      setUserId(null);
-      setMode('local');
-    } catch (err) {
-      setAuthError(`Failed to sign out: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [authService, setMode, setUserId]);
-
-  // ── Signed-in view ─────────────────────────────────────────────────────────
-  if (mode !== 'local' && userId) {
-    return (
-      <Card padding="lg">
-        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-          Account
-        </h3>
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)]">
-            <User size={24} className="text-[var(--color-primary)]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-[var(--color-text-main)]">
-              Signed in
-            </p>
-            <div className="mt-1 flex items-center gap-1.5">
-              <BadgeCheck size={14} className="text-green-600" />
-              <span className="text-xs text-green-600">
-                {mode === 'offline-synced' ? 'Offline sync' : 'Synced'}
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleSignOut}
-            disabled={isSubmitting}
-            aria-label="Sign out"
-          >
-            <LogOut size={16} className="mr-1.5" />
-            Sign Out
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
-  // ── Sign-in / Sign-up form view ────────────────────────────────────────────
   return (
     <Card padding="lg">
-      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-        Account
-      </h3>
-
-      {/* Tab toggle */}
-      <div className="mb-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => { setFormMode('sign-in'); setAuthError(null); }}
-          className={[
-            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            formMode === 'sign-in'
-              ? 'bg-[var(--color-primary)] text-white'
-              : 'text-[var(--color-text-muted)] hover:bg-gray-100',
-          ].join(' ')}
-        >
-          Sign In
-        </button>
-        <button
-          type="button"
-          onClick={() => { setFormMode('sign-up'); setAuthError(null); }}
-          className={[
-            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            formMode === 'sign-up'
-              ? 'bg-[var(--color-primary)] text-white'
-              : 'text-[var(--color-text-muted)] hover:bg-gray-100',
-          ].join(' ')}
-        >
-          Sign Up
-        </button>
-      </div>
-
-      <form
-        onSubmit={formMode === 'sign-in' ? handleSignIn : handleSignUp}
-        className="space-y-3"
-      >
-        <div>
-          <label htmlFor="auth-email" className="mb-1 block text-xs font-medium text-[var(--color-text-main)]">
-            Email
-          </label>
-          <Input
-            id="auth-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-            aria-label="Email"
-          />
-        </div>
-        <div>
-          <label htmlFor="auth-password" className="mb-1 block text-xs font-medium text-[var(--color-text-main)]">
-            Password
-          </label>
-          <Input
-            id="auth-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            aria-label="Password"
-          />
-        </div>
-
-        {authError && (
-          <p role="alert" className="text-xs text-red-600">
-            {authError}
-          </p>
-        )}
-
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={isSubmitting}
-          className="w-full"
-        >
-          {isSubmitting
-            ? 'Please wait…'
-            : formMode === 'sign-in'
-              ? 'Sign In'
-              : 'Create Account'}
-        </Button>
-      </form>
-
-      <div className="my-4 flex items-center gap-3">
-        <div className="h-px flex-1 bg-[var(--color-border)]" />
-        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-          or
-        </span>
-        <div className="h-px flex-1 bg-[var(--color-border)]" />
-      </div>
-
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={handleGoogleSignIn}
-        disabled={isSubmitting || !authService}
-        className="w-full"
-        aria-label="Continue with Google"
-      >
-        <Chrome size={16} className="mr-2" />
-        Continue with Google
-      </Button>
-    </Card>
-  );
-}
-
-// ─── SyncCard ──────────────────────────────────────────────────────────────────
-
-interface SyncCardProps {
-  syncState: SyncState;
-  onSyncStateChange: (state: SyncState) => void;
-}
-
-interface SyncOption {
-  key: SyncState;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-const SYNC_OPTIONS: SyncOption[] = [
-  {
-    key: 'off',
-    icon: <HardDrive size={20} />,
-    title: 'Sync off',
-    description: 'Local only — your data stays on this device.',
-  },
-  {
-    key: 'guest',
-    icon: <CloudOff size={20} />,
-    title: 'Guest cloud',
-    description: 'Anonymous sync — no account required.',
-  },
-  {
-    key: 'signed-in',
-    icon: <Cloud size={20} />,
-    title: 'Signed in',
-    description: 'Full sync with your account across devices.',
-  },
-];
-
-function SyncCard({ syncState, onSyncStateChange }: SyncCardProps) {
-  return (
-    <Card padding="lg">
-      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-        Sync
-      </h3>
-      <p className="mb-4 text-xs text-[var(--color-text-muted)]">
-        Sign-in is optional. PromptDock works fully offline in local-only mode.
-      </p>
-      <div className="space-y-3">
-        {SYNC_OPTIONS.map((option) => {
-          const isActive = syncState === option.key;
-          return (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => onSyncStateChange(option.key)}
-              aria-pressed={isActive}
-              className={[
-                'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
-                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
-                isActive
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]'
-                  : 'border-[var(--color-border)] bg-[var(--color-panel)] hover:bg-gray-50',
-              ].join(' ')}
-            >
-              <div
-                className={[
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                  isActive
-                    ? 'bg-[var(--color-primary)] text-white'
-                    : 'bg-gray-100 text-[var(--color-text-muted)]',
-                ].join(' ')}
-              >
-                {option.icon}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p
-                  className={[
-                    'text-sm font-medium',
-                    isActive
-                      ? 'text-[var(--color-primary)]'
-                      : 'text-[var(--color-text-main)]',
-                  ].join(' ')}
-                >
-                  {option.title}
-                </p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {option.description}
-                </p>
-              </div>
-              {isActive && (
-                <CheckCircle2
-                  size={18}
-                  className="shrink-0 text-[var(--color-primary)]"
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <AccountPanel
+        authService={authService}
+        mode={mode}
+        userId={userId}
+        syncStatus={syncStatus}
+        onAuthSuccess={(user) => {
+          setUserId(user.uid);
+          setMode('synced');
+        }}
+        onSignOutSuccess={() => {
+          setUserId(null);
+          setMode('local');
+        }}
+      />
     </Card>
   );
 }
@@ -1015,10 +674,6 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
   const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
 
-  // ── Sync state derived from AppModeStore ───────────────────────────────────
-  const appMode = useAppModeStore((s) => s.mode);
-  const syncState: SyncState = appMode === 'synced' ? 'signed-in' : 'off';
-
   // ── Density is a UI-only preference not in UserSettings ────────────────────
   const [density, setDensity] = useState<DensityOption>('comfortable');
 
@@ -1231,12 +886,6 @@ export function SettingsScreen({ onBack, authService, loading = false }: Setting
               className="scroll-mt-6"
             >
               <AccountCard authService={authService} />
-              <div className="mt-4">
-                <SyncCard
-                  syncState={syncState}
-                  onSyncStateChange={() => {/* Sync state is derived from AppModeStore */}}
-                />
-              </div>
             </section>
 
             {/* Appearance */}

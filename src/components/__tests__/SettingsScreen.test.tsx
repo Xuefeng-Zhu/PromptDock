@@ -211,14 +211,11 @@ describe('SettingsScreen', () => {
     expect(nav.textContent).toContain('About');
   });
 
-  it('renders setting cards for Account, Sync, Appearance, Hotkey, Import/Export, About', () => {
+  it('renders setting cards for Account, Appearance, Hotkey, Import/Export, About', () => {
     render(<SettingsScreen onBack={() => {}} />);
     // In local mode (not signed in), the Account card shows a sign-in form
     expect(screen.getByLabelText('Email')).toBeDefined();
     expect(screen.getByLabelText('Password')).toBeDefined();
-    expect(screen.getByText('Sync off')).toBeDefined();
-    expect(screen.getByText('Guest cloud')).toBeDefined();
-    expect(screen.getByText('Signed in')).toBeDefined();
     expect(screen.getByText('Light')).toBeDefined();
     expect(screen.getByText('Dark')).toBeDefined();
     expect(screen.getByText('System')).toBeDefined();
@@ -734,8 +731,35 @@ describe('SettingsScreen + AuthService integration', () => {
     render(<SettingsScreen onBack={() => {}} />);
 
     // The AccountCard should show "Synced" badge and a Sign Out button
-    expect(screen.getByText('Synced')).toBeDefined();
+    expect(screen.getAllByText('Synced').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeDefined();
+  });
+
+  it('shows compact signed-in account info from the auth session', async () => {
+    testAppModeStore.getState().setUserId('google-user');
+    testAppModeStore.getState().setMode('synced');
+
+    const authService = createMockAuthService({
+      onAuthStateChanged: vi.fn((callback) => {
+        callback({
+          uid: 'google-user',
+          email: 'google@example.com',
+          displayName: 'Google User',
+        });
+        return () => {};
+      }),
+    });
+
+    render(<SettingsScreen onBack={() => {}} authService={authService} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Google User').length).toBeGreaterThan(0);
+    });
+    expect(screen.getAllByText('google@example.com').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Synced').length).toBeGreaterThan(0);
+    expect(screen.queryByText('google-user')).toBeNull();
+    expect(screen.queryByText('Account ID')).toBeNull();
+    expect(screen.queryByText('Sync mode')).toBeNull();
   });
 });
 

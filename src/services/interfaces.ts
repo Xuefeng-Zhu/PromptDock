@@ -48,7 +48,7 @@ export interface IAuthService {
   signIn(email: string, password: string): Promise<AuthResult>;
   signInWithGoogle(): Promise<AuthResult>;
   signOut(): Promise<void>;
-  restoreSession(): Promise<AuthResult | null>;
+  restoreSession(onLateRestore?: (result: AuthResult | null) => void): Promise<AuthResult | null>;
   sendPasswordReset(email: string): Promise<void>;
   onAuthStateChanged(callback: (user: AuthUser | null) => void): () => void;
 }

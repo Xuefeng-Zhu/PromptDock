@@ -106,7 +106,16 @@ describe('PromptEditor', () => {
   });
 
   it('shows Duplicate, Archive, Copy buttons when editing', () => {
-    render(<PromptEditor {...defaultProps} promptId="prompt-summarize" prompt={MOCK_PROMPTS[0]} />);
+    render(
+      <PromptEditor
+        {...defaultProps}
+        promptId="prompt-summarize"
+        prompt={MOCK_PROMPTS[0]}
+        onDuplicate={vi.fn()}
+        onArchive={vi.fn()}
+        onCopy={vi.fn()}
+      />,
+    );
     expect(screen.getByText('Duplicate')).toBeDefined();
     expect(screen.getByText('Archive')).toBeDefined();
     expect(screen.getByText('Copy')).toBeDefined();
@@ -162,7 +171,7 @@ describe('PromptEditor', () => {
       expect(onCopy).toHaveBeenCalledTimes(1);
     });
 
-    it('does not throw when action buttons are clicked without callbacks', () => {
+    it('hides unavailable actions when callbacks are not provided', () => {
       render(
         <PromptEditor
           {...defaultProps}
@@ -170,9 +179,9 @@ describe('PromptEditor', () => {
           prompt={MOCK_PROMPTS[0]}
         />,
       );
-      expect(() => fireEvent.click(screen.getByText('Duplicate'))).not.toThrow();
-      expect(() => fireEvent.click(screen.getByText('Archive'))).not.toThrow();
-      expect(() => fireEvent.click(screen.getByText('Copy'))).not.toThrow();
+      expect(screen.queryByText('Duplicate')).toBeNull();
+      expect(screen.queryByText('Archive')).toBeNull();
+      expect(screen.queryByText('Copy')).toBeNull();
     });
   });
 });

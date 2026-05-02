@@ -340,20 +340,26 @@ export function PromptEditor({
             {isEditing ? 'Edit Prompt' : 'New Prompt'}
           </h1>
           <div className="flex items-center gap-2">
-            {isEditing && (
+            {isEditing && (onDuplicate || onArchive || onCopy) && (
               <>
-                <Button variant="secondary" size="sm" onClick={() => onDuplicate?.()}>
-                  <Files className="mr-1.5 h-4 w-4" />
-                  Duplicate
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => onArchive?.()}>
-                  <Archive className="mr-1.5 h-4 w-4" />
-                  Archive
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => onCopy?.()}>
-                  <Copy className="mr-1.5 h-4 w-4" />
-                  Copy
-                </Button>
+                {onDuplicate && (
+                  <Button variant="secondary" size="sm" onClick={onDuplicate}>
+                    <Files className="mr-1.5 h-4 w-4" />
+                    Duplicate
+                  </Button>
+                )}
+                {onArchive && (
+                  <Button variant="secondary" size="sm" onClick={onArchive}>
+                    <Archive className="mr-1.5 h-4 w-4" />
+                    Archive
+                  </Button>
+                )}
+                {onCopy && (
+                  <Button variant="secondary" size="sm" onClick={onCopy}>
+                    <Copy className="mr-1.5 h-4 w-4" />
+                    Copy
+                  </Button>
+                )}
               </>
             )}
             <div className="relative flex">

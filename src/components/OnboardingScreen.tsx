@@ -9,6 +9,7 @@ import {
   ClipboardCopy,
   WifiOff,
   Lock,
+  Chrome,
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -127,6 +128,14 @@ function authErrorMessage(error: AuthError): string {
       return 'An account with this email already exists.';
     case 'weak-password':
       return 'Password is too weak. Use at least 6 characters.';
+    case 'missing-configuration':
+      return 'Firebase is not configured for this build. Add the Firebase environment variables and restart PromptDock.';
+    case 'network':
+      return 'Network error while contacting Firebase. Check your connection and try again.';
+    case 'popup-blocked':
+      return 'The Google sign-in popup was blocked. Allow popups for PromptDock and try again.';
+    case 'popup-cancelled':
+      return 'Google sign-in was cancelled.';
     case 'unknown':
     default:
       return 'An unexpected error occurred. Please try again.';
@@ -158,6 +167,20 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  const completeAuth = useCallback(
+    (result: Awaited<ReturnType<IAuthService['signIn']>>) => {
+      if (result.success) {
+        setUserId(result.user.uid);
+        setMode('synced');
+        markOnboardingComplete();
+        onComplete('signin');
+      } else {
+        setAuthError(authErrorMessage(result.error));
+      }
+    },
+    [setMode, setUserId, onComplete],
+  );
+
   // ── "Start locally" handler (Task 6.1) ─────────────────────────────────────
   const handleStartLocally = useCallback(() => {
     setMode('local');
@@ -180,20 +203,25 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
       setIsSubmitting(true);
       try {
         const result = await authService.signIn(email, password);
-        if (result.success) {
-          setUserId(result.user.uid);
-          setMode('synced');
-          markOnboardingComplete();
-          onComplete('signin');
-        } else {
-          setAuthError(authErrorMessage(result.error));
-        }
+        completeAuth(result);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [authService, email, password, setMode, setUserId, onComplete],
+    [authService, completeAuth, email, password],
   );
+
+  const handleGoogleSignIn = useCallback(async () => {
+    if (!authService) return;
+    setAuthError(null);
+    setIsSubmitting(true);
+    try {
+      const result = await authService.signInWithGoogle();
+      completeAuth(result);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [authService, completeAuth]);
 
   // ── "Enable sync" handler (Task 6.3) ───────────────────────────────────────
   const handleEnableSync = useCallback(async () => {
@@ -362,6 +390,27 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
                 </Button>
               </div>
             </form>
+
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[var(--color-border)]" />
+              <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                or
+              </span>
+              <div className="h-px flex-1 bg-[var(--color-border)]" />
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting || !authService}
+              className="w-full"
+              aria-label="Continue with Google"
+            >
+              <Chrome size={16} className="mr-2" />
+              Continue with Google
+            </Button>
           </Card>
         )}
 

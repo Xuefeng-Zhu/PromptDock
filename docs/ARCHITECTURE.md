@@ -97,7 +97,7 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 6. `PromptRepository.setFirestoreDelegate()` forwards prompt CRUD to `FirestoreBackend`.
 7. Conflicts are detected by comparing local and remote prompt versions and stored in `ConflictService`.
 
-TODO: The Firestore workspace bootstrap path is incomplete. See [Deferred Issues](Issues.md).
+`AuthService` bootstraps the default user workspace and owner membership before synced mode starts Firestore prompt listeners.
 
 ## API Boundaries
 

@@ -18,6 +18,7 @@ import {
   BadgeCheck,
   LogOut,
   AlertCircle,
+  Chrome,
 } from 'lucide-react';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -82,6 +83,14 @@ function authErrorMessage(error: AuthError): string {
       return 'An account with this email already exists.';
     case 'weak-password':
       return 'Password is too weak. Use at least 6 characters.';
+    case 'missing-configuration':
+      return 'Firebase is not configured for this build. Add the Firebase environment variables and restart PromptDock.';
+    case 'network':
+      return 'Network error while contacting Firebase. Check your connection and try again.';
+    case 'popup-blocked':
+      return 'The Google sign-in popup was blocked. Allow popups for PromptDock and try again.';
+    case 'popup-cancelled':
+      return 'Google sign-in was cancelled.';
     case 'unknown':
     default:
       return 'An unexpected error occurred. Please try again.';
@@ -108,6 +117,20 @@ function AccountCard({ authService }: AccountCardProps) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const completeAuth = useCallback(
+    (result: Awaited<ReturnType<IAuthService['signIn']>>) => {
+      if (result.success) {
+        setUserId(result.user.uid);
+        setMode('synced');
+        setEmail('');
+        setPassword('');
+      } else {
+        setAuthError(authErrorMessage(result.error));
+      }
+    },
+    [setMode, setUserId],
+  );
+
   const handleSignIn = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -116,19 +139,12 @@ function AccountCard({ authService }: AccountCardProps) {
       setIsSubmitting(true);
       try {
         const result = await authService.signIn(email, password);
-        if (result.success) {
-          setUserId(result.user.uid);
-          setMode('synced');
-          setEmail('');
-          setPassword('');
-        } else {
-          setAuthError(authErrorMessage(result.error));
-        }
+        completeAuth(result);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [authService, email, password, setMode, setUserId],
+    [authService, completeAuth, email, password],
   );
 
   const handleSignUp = useCallback(
@@ -139,20 +155,25 @@ function AccountCard({ authService }: AccountCardProps) {
       setIsSubmitting(true);
       try {
         const result = await authService.signUp(email, password);
-        if (result.success) {
-          setUserId(result.user.uid);
-          setMode('synced');
-          setEmail('');
-          setPassword('');
-        } else {
-          setAuthError(authErrorMessage(result.error));
-        }
+        completeAuth(result);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [authService, email, password, setMode, setUserId],
+    [authService, completeAuth, email, password],
   );
+
+  const handleGoogleSignIn = useCallback(async () => {
+    if (!authService) return;
+    setAuthError(null);
+    setIsSubmitting(true);
+    try {
+      const result = await authService.signInWithGoogle();
+      completeAuth(result);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [authService, completeAuth]);
 
   const handleSignOut = useCallback(async () => {
     if (!authService) return;
@@ -170,7 +191,7 @@ function AccountCard({ authService }: AccountCardProps) {
   }, [authService, setMode, setUserId]);
 
   // ── Signed-in view ─────────────────────────────────────────────────────────
-  if (mode === 'synced' && userId) {
+  if (mode !== 'local' && userId) {
     return (
       <Card padding="lg">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
@@ -186,7 +207,9 @@ function AccountCard({ authService }: AccountCardProps) {
             </p>
             <div className="mt-1 flex items-center gap-1.5">
               <BadgeCheck size={14} className="text-green-600" />
-              <span className="text-xs text-green-600">Synced</span>
+              <span className="text-xs text-green-600">
+                {mode === 'offline-synced' ? 'Offline sync' : 'Synced'}
+              </span>
             </div>
           </div>
           <Button
@@ -292,6 +315,27 @@ function AccountCard({ authService }: AccountCardProps) {
               : 'Create Account'}
         </Button>
       </form>
+
+      <div className="my-4 flex items-center gap-3">
+        <div className="h-px flex-1 bg-[var(--color-border)]" />
+        <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+          or
+        </span>
+        <div className="h-px flex-1 bg-[var(--color-border)]" />
+      </div>
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={handleGoogleSignIn}
+        disabled={isSubmitting || !authService}
+        className="w-full"
+        aria-label="Continue with Google"
+      >
+        <Chrome size={16} className="mr-2" />
+        Continue with Google
+      </Button>
     </Card>
   );
 }
@@ -660,8 +704,11 @@ const importExportService = new ImportExportService();
 
 function ImportExportCard() {
   const prompts = usePromptStore((s) => s.prompts);
+  const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const updatePrompt = usePromptStore((s) => s.updatePrompt);
+  const mode = useAppModeStore((s) => s.mode);
+  const userId = useAppModeStore((s) => s.userId);
 
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
@@ -674,6 +721,9 @@ function ImportExportCard() {
     setImportErrors([]);
     setSuccessMessage(null);
   }, []);
+
+  const targetWorkspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
+  const targetCreatedBy = mode !== 'local' && userId ? userId : 'local';
 
   // ── Export handler ─────────────────────────────────────────────────────────
   const handleExport = useCallback(async () => {
@@ -729,7 +779,7 @@ function ImportExportCard() {
       // No duplicates — add all prompts
       for (const p of result.prompts) {
         await createPrompt({
-          workspaceId: p.workspaceId || 'local',
+          workspaceId: targetWorkspaceId,
           title: p.title,
           description: p.description,
           body: p.body,
@@ -739,7 +789,7 @@ function ImportExportCard() {
           archived: p.archived,
           archivedAt: p.archivedAt,
           lastUsedAt: p.lastUsedAt,
-          createdBy: p.createdBy,
+          createdBy: targetCreatedBy,
           version: p.version,
         });
       }
@@ -751,7 +801,7 @@ function ImportExportCard() {
     } finally {
       setIsImporting(false);
     }
-  }, [prompts, createPrompt, clearMessages]);
+  }, [prompts, createPrompt, clearMessages, targetCreatedBy, targetWorkspaceId]);
 
   // ── Duplicate resolution: skip all ─────────────────────────────────────────
   const handleSkipAll = useCallback(async () => {
@@ -759,7 +809,7 @@ function ImportExportCard() {
       // Only import non-duplicate prompts
       for (const p of pendingNonDuplicates) {
         await createPrompt({
-          workspaceId: p.workspaceId || 'local',
+          workspaceId: targetWorkspaceId,
           title: p.title,
           description: p.description,
           body: p.body,
@@ -769,7 +819,7 @@ function ImportExportCard() {
           archived: p.archived,
           archivedAt: p.archivedAt,
           lastUsedAt: p.lastUsedAt,
-          createdBy: p.createdBy,
+          createdBy: targetCreatedBy,
           version: p.version,
         });
       }
@@ -786,7 +836,7 @@ function ImportExportCard() {
         `Import failed: ${err instanceof Error ? err.message : String(err)}`,
       ]);
     }
-  }, [pendingNonDuplicates, duplicates.length, createPrompt]);
+  }, [pendingNonDuplicates, duplicates.length, createPrompt, targetCreatedBy, targetWorkspaceId]);
 
   // ── Duplicate resolution: overwrite all ────────────────────────────────────
   const handleOverwriteAll = useCallback(async () => {
@@ -805,7 +855,7 @@ function ImportExportCard() {
       // Also import non-duplicate prompts
       for (const p of pendingNonDuplicates) {
         await createPrompt({
-          workspaceId: p.workspaceId || 'local',
+          workspaceId: targetWorkspaceId,
           title: p.title,
           description: p.description,
           body: p.body,
@@ -815,7 +865,7 @@ function ImportExportCard() {
           archived: p.archived,
           archivedAt: p.archivedAt,
           lastUsedAt: p.lastUsedAt,
-          createdBy: p.createdBy,
+          createdBy: targetCreatedBy,
           version: p.version,
         });
       }
@@ -828,7 +878,7 @@ function ImportExportCard() {
         `Import failed: ${err instanceof Error ? err.message : String(err)}`,
       ]);
     }
-  }, [duplicates, pendingNonDuplicates, createPrompt, updatePrompt]);
+  }, [duplicates, pendingNonDuplicates, createPrompt, updatePrompt, targetCreatedBy, targetWorkspaceId]);
 
   return (
     <Card padding="lg">

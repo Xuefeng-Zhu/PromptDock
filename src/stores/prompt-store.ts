@@ -34,6 +34,7 @@ export interface PromptStore {
   markPromptUsed: (id: string) => Promise<void>;
   archivePrompt: (id: string) => Promise<void>;
   restorePrompt: (id: string) => Promise<void>;
+  setActiveWorkspaceId: (workspaceId: string) => void;
   setSearchQuery: (query: string) => void;
   setFolderFilter: (folderId: string | null) => void;
   setFavoriteFilter: (enabled: boolean) => void;
@@ -125,6 +126,10 @@ export function createPromptStore(repo: IPromptRepository) {
       const { activeWorkspaceId } = get();
       const prompts = await repo.getAll(activeWorkspaceId);
       set({ prompts });
+    },
+
+    setActiveWorkspaceId(workspaceId: string) {
+      set({ activeWorkspaceId: workspaceId });
     },
 
     setSearchQuery(query: string) {

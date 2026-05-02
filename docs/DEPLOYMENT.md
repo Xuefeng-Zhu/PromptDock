@@ -105,7 +105,7 @@ Relevant files:
 - `firestore.rules`
 - `firestore.indexes.json`
 
-Before production sync rollout, resolve workspace bootstrap. Current rules require workspace membership for prompt reads/writes, but signup only creates a user document. See [Deferred Issues](Issues.md).
+Before production sync rollout, deploy the latest Firestore rules and enable the Firebase Authentication providers used by the app: Email/Password and Google.
 
 ## Environment Strategy
 

@@ -172,13 +172,13 @@ Restart the app after changing env vars.
 
 ### Firestore `permission-denied`
 
-Known issue: signup creates a `/users/{uid}` document, but workspace and membership documents are not fully bootstrapped. Firestore prompt reads/writes require workspace membership.
+Firestore prompt reads/writes require workspace membership. Sign-in now bootstraps `/workspaces/{uid}` and `/workspaces/{uid}/members/{uid}`, so first check that the latest `firestore.rules` are deployed and that the signed-in user has an owner membership document.
 
-See [Deferred Issues](Issues.md).
+For local emulator work, restart the Firebase emulators after changing rules.
 
 ### Prompts disappear after sync transition
 
-Known issue: workspace identity is not a single source of truth. New local prompts may use `workspaceId: 'local'`, while synced mode queries a user/workspace ID.
+Synced mode uses the Firebase user ID as the default workspace ID. If prompts disappear after sign-in, confirm the active workspace setting is the signed-in user ID and reload prompts after sync finishes.
 
 See [Deferred Issues](Issues.md).
 

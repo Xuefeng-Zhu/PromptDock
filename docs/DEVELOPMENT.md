@@ -158,7 +158,7 @@ Touch points usually include:
 | Hotkey does not open launcher | Verify you are in Tauri runtime, not browser runtime. Check OS shortcut conflicts. |
 | Clipboard works but paste does not | Paste simulation is desktop-only and may need OS permissions. The fallback leaves text on the clipboard. |
 | Firebase sync fails immediately | Confirm Firebase env vars and emulator settings. See [Configuration](CONFIGURATION.md). |
-| Firestore returns `permission-denied` | Check workspace membership bootstrap. See [Deferred Issues](Issues.md). |
+| Firestore returns `permission-denied` | Deploy the latest `firestore.rules`, then check that `/workspaces/{uid}/members/{uid}` exists for the signed-in user. |
 | UI test cannot find text | Check whether onboarding localStorage state or store singleton initialization is required. |
 
 ## Current Verification Caveat

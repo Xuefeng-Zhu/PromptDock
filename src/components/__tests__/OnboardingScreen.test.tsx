@@ -43,6 +43,10 @@ function createMockAuthService(overrides: Partial<IAuthService> = {}): IAuthServ
       success: true,
       user: { uid: 'user-456', email: 'new@example.com', displayName: null },
     })),
+    signInWithGoogle: vi.fn(async (): Promise<AuthResult> => ({
+      success: true,
+      user: { uid: 'google-user', email: 'google@example.com', displayName: 'Google User' },
+    })),
     signOut: vi.fn(async () => {}),
     restoreSession: vi.fn(async () => null),
     sendPasswordReset: vi.fn(async () => {}),
@@ -210,6 +214,24 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
     expect(testAppModeStore.getState().mode).toBe('local');
     // Onboarding flag should NOT be set
     expect(localStorage.getItem(ONBOARDING_KEY)).toBeNull();
+  });
+
+  it('calls AuthService.signInWithGoogle and completes onboarding', async () => {
+    const authService = createMockAuthService();
+    const handleComplete = vi.fn();
+    render(<OnboardingScreen onComplete={handleComplete} authService={authService} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    });
+
+    expect(authService.signInWithGoogle).toHaveBeenCalled();
+    expect(testAppModeStore.getState().mode).toBe('synced');
+    expect(testAppModeStore.getState().userId).toBe('google-user');
+    expect(handleComplete).toHaveBeenCalledWith('signin');
+    expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
   });
 
   it('can cancel the sign-in form', () => {

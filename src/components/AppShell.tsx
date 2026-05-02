@@ -168,12 +168,15 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const loadPrompts = usePromptStore((s) => s.loadPrompts);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
+  const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
 
   // ── SettingsStore selectors ────────────────────────────────────────────────
 
   const theme = useSettingsStore((s) => s.settings.theme);
   const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
+  const mode = useAppModeStore((s) => s.mode);
+  const userId = useAppModeStore((s) => s.userId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
 
   // ── Toast store ────────────────────────────────────────────────────────────
@@ -417,8 +420,10 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
         await updatePrompt(screen.promptId, data);
         trackPromptAction('updated');
       } else {
+        const workspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
+        const createdBy = mode !== 'local' && userId ? userId : 'local';
         await createPrompt({
-          workspaceId: 'local',
+          workspaceId,
           title: (data.title as string) ?? 'Untitled',
           description: (data.description as string) ?? '',
           body: (data.body as string) ?? '',
@@ -428,7 +433,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
           archived: false,
           archivedAt: null,
           lastUsedAt: null,
-          createdBy: 'local',
+          createdBy,
           version: 1,
         });
         trackPromptAction('created');
@@ -439,7 +444,7 @@ export function AppShell({ authService, syncService, conflictService: conflictSe
       addToast(`Failed to save prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
       throw err;
     }
-  }, [screen, updatePrompt, createPrompt, addToast]);
+  }, [screen, updatePrompt, createPrompt, addToast, activeWorkspaceId, mode, userId]);
 
   const handleEditorCancel = useCallback(() => {
     setScreen({ name: 'library' });

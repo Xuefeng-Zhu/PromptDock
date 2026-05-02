@@ -30,6 +30,8 @@ cp .env.example .env.local
 
 If required Firebase variables are missing, `getFirebaseApp()` throws. Local mode is still usable without these variables as long as the user does not start sync.
 
+Firebase Authentication must have Email/Password and Google providers enabled for the corresponding sign-in buttons to work. Google sign-in uses the same Firebase web app config; no extra Vite variable is required.
+
 ## Example Local Configuration
 
 Local-only:
@@ -122,9 +124,7 @@ The Rust layer also registers a tray icon and default hotkey in `src-tauri/src/l
 | Firestore | `127.0.0.1` | 8080 |
 | Emulator UI | default host | 4000 |
 
-`firestore.rules` expects authenticated users to access only their own user/settings documents and workspace resources where they have membership.
-
-TODO: The app currently creates a user document during signup, but the workspace and membership bootstrap flow is incomplete. See [Deferred Issues](Issues.md).
+`firestore.rules` expects authenticated users to access only their own user/settings documents and workspace resources where they have membership. `AuthService` bootstraps the default workspace and owner membership after email/password or Google sign-in.
 
 ## Version Sources
 

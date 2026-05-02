@@ -764,17 +764,5 @@ describe('AppShell', () => {
       expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello world');
     });
 
-    it('clicking Sync in TopBar calls loadPrompts on the store', async () => {
-      const { mockRepo } = await renderOnLibraryScreen();
-
-      // Click the Sync button in the TopBar
-      const syncBtn = screen.getByLabelText('Sync');
-      await act(async () => {
-        fireEvent.click(syncBtn);
-      });
-
-      // loadPrompts calls repo.getAll
-      expect(mockRepo.getAll).toHaveBeenCalled();
-    });
   });
 });

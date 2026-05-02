@@ -239,8 +239,8 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
   );
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-[var(--color-background)] p-8">
-      <div className="w-full max-w-3xl space-y-10">
+    <div className="flex h-full min-h-0 overflow-y-auto bg-[var(--color-background)] px-4 py-6 sm:px-8 sm:py-8">
+      <div className="mx-auto my-auto w-full max-w-3xl space-y-10">
         {/* ── Welcome Header ────────────────────────────────────────── */}
         <div className="text-center">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-primary)]">

@@ -87,6 +87,14 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 4. Copy uses `copy_to_clipboard` in Tauri, falling back to browser clipboard APIs.
 5. Paste copies first, hides the main window when appropriate, then invokes `paste_to_active_app`.
 
+### Tag Derivation and Scalability
+
+Tags are currently stored only as strings on each `PromptRecipe.tags` array. The sidebar tag list, sidebar tag counts, and library tag filter options are derived by scanning the loaded prompt collection in memory.
+
+This keeps the local-first data model simple and works well for typical personal libraries, but the derivation cost is proportional to the number of loaded prompts times the average number of tags per prompt. Very large libraries or high-churn synced workspaces would repeatedly rescan the prompt list after create, update, archive, delete, or sync updates.
+
+Before adding advanced tag management or optimizing for large synced workspaces, introduce a canonical tag index. A store-level derived index would be enough for medium-sized libraries; first-class persisted tag records should be used if tags need metadata such as display names, colors, aliases, pinned order, rename/delete flows, or server-side aggregation.
+
 ### Sync Transition
 
 1. `AuthService` signs in or restores a Firebase Auth user.
@@ -154,6 +162,7 @@ Stores follow a factory plus singleton pattern:
 - Workspace bootstrap for synced mode is incomplete and can cause Firestore permission failures.
 - Active workspace state is split across settings, prompt store, and sync assumptions.
 - User-created folder persistence currently uses a localStorage utility outside the repository abstraction.
+- Tags are derived from prompt arrays instead of a canonical tag index, which limits scalability and tag metadata workflows.
 - No CI workflow is present in the repository.
 - No E2E test runner is configured for full Tauri window/hotkey/paste flows.
 

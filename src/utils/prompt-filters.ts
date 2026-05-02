@@ -8,6 +8,7 @@ export type LastUsedFilter = 'any' | 'today' | 'last7Days' | 'last30Days';
 
 export interface PromptFilters {
   sortBy: SortFilter;
+  query: string;
   statuses: StatusFilter[];
   folders: FolderFilter[];
   tags: TagFilter[];
@@ -22,6 +23,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 export function createDefaultPromptFilters(): PromptFilters {
   return {
     sortBy: 'lastUsed',
+    query: '',
     statuses: [],
     folders: [],
     tags: [],
@@ -48,13 +50,20 @@ export function normalizePromptFilters(filter: FilterType): PromptFilters {
     };
   }
 
-  return filter;
+  return {
+    ...createDefaultPromptFilters(),
+    ...filter,
+    statuses: filter.statuses ?? [],
+    folders: filter.folders ?? [],
+    tags: filter.tags ?? [],
+  };
 }
 
 export function countActivePromptFilters(filter: FilterType): number {
   const normalized = normalizePromptFilters(filter);
 
   return (
+    Number(normalized.query.trim() !== '') +
     normalized.statuses.length +
     normalized.folders.length +
     normalized.tags.length +
@@ -101,6 +110,18 @@ function matchesTag(prompt: PromptRecipe, tags: TagFilter[]): boolean {
       return promptTag.endsWith('s') && promptTag.slice(0, -1) === tagKey;
     });
   });
+}
+
+function matchesQuery(prompt: PromptRecipe, query: string): boolean {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery === '') return true;
+
+  return (
+    prompt.title.toLowerCase().includes(normalizedQuery) ||
+    prompt.description.toLowerCase().includes(normalizedQuery) ||
+    prompt.body.toLowerCase().includes(normalizedQuery) ||
+    prompt.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery))
+  );
 }
 
 function isSameLocalDay(a: Date, b: Date): boolean {
@@ -164,6 +185,10 @@ export function applyPromptFilters(
 ): PromptRecipe[] {
   const normalized = normalizePromptFilters(filter);
   let result = prompts;
+
+  if (normalized.query.trim() !== '') {
+    result = result.filter((prompt) => matchesQuery(prompt, normalized.query));
+  }
 
   if (normalized.statuses.includes('favorites')) {
     result = result.filter((prompt) => prompt.favorite);

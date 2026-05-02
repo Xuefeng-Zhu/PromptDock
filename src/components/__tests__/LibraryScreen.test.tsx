@@ -122,6 +122,7 @@ describe('LibraryScreen', () => {
         prompts={prompts}
         activeFilter={{
           sortBy: 'az',
+          query: '',
           statuses: [],
           folders: [],
           tags: [],
@@ -242,6 +243,21 @@ describe('LibraryScreen', () => {
     );
   });
 
+  it('applies a title or keyword search from the filters popover', () => {
+    const onFilterChange = vi.fn();
+    render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    fireEvent.change(screen.getByLabelText('Search title or keywords'), {
+      target: { value: 'email' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'email' }),
+    );
+  });
+
   it('searches folder and tag dropdown options before applying filters', () => {
     const onFilterChange = vi.fn();
     render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
@@ -296,6 +312,7 @@ describe('LibraryScreen', () => {
         {...defaultProps}
         activeFilter={{
           sortBy: 'lastUsed',
+          query: 'client',
           statuses: ['hasVariables'],
           folders: ['writing'],
           tags: [],
@@ -306,6 +323,7 @@ describe('LibraryScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
 
+    expect(screen.getByRole('button', { name: /Remove Search: client/ })).toBeDefined();
     expect(screen.getByRole('button', { name: /Remove Folder: Writing/ })).toBeDefined();
     expect(screen.getByRole('button', { name: /Remove Status: Has variables/ })).toBeDefined();
     expect(screen.getByRole('button', { name: /Remove Last used: Last 7 days/ })).toBeDefined();
@@ -320,6 +338,7 @@ describe('LibraryScreen', () => {
         {...defaultProps}
         activeFilter={{
           sortBy: 'lastUsed',
+          query: '',
           statuses: ['hasVariables'],
           folders: ['writing'],
           tags: [],

@@ -506,6 +506,7 @@ describe('AppShell', () => {
         '',
         {
           sortBy: 'lastUsed',
+          query: '',
           statuses: ['hasVariables'],
           folders: ['writing'],
           tags: ['writing'],
@@ -515,6 +516,62 @@ describe('AppShell', () => {
       );
 
       expect(results.map((prompt) => prompt.id)).toEqual(['foldered']);
+    });
+
+    it('filters prompts by title or keyword query', () => {
+      const prompts = [
+        makePrompt({
+          id: 'title-match',
+          title: 'Client Email Draft',
+          description: 'Write a note',
+          body: 'Hello',
+          tags: ['communication'],
+        }),
+        makePrompt({
+          id: 'keyword-match',
+          title: 'Follow-up',
+          description: 'For renewal outreach',
+          body: 'Prepare a customer retention plan',
+          tags: ['sales'],
+        }),
+        makePrompt({
+          id: 'miss',
+          title: 'Code Review',
+          description: 'Engineering feedback',
+          body: 'Review implementation',
+          tags: ['code'],
+        }),
+      ];
+
+      const titleResults = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: 'email',
+          statuses: [],
+          folders: [],
+          tags: [],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+      expect(titleResults.map((prompt) => prompt.id)).toEqual(['title-match']);
+
+      const keywordResults = filterPrompts(
+        prompts,
+        '',
+        {
+          sortBy: 'lastUsed',
+          query: 'retention',
+          statuses: [],
+          folders: [],
+          tags: [],
+          lastUsed: 'any',
+        },
+        'library',
+      );
+      expect(keywordResults.map((prompt) => prompt.id)).toEqual(['keyword-match']);
     });
   });
 

@@ -61,6 +61,7 @@ const TAG_LABELS = Object.fromEntries(TAG_OPTIONS.map((option) => [option.value,
 const LAST_USED_LABELS = Object.fromEntries(LAST_USED_OPTIONS.map((option) => [option.value, option.label])) as Record<LastUsedFilter, string>;
 
 type ActiveFilterChip =
+  | { id: string; label: string; kind: 'query' }
   | { id: string; label: string; kind: 'status'; value: StatusFilter }
   | { id: string; label: string; kind: 'folder'; value: FolderFilter }
   | { id: string; label: string; kind: 'tag'; value: TagFilter }
@@ -74,6 +75,14 @@ function toggleFilterValue<T extends string>(values: T[], value: T): T[] {
 
 function getActiveFilterChips(filters: PromptFilters): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
+
+  if (filters.query.trim() !== '') {
+    chips.push({
+      id: 'query',
+      label: `Search: ${filters.query.trim()}`,
+      kind: 'query',
+    });
+  }
 
   for (const status of filters.statuses) {
     chips.push({
@@ -168,6 +177,10 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
 
   function removeFilterChip(chip: ActiveFilterChip) {
     setDraftFilters((current) => {
+      if (chip.kind === 'query') {
+        return { ...current, query: '' };
+      }
+
       if (chip.kind === 'lastUsed') {
         return { ...current, lastUsed: 'any' };
       }
@@ -271,6 +284,20 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
 
           <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-[0.9fr_1.35fr_1fr]">
             <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
+              <FilterSection title="Search">
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 focus-within:border-[var(--color-primary)]">
+                  <Search className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
+                  <input
+                    type="text"
+                    value={draftFilters.query}
+                    onChange={(event) => updateDraftFilters({ query: event.target.value })}
+                    placeholder="Title or keywords"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-placeholder)]"
+                    aria-label="Search title or keywords"
+                  />
+                </div>
+              </FilterSection>
+
               <FilterSection title="Last used">
                 <div className="grid grid-cols-2 gap-2">
                   {LAST_USED_OPTIONS.map((option) => (

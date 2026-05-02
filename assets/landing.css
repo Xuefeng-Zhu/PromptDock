@@ -63,7 +63,6 @@ a {
 
 .brand,
 .nav-links,
-.featured-row,
 .press-hint {
   display: flex;
   align-items: center;
@@ -255,27 +254,6 @@ a {
 .store-button-secondary:hover,
 .store-button-secondary:focus-visible {
   background: #ffffff;
-}
-
-.featured-row {
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.58rem;
-  margin-top: 1.4rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 850;
-}
-
-.featured-row b {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  border: 1px solid rgba(48, 38, 30, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.58);
-  color: var(--ink);
-  padding: 0.18rem 0.6rem;
 }
 
 .launcher-window {

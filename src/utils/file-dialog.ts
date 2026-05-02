@@ -3,6 +3,8 @@
  * Uses native Tauri dialogs in the desktop shell and browser APIs elsewhere.
  */
 
+import { isTauriRuntime } from './runtime';
+
 type BrowserFileHandle = {
   createWritable: () => Promise<{
     write: (data: Blob) => Promise<void>;
@@ -19,10 +21,6 @@ type BrowserSavePicker = {
     }>;
   }) => Promise<BrowserFileHandle>;
 };
-
-function isTauriRuntime(): boolean {
-  return '__TAURI_INTERNALS__' in window;
-}
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';

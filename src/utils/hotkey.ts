@@ -1,8 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
+import { isTauriRuntime } from './runtime';
 
 function normalizeHotkeyCombo(combo: string): string {
   return combo

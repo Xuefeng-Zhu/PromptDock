@@ -22,6 +22,7 @@ import { useSettingsStore } from '../stores/settings-store';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { registerHotkey } from '../utils/hotkey';
+import { isTauriRuntime } from '../utils/runtime';
 import { saveFile, openFile } from '../utils/file-dialog';
 import { ImportExportService } from '../services/import-export';
 import type { IAuthService } from '../services/interfaces';
@@ -59,10 +60,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'import-export', label: 'Import/Export', icon: <Download size={18} /> },
   { id: 'about', label: 'About', icon: <Info size={18} /> },
 ];
-
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
 
 // ─── Settings Types ────────────────────────────────────────────────────────────
 

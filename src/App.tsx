@@ -18,6 +18,7 @@ import { AppModeProvider } from './contexts/AppModeProvider';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { applyTheme } from './utils/theme';
+import { isTauriRuntime } from './utils/runtime';
 
 // ─── App Initialization ────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
   } = options;
 
   // 1. Pick the right storage backend based on runtime environment
-  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  const isTauri = isTauriRuntime();
   let backend: IStorageBackend;
   if (isTauri) {
     backend = new LocalStorageBackend();

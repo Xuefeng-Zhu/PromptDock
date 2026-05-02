@@ -242,6 +242,32 @@ describe('LibraryScreen', () => {
     );
   });
 
+  it('searches folder and tag dropdown options before applying filters', () => {
+    const onFilterChange = vi.fn();
+    render(<LibraryScreen {...defaultProps} onFilterChange={onFilterChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select folders' }));
+    fireEvent.change(screen.getByLabelText('Search folders'), { target: { value: 'eng' } });
+    expect(screen.getByRole('option', { name: 'Engineering' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: 'Writing' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: 'Engineering' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select tags' }));
+    fireEvent.change(screen.getByLabelText('Search tags'), { target: { value: 'meet' } });
+    expect(screen.getByRole('option', { name: '#meeting' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: '#writing' })).toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: '#meeting' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+    expect(onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        folders: ['engineering'],
+        tags: ['meeting'],
+      }),
+    );
+  });
+
   it('calls onNewPrompt when New Prompt button is clicked', () => {
     const onNewPrompt = vi.fn();
     render(<LibraryScreen {...defaultProps} onNewPrompt={onNewPrompt} />);

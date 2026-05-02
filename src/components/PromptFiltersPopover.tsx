@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ListFilter, X } from 'lucide-react';
+import { Check, ChevronDown, ListFilter, Search, X } from 'lucide-react';
 import {
   countActivePromptFilters,
   createDefaultPromptFilters,
@@ -18,6 +18,11 @@ interface PromptFiltersPopoverProps {
   onFilterChange: (filter: FilterType) => void;
 }
 
+interface FilterOption<T extends string> {
+  label: string;
+  value: T;
+}
+
 const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Favorites only', value: 'favorites' },
   { label: 'Recent', value: 'recent' },
@@ -26,7 +31,7 @@ const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Shared prompts', value: 'shared' },
 ];
 
-const FOLDER_OPTIONS: Array<{ label: string; value: FolderFilter }> = [
+const FOLDER_OPTIONS: Array<FilterOption<FolderFilter>> = [
   { label: 'Work', value: 'work' },
   { label: 'Writing', value: 'writing' },
   { label: 'Product', value: 'product' },
@@ -34,7 +39,7 @@ const FOLDER_OPTIONS: Array<{ label: string; value: FolderFilter }> = [
   { label: 'Personal', value: 'personal' },
 ];
 
-const TAG_OPTIONS: Array<{ label: string; value: TagFilter }> = [
+const TAG_OPTIONS: Array<FilterOption<TagFilter>> = [
   { label: 'Writing', value: 'writing' },
   { label: 'Summarization', value: 'summarization' },
   { label: 'Email', value: 'email' },
@@ -307,40 +312,30 @@ export function PromptFiltersPopover({ activeFilter, onFilterChange }: PromptFil
               </FilterSection>
 
               <FilterSection title="Tags">
-                <div className="flex flex-wrap gap-2">
-                  {TAG_OPTIONS.map((option) => (
-                    <TagChoice
-                      key={option.value}
-                      label={`#${option.label.toLowerCase()}`}
-                      selected={draftFilters.tags.includes(option.value)}
-                      onClick={() =>
-                        updateDraftFilters({
-                          tags: toggleFilterValue(draftFilters.tags, option.value),
-                        })
-                      }
-                    />
-                  ))}
-                </div>
+                <SearchableMultiSelect
+                  label="tags"
+                  options={TAG_OPTIONS}
+                  selectedValues={draftFilters.tags}
+                  onChange={(tags) => updateDraftFilters({ tags })}
+                  placeholder="Select tags"
+                  searchPlaceholder="Search tags..."
+                  emptyMessage="No tags found"
+                  formatSelected={(option) => `#${option.label.toLowerCase()}`}
+                />
               </FilterSection>
             </div>
 
             <div className="p-5">
               <FilterSection title="Folders">
-                <div className="space-y-1">
-                  {FOLDER_OPTIONS.map((option) => (
-                    <ChoiceRow
-                      key={option.value}
-                      label={option.label}
-                      selected={draftFilters.folders.includes(option.value)}
-                      type="checkbox"
-                      onClick={() =>
-                        updateDraftFilters({
-                          folders: toggleFilterValue(draftFilters.folders, option.value),
-                        })
-                      }
-                    />
-                  ))}
-                </div>
+                <SearchableMultiSelect
+                  label="folders"
+                  options={FOLDER_OPTIONS}
+                  selectedValues={draftFilters.folders}
+                  onChange={(folders) => updateDraftFilters({ folders })}
+                  placeholder="Select folders"
+                  searchPlaceholder="Search folders..."
+                  emptyMessage="No folders found"
+                />
               </FilterSection>
             </div>
           </div>
@@ -415,26 +410,144 @@ function ChoiceRow({ label, selected, type, onClick }: ChoiceRowProps) {
   );
 }
 
-interface TagChoiceProps {
+interface SearchableMultiSelectProps<T extends string> {
   label: string;
-  selected: boolean;
-  onClick: () => void;
+  options: Array<FilterOption<T>>;
+  selectedValues: T[];
+  onChange: (values: T[]) => void;
+  placeholder: string;
+  searchPlaceholder: string;
+  emptyMessage: string;
+  formatSelected?: (option: FilterOption<T>) => string;
 }
 
-function TagChoice({ label, selected, onClick }: TagChoiceProps) {
+function SearchableMultiSelect<T extends string>({
+  label,
+  options,
+  selectedValues,
+  onChange,
+  placeholder,
+  searchPlaceholder,
+  emptyMessage,
+  formatSelected,
+}: SearchableMultiSelectProps<T>) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
+  const selectedOptions = options.filter((option) => selectedSet.has(option.value));
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const summary = selectedOptions.length > 0
+    ? selectedOptions.map((option) => formatSelected?.(option) ?? option.label).join(', ')
+    : placeholder;
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      return;
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  function toggleValue(value: T) {
+    onChange(toggleFilterValue(selectedValues, value));
+  }
+
   return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={[
-        'rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
-        selected
-          ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-          : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-gray-50 hover:text-[var(--color-text-main)]',
-      ].join(' ')}
-    >
-      {label}
-    </button>
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={[
+          'flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+          selectedOptions.length > 0
+            ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+            : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-gray-50 hover:text-[var(--color-text-main)]',
+        ].join(' ')}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="min-w-0 truncate">{summary}</span>
+        <ChevronDown className="h-4 w-4 shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-40 mt-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-2 shadow-xl">
+          <div className="mb-2 flex items-center gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5">
+            <Search className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={searchPlaceholder}
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-placeholder)]"
+              aria-label={`Search ${label}`}
+            />
+          </div>
+
+          <div className="max-h-44 overflow-y-auto" role="listbox" aria-label={label}>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => {
+                const selected = selectedSet.has(option.value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => toggleValue(option.value)}
+                    className={[
+                      'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors',
+                      selected
+                        ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-main)] hover:bg-gray-50',
+                    ].join(' ')}
+                  >
+                    <span
+                      className={[
+                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                        selected
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
+                          : 'border-[var(--color-border)] bg-[var(--color-panel)]',
+                      ].join(' ')}
+                      aria-hidden="true"
+                    >
+                      {selected && <Check className="h-3 w-3" />}
+                    </span>
+                    <span className="min-w-0 truncate">
+                      {formatSelected?.(option) ?? option.label}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-2 py-3 text-sm text-[var(--color-text-muted)]">
+                {emptyMessage}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,8 +1,9 @@
-import { Star, Check, FileText, Pencil, Lightbulb, Code, Mail, ClipboardList } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { PromptRecipe } from '../types/index';
-import { TagPill } from './TagPill';
-import { IconTile } from './IconTile';
-import { formatRelativeTime } from '../utils/date-format';
+import { PromptCardFooter } from './prompt-card/PromptCardFooter';
+import { PromptCardHeader } from './prompt-card/PromptCardHeader';
+import { PromptCardTags } from './prompt-card/PromptCardTags';
+import { resolveIconFromColor } from './prompt-card/category-icons';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -15,36 +16,7 @@ export interface PromptCardProps {
   viewMode?: 'grid' | 'list';
 }
 
-// ─── Icon Mapping ──────────────────────────────────────────────────────────────
-
-const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
-  FileText: <FileText className="h-4 w-4" />,
-  Pencil: <Pencil className="h-4 w-4" />,
-  Lightbulb: <Lightbulb className="h-4 w-4" />,
-  Code: <Code className="h-4 w-4" />,
-  Mail: <Mail className="h-4 w-4" />,
-  ClipboardList: <ClipboardList className="h-4 w-4" />,
-};
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
 export { formatRelativeTime } from '../utils/date-format';
-
-/**
- * Truncates text to a maximum length, appending an ellipsis if truncated.
- */
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trimEnd() + '…';
-}
-
-/**
- * Resolves a category icon name to a React node.
- * Falls back to FileText if the icon name is not recognized.
- */
-function getCategoryIcon(iconName: string): React.ReactNode {
-  return CATEGORY_ICON_MAP[iconName] ?? <FileText className="h-4 w-4" />;
-}
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
@@ -73,27 +45,6 @@ export function PromptCard({
   const iconNode = resolveIconFromColor(categoryColor);
 
   const isList = viewMode === 'list';
-
-  const favoriteButton = (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggleFavorite(prompt.id);
-      }}
-      className="shrink-0 rounded-md p-0.5 transition-colors hover:bg-gray-100"
-      aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
-    >
-      <Star
-        className={[
-          'h-4 w-4 transition-colors',
-          prompt.favorite
-            ? 'fill-yellow-400 text-yellow-400'
-            : 'text-[var(--color-text-placeholder)]',
-        ].join(' ')}
-      />
-    </button>
-  );
 
   return (
     <div
@@ -129,75 +80,26 @@ export function PromptCard({
         </div>
       )}
 
-      {/* Header: IconTile + Title */}
-      <div className={isList ? 'flex min-w-0 flex-1 items-start gap-3' : 'flex items-start gap-3'}>
-        <IconTile icon={iconNode} color={categoryColor} />
+      <PromptCardHeader
+        categoryColor={categoryColor}
+        icon={iconNode}
+        isList={isList}
+        prompt={prompt}
+      />
 
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-[var(--color-text-main)] leading-snug truncate">
-            {prompt.title}
-          </h3>
-
-          {/* Truncated description */}
-          {prompt.description && (
-            <p
-              className={[
-                'mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed',
-                isList ? 'truncate' : 'line-clamp-2',
-              ].join(' ')}
-            >
-              {truncate(prompt.description, 120)}
-            </p>
-          )}
-
-          {isList && prompt.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {prompt.tags.slice(0, 4).map((tag) => (
-                <TagPill key={tag} tag={tag} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Tags */}
-      {!isList && prompt.tags.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {prompt.tags.map((tag) => (
-            <TagPill key={tag} tag={tag} />
-          ))}
-        </div>
+      {!isList && (
+        <PromptCardTags
+          tags={prompt.tags}
+          className="mt-3 flex flex-wrap gap-1.5"
+        />
       )}
 
-      {/* Footer: relative timestamp + favorite star */}
-      <div
-        className={
-          isList
-            ? 'ml-auto flex shrink-0 items-center gap-3'
-            : 'mt-3 flex items-center justify-between border-t border-[var(--color-border)] pt-2'
-        }
-      >
-        <span className="text-[11px] text-[var(--color-text-placeholder)]">
-          {formatRelativeTime(prompt.lastUsedAt)}
-        </span>
-        {favoriteButton}
-      </div>
+      <PromptCardFooter
+        favorite={prompt.favorite}
+        isList={isList}
+        lastUsedAt={prompt.lastUsedAt}
+        onToggleFavorite={() => onToggleFavorite(prompt.id)}
+      />
     </div>
   );
-}
-
-// ─── Internal Helpers ──────────────────────────────────────────────────────────
-
-/**
- * Resolves a lucide-react icon node from the categoryColor string.
- * Maps known Tailwind color families to their corresponding icons.
- */
-function resolveIconFromColor(categoryColor: string): React.ReactNode {
-  if (categoryColor.includes('purple')) return getCategoryIcon('FileText');
-  if (categoryColor.includes('green')) return getCategoryIcon('Pencil');
-  if (categoryColor.includes('amber')) return getCategoryIcon('Lightbulb');
-  if (categoryColor.includes('blue')) return getCategoryIcon('Code');
-  if (categoryColor.includes('rose')) return getCategoryIcon('Mail');
-  if (categoryColor.includes('teal')) return getCategoryIcon('ClipboardList');
-  return getCategoryIcon('FileText');
 }

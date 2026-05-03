@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { countWords, countChars } from '../PromptEditor';
+import { countWords, countChars } from '../prompt-editor';
 
 /**
  * Feature: prompt-dock-ui

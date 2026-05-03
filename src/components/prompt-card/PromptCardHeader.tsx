@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { PromptRecipe } from '../../types/index';
-import { IconTile } from '../IconTile';
+import { IconTile } from '../ui';
 import { PromptCardTags } from './PromptCardTags';
 import { truncate } from './text';
 

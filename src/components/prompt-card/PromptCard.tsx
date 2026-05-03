@@ -1,9 +1,9 @@
 import { Check } from 'lucide-react';
-import type { PromptRecipe } from '../types/index';
-import { PromptCardFooter } from './prompt-card/PromptCardFooter';
-import { PromptCardHeader } from './prompt-card/PromptCardHeader';
-import { PromptCardTags } from './prompt-card/PromptCardTags';
-import { resolveIconFromColor } from './prompt-card/category-icons';
+import type { PromptRecipe } from '../../types/index';
+import { PromptCardFooter } from './PromptCardFooter';
+import { PromptCardHeader } from './PromptCardHeader';
+import { PromptCardTags } from './PromptCardTags';
+import { resolveIconFromColor } from './category-icons';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ export interface PromptCardProps {
   viewMode?: 'grid' | 'list';
 }
 
-export { formatRelativeTime } from '../utils/date-format';
+export { formatRelativeTime } from '../../utils/date-format';
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 

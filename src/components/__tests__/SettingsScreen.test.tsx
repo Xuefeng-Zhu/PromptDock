@@ -17,7 +17,7 @@ import {
   createPromptStore,
   type PromptStore,
 } from '../../stores/prompt-store';
-import { SettingsScreen } from '../SettingsScreen';
+import { SettingsScreen } from '../settings';
 
 // ─── Mock SettingsStore module ─────────────────────────────────────────────────
 // We mock the useSettingsStore hook so the component reads from our test store.

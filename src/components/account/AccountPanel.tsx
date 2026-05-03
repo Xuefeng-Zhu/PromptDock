@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { useAuthForm } from '../hooks/use-auth-form';
-import { AccountAuthForm } from './account/AccountAuthForm';
-import { AccountSummary } from './account/AccountSummary';
-import { getAccountStatusLabel } from './account/account-display';
-import type { IAuthService } from '../services/interfaces';
-import type { AppMode, AuthUser, SyncStatus } from '../types/index';
+import { useAuthForm } from '../../hooks/use-auth-form';
+import { AccountAuthForm } from './AccountAuthForm';
+import { AccountSummary } from './AccountSummary';
+import { getAccountStatusLabel } from './account-display';
+import type { IAuthService } from '../../services/interfaces';
+import type { AppMode, AuthUser, SyncStatus } from '../../types/index';
 
 type AccountPanelVariant = 'card' | 'popover';
 

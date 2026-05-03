@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { extractVariables } from '../PromptEditor';
+import { extractVariables } from '../prompt-editor';
 
 /**
  * Feature: prompt-dock-ui

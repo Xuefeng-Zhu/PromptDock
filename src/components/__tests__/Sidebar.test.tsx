@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Sidebar } from '../Sidebar';
+import { Sidebar } from '../sidebar';
 import type { Folder } from '../../types/index';
 
 const mockFolders: Folder[] = [

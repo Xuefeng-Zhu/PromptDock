@@ -1,4 +1,4 @@
-import type { SyncStatus } from '../types/index';
+import type { SyncStatus } from '../../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

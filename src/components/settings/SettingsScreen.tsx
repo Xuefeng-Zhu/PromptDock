@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
-import { Button } from './ui/Button';
+import { Button } from '../ui/Button';
 import {
   AboutSettingsCard,
   AccountSettingsCard,
@@ -8,13 +8,13 @@ import {
   DefaultBehaviorSettingsCard,
   HotkeySettingsCard,
   ImportExportSettingsCard,
-} from './settings/SettingsCards';
-import { SettingsNav } from './settings/SettingsNav';
-import { SettingsSkeleton } from './settings/SettingsSkeleton';
-import { useSettingsActions } from '../hooks/use-settings-actions';
-import { useSettingsScrollSpy } from '../hooks/use-settings-scroll-spy';
-import type { IAuthService } from '../services/interfaces';
-import type { SettingsSectionId } from './settings/settings-data';
+} from './SettingsCards';
+import { SettingsNav } from './SettingsNav';
+import { SettingsSkeleton } from './SettingsSkeleton';
+import { useSettingsActions } from '../../hooks/use-settings-actions';
+import { useSettingsScrollSpy } from '../../hooks/use-settings-scroll-spy';
+import type { IAuthService } from '../../services/interfaces';
+import type { SettingsSectionId } from './settings-data';
 
 export interface SettingsScreenProps {
   onBack: () => void;

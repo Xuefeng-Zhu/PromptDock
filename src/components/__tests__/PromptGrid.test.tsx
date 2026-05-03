@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PromptGrid } from '../PromptGrid';
+import { PromptGrid } from '../library';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 
 const defaultProps = {

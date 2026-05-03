@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { PromptCard } from '../PromptCard';
+import { PromptCard } from '../prompt-card';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 
 const mockPrompt = MOCK_PROMPTS[0]; // "Summarize Text", favorite: true

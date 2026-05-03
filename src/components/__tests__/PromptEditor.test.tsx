@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PromptEditor } from '../PromptEditor';
+import { PromptEditor } from '../prompt-editor';
 import { MOCK_PROMPTS, MOCK_FOLDERS } from '../../data/mock-data';
 
 const defaultProps = {

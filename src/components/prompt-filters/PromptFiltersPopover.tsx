@@ -2,13 +2,13 @@ import {
   type FilterType,
   type FolderFilter,
   type TagFilter,
-} from '../utils/prompt-filters';
-import { usePromptFilterPopover } from '../hooks/use-prompt-filter-popover';
+} from '../../utils/prompt-filters';
+import { usePromptFilterPopover } from '../../hooks/use-prompt-filter-popover';
 import {
   type SearchableMultiSelectOption,
-} from './ui/SearchableMultiSelect';
-import { FilterPopoverTrigger } from './prompt-filters/FilterPopoverTrigger';
-import { PromptFiltersPanel } from './prompt-filters/PromptFiltersPanel';
+} from '../ui/SearchableMultiSelect';
+import { FilterPopoverTrigger } from './FilterPopoverTrigger';
+import { PromptFiltersPanel } from './PromptFiltersPanel';
 
 interface PromptFiltersPopoverProps {
   activeFilter: FilterType;

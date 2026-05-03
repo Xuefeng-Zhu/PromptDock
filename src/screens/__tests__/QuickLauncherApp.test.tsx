@@ -12,7 +12,7 @@ vi.mock('../../App', () => ({
   ThemeManager: () => <div data-testid="theme-manager" />,
 }));
 
-vi.mock('../../components/ErrorBoundary', () => ({
+vi.mock('../../components/shared', () => ({
   ErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 

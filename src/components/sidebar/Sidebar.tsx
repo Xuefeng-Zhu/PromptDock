@@ -1,8 +1,8 @@
-import type { Folder, UserSettings } from '../types/index';
-import { SidebarFolderSection } from './sidebar/SidebarFolderSection';
-import { SidebarFooter } from './sidebar/SidebarFooter';
-import { SidebarLibrarySection } from './sidebar/SidebarLibrarySection';
-import { SidebarTagSection } from './sidebar/SidebarTagSection';
+import type { Folder, UserSettings } from '../../types/index';
+import { SidebarFolderSection } from './SidebarFolderSection';
+import { SidebarFooter } from './SidebarFooter';
+import { SidebarLibrarySection } from './SidebarLibrarySection';
+import { SidebarTagSection } from './SidebarTagSection';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

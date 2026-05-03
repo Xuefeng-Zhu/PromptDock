@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import {
   PromptEditor as PromptEditorForm,
   type PromptEditorProps as PromptEditorFormProps,
-} from '../components/PromptEditor';
+} from '../components/prompt-editor';
 import { usePromptStore, type CreatePromptData } from '../stores/prompt-store';
 import type { Folder, PromptRecipe } from '../types/index';
 
@@ -41,7 +41,7 @@ function toCreatePromptData(data: Partial<PromptRecipe>): CreatePromptData {
 /**
  * Store-backed screen adapter for the shared prompt editor form.
  *
- * The editor UI and validation live in `src/components/PromptEditor.tsx`; this
+ * The editor UI and validation live in `src/components/prompt-editor/PromptEditor.tsx`; this
  * wrapper preserves the old screen-level API for any future route-style usage.
  */
 export function PromptEditor({

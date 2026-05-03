@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
-import type { Folder, PromptRecipe } from '../types/index';
-import { deriveFolderFilterOptions, deriveTagFilterOptions } from '../utils/library-filter-options';
+import type { Folder, PromptRecipe } from '../../types/index';
+import { deriveFolderFilterOptions, deriveTagFilterOptions } from '../../utils/library-filter-options';
 import {
   normalizePromptFilters,
   sortPromptsByFilter,
   type FilterType,
-} from '../utils/prompt-filters';
-import { LibraryHeader } from './library/LibraryHeader';
-import { PromptGridSkeleton } from './library/PromptGridSkeleton';
-import type { LibraryViewMode } from './library/types';
+} from '../../utils/prompt-filters';
+import { LibraryHeader } from './LibraryHeader';
+import { PromptGridSkeleton } from './PromptGridSkeleton';
+import type { LibraryViewMode } from './types';
 import { PromptGrid } from './PromptGrid';
-import { PromptFiltersPopover } from './PromptFiltersPopover';
+import { PromptFiltersPopover } from '../prompt-filters';
 import { PromptSortDropdown } from './PromptSortDropdown';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────

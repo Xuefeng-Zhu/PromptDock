@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Archive, Files, FolderInput, MoreHorizontal, Pencil, Star, Trash2 } from 'lucide-react';
+import { Archive, Files, FolderInput, Pencil, Star, Trash2 } from 'lucide-react';
+import {
+  PromptActionsMenu,
+  type PromptActionMenuItem,
+} from '../prompt-actions/PromptActionsMenu';
 import type { PromptRecipe } from '../../types/index';
 
 interface PromptInspectorHeaderProps {
@@ -19,26 +22,40 @@ export function PromptInspectorHeader({
   onToggleFavorite,
   prompt,
 }: PromptInspectorHeaderProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuOpen]);
-
-  const runAction = (action?: (id: string) => void) => {
-    action?.(prompt.id);
-    setMenuOpen(false);
-  };
+  const actionItems: PromptActionMenuItem[] = [
+    {
+      type: 'item',
+      icon: <Pencil className="h-4 w-4" />,
+      label: 'Edit prompt',
+      onSelect: () => onEdit?.(prompt.id),
+    },
+    {
+      type: 'item',
+      icon: <Files className="h-4 w-4" />,
+      label: 'Duplicate',
+      onSelect: () => onDuplicate?.(prompt.id),
+    },
+    {
+      type: 'item',
+      icon: <FolderInput className="h-4 w-4" />,
+      label: 'Move to folder',
+      onSelect: () => onEdit?.(prompt.id),
+    },
+    {
+      type: 'item',
+      icon: <Archive className="h-4 w-4" />,
+      label: 'Archive',
+      onSelect: () => onArchive?.(prompt.id),
+    },
+    { type: 'separator' },
+    {
+      type: 'item',
+      danger: true,
+      icon: <Trash2 className="h-4 w-4" />,
+      label: 'Delete',
+      onSelect: () => onDelete?.(prompt.id),
+    },
+  ];
 
   return (
     <div className="px-5 pt-5 pb-4">
@@ -63,31 +80,7 @@ export function PromptInspectorHeader({
             />
           </button>
 
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors text-[var(--color-text-muted)]"
-              aria-label="More options"
-              aria-expanded={menuOpen}
-              aria-haspopup="menu"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-            {menuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1 shadow-lg"
-              >
-                <DropdownItem icon={<Pencil className="h-4 w-4" />} label="Edit prompt" onClick={() => runAction(onEdit)} />
-                <DropdownItem icon={<Files className="h-4 w-4" />} label="Duplicate" onClick={() => runAction(onDuplicate)} />
-                <DropdownItem icon={<FolderInput className="h-4 w-4" />} label="Move to folder" onClick={() => runAction(onEdit)} />
-                <DropdownItem icon={<Archive className="h-4 w-4" />} label="Archive" onClick={() => runAction(onArchive)} />
-                <div className="my-1 border-t border-[var(--color-border)]" />
-                <DropdownItem icon={<Trash2 className="h-4 w-4" />} label="Delete" onClick={() => runAction(onDelete)} danger />
-              </div>
-            )}
-          </div>
+          <PromptActionsMenu items={actionItems} />
         </div>
       </div>
       {prompt.description && (
@@ -96,36 +89,5 @@ export function PromptInspectorHeader({
         </p>
       )}
     </div>
-  );
-}
-
-interface DropdownItemProps {
-  danger?: boolean;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}
-
-function DropdownItem({
-  danger = false,
-  icon,
-  label,
-  onClick,
-}: DropdownItemProps) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className={[
-        'flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors',
-        danger
-          ? 'text-red-600 hover:bg-red-50'
-          : 'text-[var(--color-text-main)] hover:bg-gray-50',
-      ].join(' ')}
-    >
-      <span className={danger ? 'text-red-500' : 'text-[var(--color-text-muted)]'}>{icon}</span>
-      {label}
-    </button>
   );
 }

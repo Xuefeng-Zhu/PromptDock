@@ -148,6 +148,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               ref={listRef}
               id={`${selectId}-listbox`}
               role="listbox"
+              aria-labelledby={label ? `${selectId}-label` : undefined}
               className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] py-1 shadow-lg"
             >
               {options.map((opt, index) => {

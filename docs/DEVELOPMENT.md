@@ -74,7 +74,11 @@ Use `npm run lint` for static TypeScript/React guardrails, `npm run build` for T
 
 ## Branching and PR Expectations
 
-The repository CI workflow runs lint, frontend build, frontend tests, and Rust tests on pull requests and `main` pushes. Contributors should run the same verification locally before opening a PR when practical.
+Use `develop` as the integration branch for day-to-day work. Open regular
+feature, fix, and documentation pull requests against `develop`; keep `main`
+release-only and merge `develop` into `main` when cutting a release.
+
+The repository CI workflow runs lint, frontend build, frontend tests, and Rust tests on pull requests and pushes to `develop` or `main`. Contributors should run the same verification locally before opening a PR when practical.
 
 Recommended PR checklist:
 

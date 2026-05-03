@@ -452,6 +452,35 @@ describe('SettingsScreen + hotkey registration', () => {
     });
   });
 
+  it('captures hotkeys from the document while recording', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(document, {
+        code: 'KeyP',
+        key: 'p',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRegisterHotkey).toHaveBeenCalledWith('CommandOrControl+Alt+P');
+    });
+    expect(mockRepo.update).toHaveBeenCalledWith({
+      hotkeyCombo: 'CommandOrControl+Alt+P',
+    });
+  });
+
   it('rejects incomplete hotkeys before registering them', async () => {
     render(<SettingsScreen onBack={() => {}} />);
     const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');

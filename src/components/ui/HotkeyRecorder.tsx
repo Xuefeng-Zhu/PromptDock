@@ -1,9 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   displayHotkeyToken,
   eventModifiers,
   eventPrimaryKey,
+  type HotkeyKeyboardEventLike,
   isMacPlatform,
   isModifierKey,
   splitHotkey,
@@ -15,6 +16,10 @@ import { Button } from './Button';
 type SaveState = 'idle' | 'recording' | 'saving' | 'saved';
 
 type HotkeyChangeHandler = (hotkey: string) => boolean | Promise<boolean>;
+type RecordingKeyEvent = HotkeyKeyboardEventLike & {
+  preventDefault: () => void;
+  stopPropagation: () => void;
+};
 
 export interface HotkeyRecorderProps {
   value: string;
@@ -99,16 +104,8 @@ export function HotkeyRecorder({
     setSaveState('idle');
   }, []);
 
-  const handleRecorderKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (!isRecording) {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          startRecording();
-        }
-        return;
-      }
-
+  const handleRecordingKeyDown = useCallback(
+    (event: RecordingKeyEvent) => {
       event.preventDefault();
       event.stopPropagation();
 
@@ -151,7 +148,35 @@ export function HotkeyRecorder({
       setPreviewHotkey(combo);
       void persistHotkey(combo);
     },
-    [cancelRecording, isRecording, persistHotkey, startRecording],
+    [cancelRecording, persistHotkey],
+  );
+
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const handleDocumentKeyDown = (event: KeyboardEvent) => {
+      handleRecordingKeyDown(event);
+    };
+
+    document.addEventListener('keydown', handleDocumentKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleDocumentKeyDown, true);
+    };
+  }, [handleRecordingKeyDown, isRecording]);
+
+  const handleRecorderKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!isRecording) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          startRecording();
+        }
+        return;
+      }
+
+      handleRecordingKeyDown(event);
+    },
+    [handleRecordingKeyDown, isRecording, startRecording],
   );
 
   const handleClear = useCallback(() => {
@@ -181,9 +206,6 @@ export function HotkeyRecorder({
           data-hotkey-value={value}
           onClick={startRecording}
           onKeyDown={handleRecorderKeyDown}
-          onBlur={() => {
-            if (isRecording) cancelRecording();
-          }}
           disabled={disabled || saveState === 'saving'}
           className={[
             'min-h-12 min-w-64 rounded-lg border px-3 py-2 transition-colors',

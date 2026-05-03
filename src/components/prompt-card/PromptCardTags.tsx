@@ -1,4 +1,4 @@
-import { TagPill } from '../TagPill';
+import { TagPill } from '../ui';
 
 interface PromptCardTagsProps {
   tags: string[];

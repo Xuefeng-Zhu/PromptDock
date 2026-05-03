@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { AppShell } from '../AppShell';
+import { AppShell } from '../app-shell';
 import type { PromptRecipe } from '../../types/index';
 import type { IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
 import { initPromptStore } from '../../stores/prompt-store';

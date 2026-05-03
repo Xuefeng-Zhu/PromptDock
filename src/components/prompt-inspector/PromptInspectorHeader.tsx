@@ -2,7 +2,7 @@ import { Archive, Files, FolderInput, Pencil, Star, Trash2 } from 'lucide-react'
 import {
   PromptActionsMenu,
   type PromptActionMenuItem,
-} from '../prompt-actions/PromptActionsMenu';
+} from '../prompt-actions';
 import type { PromptRecipe } from '../../types/index';
 
 interface PromptInspectorHeaderProps {

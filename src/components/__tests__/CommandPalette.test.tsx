@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { CommandPalette } from '../CommandPalette';
+import { CommandPalette } from '../prompt-search';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 
 // jsdom does not implement scrollIntoView

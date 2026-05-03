@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { clampIndex } from '../CommandPalette';
+import { clampIndex } from '../prompt-search';
 
 /**
  * Feature: prompt-dock-ui

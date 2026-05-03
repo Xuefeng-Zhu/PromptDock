@@ -1,11 +1,11 @@
-import { useOnboardingFlow, type OnboardingChoice, type OnboardingSyncService } from '../hooks/use-onboarding-flow';
-import { isOnboardingComplete, markOnboardingComplete, ONBOARDING_KEY } from '../utils/onboarding';
-import { OnboardingBenefits } from './onboarding/OnboardingBenefits';
-import { OnboardingHero, OnboardingPrivacyFooter } from './onboarding/OnboardingHero';
-import { OnboardingOptionGrid } from './onboarding/OnboardingOptionGrid';
-import { OnboardingSignInCard } from './onboarding/OnboardingSignInCard';
-import { ONBOARDING_BENEFITS, ONBOARDING_OPTIONS } from './onboarding/onboarding-data';
-import type { IAuthService } from '../services/interfaces';
+import { useOnboardingFlow, type OnboardingChoice, type OnboardingSyncService } from '../../hooks/use-onboarding-flow';
+import { isOnboardingComplete, markOnboardingComplete, ONBOARDING_KEY } from '../../utils/onboarding';
+import { OnboardingBenefits } from './OnboardingBenefits';
+import { OnboardingHero, OnboardingPrivacyFooter } from './OnboardingHero';
+import { OnboardingOptionGrid } from './OnboardingOptionGrid';
+import { OnboardingSignInCard } from './OnboardingSignInCard';
+import { ONBOARDING_BENEFITS, ONBOARDING_OPTIONS } from './onboarding-data';
+import type { IAuthService } from '../../services/interfaces';
 export { isOnboardingComplete, markOnboardingComplete, ONBOARDING_KEY };
 
 // ─── Props ─────────────────────────────────────────────────────────────────────

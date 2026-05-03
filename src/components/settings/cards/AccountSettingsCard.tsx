@@ -1,4 +1,4 @@
-import { AccountPanel } from '../../AccountPanel';
+import { AccountPanel } from '../../account';
 import { Card } from '../../ui/Card';
 import { useAppModeStore } from '../../../stores/app-mode-store';
 import type { IAuthService } from '../../../services/interfaces';

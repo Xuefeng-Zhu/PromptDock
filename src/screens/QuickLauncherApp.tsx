@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { initializeApp, ThemeManager } from '../App';
-import { ErrorBoundary } from '../components/ErrorBoundary';
+import { ErrorBoundary } from '../components/shared';
 import { QuickLauncherWindow } from './QuickLauncherWindow';
 
 /**

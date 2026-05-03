@@ -9,7 +9,7 @@ import {
   ONBOARDING_KEY,
   isOnboardingComplete,
   markOnboardingComplete,
-} from '../OnboardingScreen';
+} from '../onboarding';
 import type { IAuthService } from '../../services/interfaces';
 import type { AuthResult } from '../../types/index';
 

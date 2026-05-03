@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { EmptyState } from '../EmptyState';
+import { EmptyState } from '../shared';
 
 describe('EmptyState', () => {
   it('renders the title', () => {

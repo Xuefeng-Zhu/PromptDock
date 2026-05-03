@@ -1,8 +1,8 @@
-import { SyncStatusBadge } from './SyncStatusBadge';
-import { AccountMenuPopover } from './top-bar/AccountMenuPopover';
-import { TopBarSearchTrigger } from './top-bar/TopBarSearchTrigger';
-import type { IAuthService } from '../services/interfaces';
-import type { AppMode, AuthUser, SyncStatus } from '../types/index';
+import { SyncStatusBadge } from '../sync';
+import { AccountMenuPopover } from './AccountMenuPopover';
+import { TopBarSearchTrigger } from './TopBarSearchTrigger';
+import type { IAuthService } from '../../services/interfaces';
+import type { AppMode, AuthUser, SyncStatus } from '../../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

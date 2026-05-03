@@ -1,4 +1,4 @@
-import { useToastStore, type Toast } from '../stores/toast-store';
+import { useToastStore, type Toast } from '../../stores/toast-store';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 // ─── Toast Item ────────────────────────────────────────────────────────────────

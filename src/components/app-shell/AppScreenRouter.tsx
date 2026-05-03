@@ -1,8 +1,8 @@
 import { ConflictCenter } from '../../screens/ConflictCenter';
 import type { useAppShellController } from '../../hooks/use-app-shell-controller';
-import { LibraryScreen } from '../LibraryScreen';
-import { PromptEditor } from '../PromptEditor';
-import { SettingsScreen } from '../SettingsScreen';
+import { LibraryScreen } from '../library';
+import { PromptEditor } from '../prompt-editor';
+import { SettingsScreen } from '../settings';
 
 type AppShellController = ReturnType<typeof useAppShellController>;
 

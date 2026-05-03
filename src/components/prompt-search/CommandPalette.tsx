@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { PromptRecipe } from '../types/index';
-import type { SearchOptions } from '../services/search-engine';
-import { useHighlightedIndex } from '../hooks/use-highlighted-index';
-import { CommandPaletteResults } from './prompt-search/CommandPaletteResults';
-import { CommandPaletteSearchField } from './prompt-search/CommandPaletteSearchField';
-import { PromptSearchShortcutHints } from './prompt-search/PromptSearchShortcutHints';
-import { useSearchOverlayFocus } from './prompt-search/useSearchOverlayFocus';
+import type { PromptRecipe } from '../../types/index';
+import type { SearchOptions } from '../../services/search-engine';
+import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
+import { CommandPaletteResults } from './CommandPaletteResults';
+import { CommandPaletteSearchField } from './CommandPaletteSearchField';
+import { PromptSearchShortcutHints } from './PromptSearchShortcutHints';
+import { useSearchOverlayFocus } from './useSearchOverlayFocus';
 import {
   searchPromptResults,
   usePromptSearchResults,
-} from '../hooks/use-prompt-search-results';
+} from '../../hooks/use-prompt-search-results';
 
-export { clampIndex } from '../utils/list-navigation';
+export { clampIndex } from '../../utils/list-navigation';
 
 // ─── Exported Utility Functions ────────────────────────────────────────────────
 

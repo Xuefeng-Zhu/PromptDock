@@ -1,9 +1,9 @@
-import type { PromptRecipe, Folder } from '../types/index';
-import { PromptBodySection } from './prompt-inspector/PromptBodySection';
-import { PromptInspectorHeader } from './prompt-inspector/PromptInspectorHeader';
-import { PromptMetadataSection } from './prompt-inspector/PromptMetadataSection';
-import { PromptTagsSection } from './prompt-inspector/PromptTagsSection';
-import { PromptVariablesSection } from './prompt-inspector/PromptVariablesSection';
+import type { PromptRecipe, Folder } from '../../types/index';
+import { PromptBodySection } from './PromptBodySection';
+import { PromptInspectorHeader } from './PromptInspectorHeader';
+import { PromptMetadataSection } from './PromptMetadataSection';
+import { PromptTagsSection } from './PromptTagsSection';
+import { PromptVariablesSection } from './PromptVariablesSection';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

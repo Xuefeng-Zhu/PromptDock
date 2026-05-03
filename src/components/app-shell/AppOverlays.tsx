@@ -1,7 +1,7 @@
 import type { useAppShellController } from '../../hooks/use-app-shell-controller';
-import { CommandPalette } from '../CommandPalette';
-import { ToastContainer } from '../ToastContainer';
-import { VariableFillModal } from '../VariableFillModal';
+import { ToastContainer } from '../feedback';
+import { CommandPalette } from '../prompt-search';
+import { VariableFillModal } from '../variable-fill';
 
 type AppShellController = ReturnType<typeof useAppShellController>;
 

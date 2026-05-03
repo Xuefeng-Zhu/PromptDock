@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { User } from 'lucide-react';
-import { AccountPanel } from '../AccountPanel';
+import { AccountPanel } from '../account';
 import { useDismissablePopover } from '../ui/listbox/use-dismissable-popover';
 import type { IAuthService } from '../../services/interfaces';
 import type { AppMode, AuthUser, SyncStatus } from '../../types/index';

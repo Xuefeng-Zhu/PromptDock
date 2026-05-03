@@ -1,5 +1,7 @@
-import React, { useId, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useCallback, useId, useRef, useState } from 'react';
 import { ChevronDown, FolderOpen } from 'lucide-react';
+import { useDismissablePopover } from './listbox/use-dismissable-popover';
+import { useListboxNavigation } from './listbox/use-listbox-navigation';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -27,34 +29,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const generatedId = useId();
     const selectId = id ?? generatedId;
     const [isOpen, setIsOpen] = useState(false);
-    const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const containerRef = useRef<HTMLDivElement>(null);
-    const listRef = useRef<HTMLUListElement>(null);
 
     const selectedOption = options.find((o) => o.value === value);
+    const selectedIndex = options.findIndex((o) => o.value === value);
     const displayLabel = selectedOption?.label ?? placeholder ?? 'Select…';
     const hasValue = selectedOption !== undefined && selectedOption.value !== '';
-
-    // ── Close on outside click ───────────────────────────────────────────────
-    useEffect(() => {
-      if (!isOpen) return;
-      function handleClickOutside(e: MouseEvent) {
-        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-          setIsOpen(false);
-        }
-      }
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isOpen]);
-
-    // ── Scroll highlighted item into view ────────────────────────────────────
-    useEffect(() => {
-      if (!isOpen || !listRef.current || highlightedIndex < 0) return;
-      const items = listRef.current.children;
-      if (items[highlightedIndex]) {
-        (items[highlightedIndex] as HTMLElement).scrollIntoView({ block: 'nearest' });
-      }
-    }, [isOpen, highlightedIndex]);
 
     const handleSelect = useCallback(
       (optionValue: string) => {
@@ -64,47 +44,36 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       [onChange],
     );
 
-    const handleKeyDown = useCallback(
-      (e: React.KeyboardEvent) => {
-        if (!isOpen) {
-          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            setIsOpen(true);
-            setHighlightedIndex(options.findIndex((o) => o.value === value));
-          }
-          return;
-        }
+    useDismissablePopover({
+      containerRef,
+      onDismiss: () => setIsOpen(false),
+      open: isOpen,
+    });
 
-        switch (e.key) {
-          case 'ArrowDown':
-            e.preventDefault();
-            setHighlightedIndex((prev) => Math.min(prev + 1, options.length - 1));
-            break;
-          case 'ArrowUp':
-            e.preventDefault();
-            setHighlightedIndex((prev) => Math.max(prev - 1, 0));
-            break;
-          case 'Enter':
-          case ' ':
-            e.preventDefault();
-            if (highlightedIndex >= 0 && options[highlightedIndex]) {
-              handleSelect(options[highlightedIndex].value);
-            }
-            break;
-          case 'Escape':
-            e.preventDefault();
-            setIsOpen(false);
-            break;
+    const {
+      handleKeyDown,
+      highlightedIndex,
+      listRef,
+      setHighlightedIndex,
+      toggleListbox,
+    } = useListboxNavigation({
+      onSelect: (index) => {
+        if (options[index]) {
+          handleSelect(options[index].value);
         }
       },
-      [isOpen, highlightedIndex, options, value, handleSelect],
-    );
+      open: isOpen,
+      optionCount: options.length,
+      selectedIndex,
+      setOpen: setIsOpen,
+    });
 
     return (
       <div className="flex flex-col gap-1.5" ref={containerRef}>
         {label && (
           <label
             htmlFor={selectId}
+            id={`${selectId}-label`}
             className="text-sm font-medium text-[var(--color-text-main)]"
           >
             {label}
@@ -140,7 +109,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             aria-controls={`${selectId}-listbox`}
             aria-labelledby={label ? `${selectId}-label` : undefined}
             disabled={disabled}
-            onClick={() => setIsOpen((prev) => !prev)}
+            onClick={toggleListbox}
             onKeyDown={handleKeyDown}
             className={[
               'flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors',

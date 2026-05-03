@@ -1,5 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
+import { useAnchoredDropdownPosition } from './listbox/use-anchored-dropdown-position';
+import { useDismissablePopover } from './listbox/use-dismissable-popover';
 
 export interface SearchableMultiSelectOption<T extends string> {
   label: string;
@@ -15,30 +17,6 @@ interface SearchableMultiSelectProps<T extends string> {
   searchPlaceholder: string;
   emptyMessage: string;
   formatSelected?: (option: SearchableMultiSelectOption<T>) => string;
-}
-
-type DropdownPlacement = 'top' | 'bottom';
-
-interface DropdownPosition {
-  left: number;
-  top: number;
-  width: number;
-  maxHeight: number;
-}
-
-const DROPDOWN_GAP = 8;
-const DROPDOWN_MAX_HEIGHT = 240;
-const DROPDOWN_MIN_HEIGHT = 144;
-const VIEWPORT_PADDING = 12;
-const DEFAULT_DROPDOWN_POSITION: DropdownPosition = {
-  left: 0,
-  top: 0,
-  width: 0,
-  maxHeight: DROPDOWN_MAX_HEIGHT,
-};
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 function toggleValue<T extends string>(values: T[], value: T): T[] {
@@ -58,13 +36,13 @@ export function SearchableMultiSelect<T extends string>({
   formatSelected,
 }: SearchableMultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<DropdownPlacement>('bottom');
-  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>(
-    DEFAULT_DROPDOWN_POSITION,
-  );
   const [query, setQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { dropdownPosition, placement } = useAnchoredDropdownPosition({
+    anchorRef: buttonRef,
+    open,
+  });
   const selectedSet = useMemo(() => new Set(selectedValues), [selectedValues]);
   const selectedOptions = options.filter((option) => selectedSet.has(option.value));
   const filteredOptions = options.filter((option) =>
@@ -74,74 +52,20 @@ export function SearchableMultiSelect<T extends string>({
     ? selectedOptions.map((option) => formatSelected?.(option) ?? option.label).join(', ')
     : placeholder;
 
-  useLayoutEffect(() => {
-    if (!open || !buttonRef.current) return;
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+  }, []);
 
-    function updatePlacement() {
-      if (!buttonRef.current) return;
-
-      const buttonRect = buttonRef.current.getBoundingClientRect();
-      const availableBelow = window.innerHeight
-        - buttonRect.bottom
-        - VIEWPORT_PADDING
-        - DROPDOWN_GAP;
-      const availableAbove = buttonRect.top - VIEWPORT_PADDING - DROPDOWN_GAP;
-      const nextPlacement = availableBelow < DROPDOWN_MAX_HEIGHT && availableAbove > availableBelow
-        ? 'top'
-        : 'bottom';
-      const availableHeight = nextPlacement === 'top' ? availableAbove : availableBelow;
-      const maxHeight = clamp(availableHeight, DROPDOWN_MIN_HEIGHT, DROPDOWN_MAX_HEIGHT);
-      const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - VIEWPORT_PADDING - buttonRect.width);
-      const left = clamp(buttonRect.left, VIEWPORT_PADDING, maxLeft);
-      const top = nextPlacement === 'top'
-        ? Math.max(VIEWPORT_PADDING, buttonRect.top - DROPDOWN_GAP - maxHeight)
-        : Math.min(
-          buttonRect.bottom + DROPDOWN_GAP,
-          window.innerHeight - VIEWPORT_PADDING - maxHeight,
-        );
-
-      setPlacement(nextPlacement);
-      setDropdownPosition({
-        left,
-        top,
-        width: buttonRect.width,
-        maxHeight,
-      });
-    }
-
-    updatePlacement();
-    window.addEventListener('resize', updatePlacement);
-    window.addEventListener('scroll', updatePlacement, true);
-    return () => {
-      window.removeEventListener('resize', updatePlacement);
-      window.removeEventListener('scroll', updatePlacement, true);
-    };
-  }, [open]);
+  useDismissablePopover({
+    containerRef: dropdownRef,
+    onDismiss: closeDropdown,
+    open,
+  });
 
   useEffect(() => {
     if (!open) {
       setQuery('');
-      return;
     }
-
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
   }, [open]);
 
   return (

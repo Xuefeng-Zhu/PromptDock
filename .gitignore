@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 dist/
+coverage/
 .firebase/
 
 # Tauri build output
@@ -10,7 +11,8 @@ src-tauri/target/
 
 # Environment variables
 .env
-.env.local
+.env.*
+!.env.example
 
 # IDE
 .vscode/

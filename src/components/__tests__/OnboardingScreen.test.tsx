@@ -24,7 +24,6 @@ vi.mock('../../stores/app-mode-store', async () => {
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },

@@ -626,6 +626,24 @@ describe('AppShell', () => {
         expect(screen.queryByRole('complementary', { name: 'Prompt details' })).toBeNull();
       });
     });
+
+    it('closes the inspector when the selected prompt card is clicked again', async () => {
+      await renderOnLibraryScreen();
+
+      const selectedCard = screen.getByTestId('prompt-card-prompt-1');
+      await act(async () => {
+        fireEvent.click(selectedCard);
+      });
+
+      expect(screen.getByRole('complementary', { name: 'Prompt details' })).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(selectedCard);
+      });
+
+      expect(screen.queryByRole('complementary', { name: 'Prompt details' })).toBeNull();
+      expect(selectedCard.getAttribute('aria-selected')).toBe('false');
+    });
   });
 
   describe('PromptInspector action callbacks via AppShell', () => {
@@ -654,6 +672,110 @@ describe('AppShell', () => {
       });
 
       expect(mockRepo.toggleFavorite).toHaveBeenCalledWith('prompt-1');
+    });
+
+    it('adding a tag in the inspector updates the prompt tags', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      await act(async () => {
+        fireEvent.click(within(inspector).getByRole('button', { name: 'Add tag' }));
+      });
+
+      const tagInput = within(inspector).getByLabelText('Add tag');
+      await act(async () => {
+        fireEvent.change(tagInput, { target: { value: 'urgent' } });
+        fireEvent.keyDown(tagInput, { key: 'Enter' });
+      });
+
+      await waitFor(() => {
+        expect(mockRepo.update).toHaveBeenCalledWith('prompt-1', { tags: ['test', 'urgent'] });
+      });
+    });
+
+    it('removing a tag in the inspector updates the prompt tags', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      await act(async () => {
+        fireEvent.click(within(inspector).getByRole('button', { name: 'Remove test tag' }));
+      });
+
+      await waitFor(() => {
+        expect(mockRepo.update).toHaveBeenCalledWith('prompt-1', { tags: [] });
+      });
+    });
+
+    it('serializes rapid tag edits from the latest desired tags', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+      let resolveFirstUpdate!: (prompt: PromptRecipe) => void;
+      const firstUpdate = new Promise<PromptRecipe>((resolve) => {
+        resolveFirstUpdate = resolve;
+      });
+      const updateCalls: Array<{ changes: Partial<PromptRecipe>; id: string }> = [];
+      mockRepo.update = vi.fn((id: string, changes: Partial<PromptRecipe>) => {
+        updateCalls.push({ id, changes });
+        if (updateCalls.length === 1) return firstUpdate;
+        return Promise.resolve(makePrompt({ id, ...changes }));
+      });
+
+      await selectPromptCard('prompt-1');
+
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      await act(async () => {
+        fireEvent.click(within(inspector).getByRole('button', { name: 'Add tag' }));
+      });
+
+      const tagInput = within(inspector).getByLabelText('Add tag');
+      await act(async () => {
+        fireEvent.change(tagInput, { target: { value: 'urgent' } });
+        fireEvent.keyDown(tagInput, { key: 'Enter' });
+      });
+
+      await waitFor(() => {
+        expect(mockRepo.update).toHaveBeenCalledTimes(1);
+      });
+
+      await act(async () => {
+        fireEvent.click(within(inspector).getByRole('button', { name: 'Remove test tag' }));
+      });
+      expect(mockRepo.update).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveFirstUpdate(makePrompt({ id: 'prompt-1', tags: ['test', 'urgent'] }));
+        await firstUpdate;
+      });
+
+      await waitFor(() => {
+        expect(mockRepo.update).toHaveBeenCalledTimes(2);
+      });
+      expect(updateCalls[1]).toEqual({
+        id: 'prompt-1',
+        changes: { tags: ['urgent'] },
+      });
+    });
+
+    it('changing the folder in the inspector updates the prompt folder', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await selectPromptCard('prompt-1');
+
+      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      await act(async () => {
+        fireEvent.click(within(inspector).getByRole('combobox', { name: 'Folder' }));
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('option', { name: 'Engineering' }));
+      });
+
+      await waitFor(() => {
+        expect(mockRepo.update).toHaveBeenCalledWith('prompt-1', { folderId: 'folder-engineering' });
+      });
     });
 
     it('clicking Duplicate in inspector dropdown calls duplicatePrompt on the store', async () => {

@@ -35,6 +35,30 @@ describe('PromptInspector', () => {
     expect(screen.getByText('Writing')).toBeDefined();
   });
 
+  it('renders folder and tags editors above date metadata', () => {
+    render(
+      <PromptInspector
+        prompt={mockPrompt}
+        folder={mockFolder}
+        folders={MOCK_FOLDERS}
+        variables={[]}
+        onUpdateFolder={vi.fn()}
+        onUpdateTags={vi.fn()}
+      />
+    );
+
+    const folderControl = screen.getByRole('combobox', { name: 'Folder' });
+    const addTagButton = screen.getByRole('button', { name: 'Add tag' });
+    const lastUsedLabel = screen.getByText('Last used');
+
+    expect(folderControl.compareDocumentPosition(addTagButton)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(addTagButton.compareDocumentPosition(lastUsedLabel)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it('renders the prompt body section with Copy button', () => {
     render(
       <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />
@@ -92,6 +116,110 @@ describe('PromptInspector', () => {
       expect(onCopyBody).toHaveBeenCalledWith(mockPrompt.body, mockPrompt.id);
     });
 
+    it('calls onUpdateTags with a new tag when a tag is added inline', () => {
+      const onUpdateTags = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onUpdateTags={onUpdateTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+      const tagInput = screen.getByLabelText('Add tag');
+      fireEvent.change(tagInput, { target: { value: 'new-tag' } });
+      fireEvent.keyDown(tagInput, { key: 'Enter' });
+
+      expect(onUpdateTags).toHaveBeenCalledTimes(1);
+      const updateTags = onUpdateTags.mock.calls[0][1];
+      expect(onUpdateTags.mock.calls[0][0]).toBe(mockPrompt.id);
+      expect(updateTags(mockPrompt.tags)).toEqual([
+        ...mockPrompt.tags,
+        'new-tag',
+      ]);
+    });
+
+    it('calls onUpdateTags without the removed tag when a tag is removed inline', () => {
+      const onUpdateTags = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onUpdateTags={onUpdateTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remove summarization tag' }));
+
+      expect(onUpdateTags).toHaveBeenCalledTimes(1);
+      const updateTags = onUpdateTags.mock.calls[0][1];
+      expect(onUpdateTags.mock.calls[0][0]).toBe(mockPrompt.id);
+      expect(updateTags(mockPrompt.tags)).toEqual(['writing']);
+    });
+
+    it('composes rapid tag updates from the latest tag list', () => {
+      const onUpdateTags = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onUpdateTags={onUpdateTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+      const tagInput = screen.getByLabelText('Add tag');
+      fireEvent.change(tagInput, { target: { value: 'new-tag' } });
+      fireEvent.keyDown(tagInput, { key: 'Enter' });
+      fireEvent.click(screen.getByRole('button', { name: 'Remove summarization tag' }));
+
+      const addTag = onUpdateTags.mock.calls[0][1];
+      const removeTag = onUpdateTags.mock.calls[1][1];
+      expect(removeTag(addTag(mockPrompt.tags))).toEqual(['writing', 'new-tag']);
+    });
+
+    it('calls onUpdateFolder when a folder is selected inline', () => {
+      const onUpdateFolder = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          folders={MOCK_FOLDERS}
+          variables={[]}
+          onUpdateFolder={onUpdateFolder}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+      fireEvent.click(screen.getByRole('option', { name: 'Engineering' }));
+
+      expect(onUpdateFolder).toHaveBeenCalledTimes(1);
+      expect(onUpdateFolder).toHaveBeenCalledWith(mockPrompt.id, 'folder-engineering');
+    });
+
+    it('calls onUpdateFolder with null when No folder is selected inline', () => {
+      const onUpdateFolder = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          folders={MOCK_FOLDERS}
+          variables={[]}
+          onUpdateFolder={onUpdateFolder}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+      fireEvent.click(screen.getByRole('option', { name: 'No folder' }));
+
+      expect(onUpdateFolder).toHaveBeenCalledTimes(1);
+      expect(onUpdateFolder).toHaveBeenCalledWith(mockPrompt.id, null);
+    });
+
     it('calls onEdit with prompt id and closes dropdown when "Edit prompt" is clicked', () => {
       const onEdit = vi.fn();
       render(
@@ -128,25 +256,6 @@ describe('PromptInspector', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
       expect(onEdit).toHaveBeenCalledTimes(1);
       expect(onEdit).toHaveBeenCalledWith(mockPrompt.id);
-    });
-
-    it('calls onEdit with prompt id and closes dropdown when "Move to folder" is clicked', () => {
-      const onEdit = vi.fn();
-      render(
-        <PromptInspector
-          prompt={mockPrompt}
-          folder={mockFolder}
-          variables={[]}
-          onEdit={onEdit}
-        />
-      );
-
-      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to folder' }));
-
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      expect(onEdit).toHaveBeenCalledWith(mockPrompt.id);
-      expect(screen.queryByRole('menu')).toBeNull();
     });
 
     it('calls onDuplicate with prompt id and closes dropdown when "Duplicate" is clicked', () => {

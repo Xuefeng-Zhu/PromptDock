@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { trackPromptAction } from '../../services/analytics-service';
 import type { PromptStore } from '../../stores/prompt-store';
 import type { ToastStore } from '../../stores/toast-store';
@@ -12,6 +12,12 @@ type ExecuteText = (options: {
   text: string;
 }) => Promise<PromptExecutionResult>;
 
+type TagUpdate = (tags: string[]) => string[];
+
+function areTagsEqual(left: string[], right: string[]) {
+  return left.length === right.length && left.every((tag, index) => tag === right[index]);
+}
+
 interface UsePromptCrudActionsOptions {
   activeWorkspaceId: string;
   addToast: ToastStore['addToast'];
@@ -21,6 +27,7 @@ interface UsePromptCrudActionsOptions {
   deletePrompt: PromptStore['deletePrompt'];
   duplicatePrompt: PromptStore['duplicatePrompt'];
   mode: AppMode;
+  prompts: PromptRecipe[];
   screen: Screen;
   selectedPromptId: string | null;
   setEditorHasUnsavedChanges: (hasUnsavedChanges: boolean) => void;
@@ -40,6 +47,7 @@ export function usePromptCrudActions({
   deletePrompt,
   duplicatePrompt,
   mode,
+  prompts,
   screen,
   selectedPromptId,
   setEditorHasUnsavedChanges,
@@ -49,6 +57,9 @@ export function usePromptCrudActions({
   updatePrompt,
   userId,
 }: UsePromptCrudActionsOptions) {
+  const pendingTagUpdatesRef = useRef(new Map<string, Promise<void>>());
+  const tagDraftsRef = useRef(new Map<string, string[]>());
+
   const handleToggleFavorite = useCallback(
     (id: string) => {
       toggleFavorite(id).catch((err: unknown) => {
@@ -149,6 +160,53 @@ export function usePromptCrudActions({
     [setScreen],
   );
 
+  const handleUpdatePromptTags = useCallback(
+    (id: string, updateTags: TagUpdate) => {
+      const baseTags =
+        tagDraftsRef.current.get(id)
+        ?? prompts.find((prompt) => prompt.id === id)?.tags
+        ?? [];
+      const nextTags = updateTags(baseTags);
+
+      if (areTagsEqual(baseTags, nextTags)) return;
+
+      tagDraftsRef.current.set(id, nextTags);
+
+      const previousUpdate = pendingTagUpdatesRef.current.get(id) ?? Promise.resolve();
+      const queuedUpdate = previousUpdate
+        .catch(() => undefined)
+        .then(async () => {
+          await updatePrompt(id, { tags: nextTags });
+          trackPromptAction('updated');
+        })
+        .catch((err: unknown) => {
+          addToast(`Failed to update tags: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        })
+        .finally(() => {
+          if (pendingTagUpdatesRef.current.get(id) === queuedUpdate) {
+            pendingTagUpdatesRef.current.delete(id);
+          }
+          if (tagDraftsRef.current.get(id) === nextTags) {
+            tagDraftsRef.current.delete(id);
+          }
+        });
+
+      pendingTagUpdatesRef.current.set(id, queuedUpdate);
+    },
+    [addToast, prompts, updatePrompt],
+  );
+
+  const handleUpdatePromptFolder = useCallback(
+    (id: string, folderId: string | null) => {
+      updatePrompt(id, { folderId })
+        .then(() => trackPromptAction('updated'))
+        .catch((err: unknown) => {
+          addToast(`Failed to update folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        });
+    },
+    [addToast, updatePrompt],
+  );
+
   const handleCopyPromptBody = useCallback(
     (body: string, promptId?: string) => {
       copyText({ text: body, promptId, source: 'prompt_body' })
@@ -192,5 +250,7 @@ export function usePromptCrudActions({
     handleEditorDuplicate,
     handleEditorSave,
     handleToggleFavorite,
+    handleUpdatePromptFolder,
+    handleUpdatePromptTags,
   };
 }

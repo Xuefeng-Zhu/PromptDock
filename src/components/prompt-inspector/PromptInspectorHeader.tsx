@@ -1,4 +1,4 @@
-import { Archive, Files, FolderInput, Pencil, Star, Trash2 } from 'lucide-react';
+import { Archive, Files, Pencil, Star, Trash2 } from 'lucide-react';
 import {
   PromptActionsMenu,
   type PromptActionMenuItem,
@@ -34,12 +34,6 @@ export function PromptInspectorHeader({
       icon: <Files className="h-4 w-4" />,
       label: 'Duplicate',
       onSelect: () => onDuplicate?.(prompt.id),
-    },
-    {
-      type: 'item',
-      icon: <FolderInput className="h-4 w-4" />,
-      label: 'Move to folder',
-      onSelect: () => onEdit?.(prompt.id),
     },
     {
       type: 'item',

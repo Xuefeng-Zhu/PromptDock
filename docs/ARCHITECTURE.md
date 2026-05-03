@@ -58,6 +58,125 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 | Native | `src-tauri/src/*` | Tauri command handlers, tray setup, global shortcut setup, paste simulation. |
 | Types | `src/types/index.ts` | Shared domain models and result types. |
 
+## Prompt Data Model
+
+`PromptRecipe` in `src/types/index.ts` is the central domain record. A prompt is scoped to one workspace, can be organized by a folder and inline tags, and is soft-deleted when archived.
+
+```mermaid
+erDiagram
+  WORKSPACE ||--o{ PROMPT_RECIPE : scopes
+  WORKSPACE ||--o{ WORKSPACE_MEMBER : has
+  FOLDER ||--o{ PROMPT_RECIPE : groups
+  PROMPT_RECIPE ||--o{ PROMPT_CONFLICT : can_conflict
+  USER_SETTINGS }o--|| WORKSPACE : selects_active
+
+  PROMPT_RECIPE {
+    string id PK
+    string workspaceId FK
+    string title
+    string description
+    string body
+    string_array tags
+    string folderId FK "nullable"
+    boolean favorite
+    boolean archived
+    datetime archivedAt "nullable"
+    datetime createdAt
+    datetime updatedAt
+    datetime lastUsedAt "nullable"
+    string createdBy
+    number version
+  }
+
+  FOLDER {
+    string id PK
+    string name
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  WORKSPACE {
+    string id PK
+    string name
+    string ownerId
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  WORKSPACE_MEMBER {
+    string id PK
+    string workspaceId FK
+    string userId
+    string role
+    datetime joinedAt
+  }
+
+  USER_SETTINGS {
+    string hotkeyCombo
+    string theme
+    string defaultAction
+    string activeWorkspaceId FK
+  }
+
+  PROMPT_CONFLICT {
+    string id PK
+    string promptId FK
+    object localVersion
+    object remoteVersion
+    datetime detectedAt
+    datetime resolvedAt "nullable"
+  }
+```
+
+The `Folder` model does not currently store `workspaceId`; prompts reference folders through `folderId`, while synced folders are scoped by their Firestore path.
+
+| Field group | Fields | Notes |
+|---|---|---|
+| Identity and tenancy | `id`, `workspaceId` | `workspaceId` is used by repositories and sync queries to isolate prompt lists. |
+| Prompt content | `title`, `description`, `body` | `body` may contain `{{variable}}` placeholders parsed by `VariableParser` and rendered by `PromptRenderer`. |
+| Organization | `tags`, `folderId`, `favorite` | Tags are inline strings on the prompt. Folders are referenced by ID. |
+| Lifecycle | `archived`, `archivedAt`, `lastUsedAt` | Delete/archive flows are soft deletes. Use flows update `lastUsedAt`. |
+| Audit and sync | `createdAt`, `updatedAt`, `createdBy`, `version` | Used for ordering, conflict detection, and local-to-Firestore migration. |
+
+Important invariants:
+
+- Components should treat the prompt returned by the repository/store action as the saved source of truth.
+- Local create assigns a new `id`, `createdAt`, `updatedAt`, `createdBy: 'local'`, and `version: 1`.
+- Local update preserves the existing `id`, refreshes `updatedAt`, and increments `version`.
+- Archive and restore preserve the prompt record and toggle `archived` / `archivedAt`.
+- Duplicate creates a new prompt ID, resets `version`, clears archive/use state, and prefixes the title with `Copy of`.
+- `CreatePromptData` currently includes `createdBy` and `version` because it mirrors `IPromptRepository.create()`, but the local repository normalizes those fields on write.
+
+## Prompt State Ownership
+
+There are two intentional in-memory prompt collections:
+
+| Owner | Collection | Purpose |
+|---|---|---|
+| `PromptRepository` | private `prompts` cache | Lazy-loaded persistence cache backed by `IStorageBackend`; filters by workspace when returning data. |
+| `PromptStore` | Zustand `prompts` state | React-facing list for the active workspace; drives library, quick launcher, filters, and rerenders. |
+
+The repository cache is not observable UI state. The store list is not durable storage. A store action calls the repository first, then merges the repository result into Zustand state.
+
+`PromptStore` also owns UI state that does not belong in the repository:
+
+| UI state | Why it belongs in the store |
+|---|---|
+| `isLoading` | Represents async load state for views. |
+| `activeWorkspaceId` | Chooses which workspace list the UI is showing. |
+| `selectedPromptId` | View/editor selection only. |
+| `searchQuery`, `folderFilter`, `favoriteFilter` | Presentation filters over loaded prompts. |
+
+`PromptRepository` owns persistence and record invariants:
+
+| Repository concern | Behavior |
+|---|---|
+| Backend abstraction | Reads/writes through `IStorageBackend` in local/browser mode. |
+| Firestore delegation | Forwards prompt operations to `FirestoreBackend` when synced mode installs a delegate. |
+| Metadata normalization | Creates IDs, timestamps, local creator metadata, and versions in local mode. |
+| Durable mutations | Persists every local create, update, archive, restore, duplicate, and favorite change. |
+| Workspace filtering | `getAll(workspaceId)` and `reloadAll(workspaceId)` return prompts scoped to the requested workspace. |
+
 ## Data Flow
 
 ### Startup
@@ -78,6 +197,18 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 3. `PromptStore` delegates to `PromptRepository`.
 4. `PromptRepository` mutates an in-memory prompt cache and persists through `IStorageBackend`.
 5. The store state updates and the UI rerenders.
+
+```text
+PromptEditor or library UI
+  -> PromptStore action
+  -> PromptRepository method
+  -> LocalStorageBackend or BrowserStorageBackend
+  -> PromptRepository returns saved PromptRecipe
+  -> PromptStore merges result into Zustand state
+  -> React UI rerenders
+```
+
+For archive/delete actions, `PromptRepository.softDelete()` marks the durable prompt as archived, while `PromptStore` removes it from the visible prompt list and clears `selectedPromptId` if needed. Restore calls `PromptRepository.restore()` and reloads the active workspace list.
 
 ### Search and Use
 
@@ -106,6 +237,20 @@ Before adding advanced tag management or optimizing for large synced workspaces,
 7. Conflicts are detected by comparing local and remote prompt versions and stored in `ConflictService`.
 
 `AuthService` bootstraps the default user workspace and owner membership before synced mode starts Firestore prompt listeners.
+
+After sync transition, the component and store APIs do not change. The write path changes inside the repository:
+
+```text
+Component
+  -> PromptStore action
+  -> PromptRepository method
+  -> FirestoreBackend delegate
+  -> Cloud Firestore write
+  -> immediate store update from operation result
+  -> later Firestore snapshot replaces PromptStore.prompts
+```
+
+Firestore snapshots are the authoritative visible list in synced mode. The store may update immediately from a write result, but the listener can replace the list with server-confirmed data, server timestamps, and remote changes from another client.
 
 See [Sync](SYNC.md) for the detailed local-to-synced transition, migration behavior, offline handling, sign-out flow, and current caveats.
 

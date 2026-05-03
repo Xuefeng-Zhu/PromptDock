@@ -132,6 +132,40 @@ describe('usePromptEditorForm', () => {
     });
   });
 
+  it('adds matching existing tags without creating case variants', () => {
+    const onSave = vi.fn();
+    const prompt = makePrompt();
+    const { result } = renderHook(() =>
+      usePromptEditorForm({
+        availableTags: ['Beta'],
+        folders,
+        onSave,
+        prompt,
+        promptId: 'prompt-1',
+      }),
+    );
+
+    act(() => {
+      result.current.setTagInput('beta');
+    });
+
+    act(() => {
+      result.current.handleAddTag();
+    });
+
+    expect(result.current.tags).toEqual(['alpha', 'Beta']);
+
+    act(() => {
+      result.current.setTagInput('BETA');
+    });
+
+    act(() => {
+      result.current.handleAddTag();
+    });
+
+    expect(result.current.tags).toEqual(['alpha', 'Beta']);
+  });
+
   it('renders and resets live preview variable values', () => {
     const onSave = vi.fn();
     const prompt = makePrompt();

@@ -4,6 +4,7 @@ import type { Folder, PromptRecipe } from '../types/index';
 import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
 import { extractVariables } from '../utils/prompt-template';
 import { filterPrompts } from '../utils/library-filtering';
+import { deriveTagFilterOptions } from '../utils/library-filter-options';
 import type { FilterType } from '../utils/prompt-filters';
 
 interface UseLibraryDataOptions {
@@ -97,6 +98,11 @@ export function useLibraryData({
     [prompts],
   );
 
+  const availableTags = useMemo(
+    () => deriveTagFilterOptions(prompts).map((option) => option.value),
+    [prompts],
+  );
+
   const categoryColorMap = useMemo(createCategoryColorMap, []);
 
   const selectedPrompt = useMemo(
@@ -131,6 +137,7 @@ export function useLibraryData({
   );
 
   return {
+    availableTags,
     categoryColorMap,
     derivedFolders,
     filteredPrompts,

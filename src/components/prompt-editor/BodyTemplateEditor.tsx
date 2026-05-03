@@ -1,4 +1,4 @@
-import { Code, Info, Maximize2, Minimize2 } from 'lucide-react';
+import { Code, Copy, Info, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { splitPromptTemplateParts } from '../../utils/prompt-template';
 
@@ -10,6 +10,7 @@ interface BodyTemplateEditorProps {
   showFormattingHelp: boolean;
   wordCount: number;
   onBodyChange: (body: string) => void;
+  onCopyPrompt?: () => void;
   onInsertVariable: () => void;
   onToggleExpanded: () => void;
   onToggleFormattingHelp: () => void;
@@ -56,6 +57,7 @@ export function BodyTemplateEditor({
   showFormattingHelp,
   wordCount,
   onBodyChange,
+  onCopyPrompt,
   onInsertVariable,
   onToggleExpanded,
   onToggleFormattingHelp,
@@ -74,10 +76,18 @@ export function BodyTemplateEditor({
             Use {'{{variable}}'} to insert variables
           </span>
         </div>
-        <Button variant="secondary" size="sm" onClick={onInsertVariable}>
-          <Code className="mr-1.5 h-3.5 w-3.5" />
-          Insert variable
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={onInsertVariable}>
+            <Code className="mr-1.5 h-3.5 w-3.5" />
+            Insert variable
+          </Button>
+          {onCopyPrompt && (
+            <Button variant="secondary" size="sm" onClick={onCopyPrompt}>
+              <Copy className="mr-1.5 h-3.5 w-3.5" />
+              Copy prompt
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden focus-within:border-[var(--color-primary)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20">

@@ -80,6 +80,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   const handleCreateFolder = useCallback((name: string) => {
     const folder = createFolder(name);
     setUserFolders((prev) => [...prev, folder]);
+    return folder;
   }, []);
 
   const handleOnboardingComplete = useCallback((_choice: 'local' | 'sync' | 'signin') => {

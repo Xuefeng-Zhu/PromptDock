@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react';
+import type { Folder } from '../../types/index';
 import { CountedInputField, CountedTextareaField } from './CountedField';
 import { EditorFavoriteField } from './EditorFavoriteField';
 import { EditorFolderField } from './EditorFolderField';
@@ -10,6 +11,7 @@ interface SelectOption {
 }
 
 interface PromptBasicsFieldsProps {
+  availableTags: string[];
   description: string;
   favorite: boolean;
   folderId: string | null;
@@ -17,8 +19,10 @@ interface PromptBasicsFieldsProps {
   onAddTag: () => void;
   onDescriptionChange: (description: string) => void;
   onFavoriteChange: (favorite: boolean) => void;
+  onCreateFolder?: (name: string) => Folder | void;
   onFolderChange: (folderId: string | null) => void;
   onRemoveTag: (tag: string) => void;
+  onSelectTag: (tag: string) => void;
   onShowTagInputChange: (show: boolean) => void;
   onTagInputChange: (value: string) => void;
   onTagKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -30,6 +34,7 @@ interface PromptBasicsFieldsProps {
 }
 
 export function PromptBasicsFields({
+  availableTags,
   description,
   favorite,
   folderId,
@@ -37,8 +42,10 @@ export function PromptBasicsFields({
   onAddTag,
   onDescriptionChange,
   onFavoriteChange,
+  onCreateFolder,
   onFolderChange,
   onRemoveTag,
+  onSelectTag,
   onShowTagInputChange,
   onTagInputChange,
   onTagKeyDown,
@@ -71,8 +78,10 @@ export function PromptBasicsFields({
 
       <div className="mb-8 grid grid-cols-3 gap-6">
         <EditorTagField
+          availableTags={availableTags}
           onAddTag={onAddTag}
           onRemoveTag={onRemoveTag}
+          onSelectTag={onSelectTag}
           onShowTagInputChange={onShowTagInputChange}
           onTagInputChange={onTagInputChange}
           onTagKeyDown={onTagKeyDown}
@@ -84,6 +93,7 @@ export function PromptBasicsFields({
         <EditorFolderField
           folderId={folderId}
           folderOptions={folderOptions}
+          onCreateFolder={onCreateFolder}
           onFolderChange={onFolderChange}
         />
 

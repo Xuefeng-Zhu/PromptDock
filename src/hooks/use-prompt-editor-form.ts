@@ -10,6 +10,7 @@ import { extractVariables } from '../utils/prompt-template';
 import { countChars, countWords } from '../utils/text-counts';
 
 interface UsePromptEditorFormOptions {
+  availableTags?: string[];
   folders: Folder[];
   onDirtyChange?: (isDirty: boolean) => void;
   onSave: (data: Partial<PromptRecipe>) => void | Promise<void>;
@@ -22,7 +23,12 @@ function areTagsEqual(left: string[], right: string[]): boolean {
   return left.every((tag, index) => tag === right[index]);
 }
 
+function normalizeTag(tag: string): string {
+  return tag.trim().toLowerCase();
+}
+
 export function usePromptEditorForm({
+  availableTags = [],
   folders,
   onDirtyChange,
   onSave,
@@ -90,14 +96,31 @@ export function usePromptEditorForm({
 
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
-  const handleAddTag = useCallback(() => {
-    const trimmed = tagInput.trim();
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags((prev) => [...prev, trimmed]);
+  const addTagValue = useCallback((tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed) {
+      const normalizedTag = normalizeTag(trimmed);
+      const existingTag =
+        availableTags.find((candidate) => normalizeTag(candidate) === normalizedTag)?.trim()
+        ?? trimmed;
+
+      setTags((prev) =>
+        prev.some((current) => normalizeTag(current) === normalizeTag(existingTag))
+          ? prev
+          : [...prev, existingTag],
+      );
     }
     setTagInput('');
     setShowTagInput(false);
-  }, [tagInput, tags]);
+  }, [availableTags]);
+
+  const handleAddTag = useCallback(() => {
+    addTagValue(tagInput);
+  }, [addTagValue, tagInput]);
+
+  const handleSelectTag = useCallback((tag: string) => {
+    addTagValue(tag);
+  }, [addTagValue]);
 
   const handleTagKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
@@ -186,6 +209,7 @@ export function usePromptEditorForm({
     handleInsertVariable,
     handleRemoveTag,
     handleResetPreview,
+    handleSelectTag,
     handleTagKeyDown,
     handleVariableValueChange,
     isEditing,

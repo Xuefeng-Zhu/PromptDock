@@ -20,7 +20,6 @@ interface UsePromptCrudActionsOptions {
   createPrompt: PromptStore['createPrompt'];
   deletePrompt: PromptStore['deletePrompt'];
   duplicatePrompt: PromptStore['duplicatePrompt'];
-  editorPrompt?: PromptRecipe;
   mode: AppMode;
   screen: Screen;
   selectedPromptId: string | null;
@@ -40,7 +39,6 @@ export function usePromptCrudActions({
   createPrompt,
   deletePrompt,
   duplicatePrompt,
-  editorPrompt,
   mode,
   screen,
   selectedPromptId,
@@ -178,10 +176,9 @@ export function usePromptCrudActions({
     setScreen({ name: 'library' });
   }, [editorPromptId, handleArchivePrompt, setScreen]);
 
-  const handleEditorCopy = useCallback(() => {
-    if (!editorPromptId || !editorPrompt) return;
-    handleCopyPromptBody(editorPrompt.body, editorPrompt.id);
-  }, [editorPrompt, editorPromptId, handleCopyPromptBody]);
+  const handleEditorCopy = useCallback((body: string) => {
+    handleCopyPromptBody(body, editorPromptId);
+  }, [editorPromptId, handleCopyPromptBody]);
 
   return {
     editorPromptId,

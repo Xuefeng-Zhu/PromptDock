@@ -6,7 +6,7 @@ import type { PromptRecipe } from '../../types/index';
 interface PromptTagsSectionProps {
   availableTags?: string[];
   onEdit?: (id: string) => void;
-  onUpdateTags?: (id: string, tags: string[]) => void;
+  onUpdateTags?: (id: string, updateTags: (tags: string[]) => string[]) => void;
   prompt: PromptRecipe;
 }
 
@@ -69,14 +69,17 @@ export function PromptTagsSection({
       availableTags.find((candidate) => normalizeTag(candidate) === normalized)?.trim()
       ?? trimmed;
 
-    if (!selectedTagKeys.has(normalizeTag(existingTag))) {
-      onUpdateTags?.(prompt.id, [...prompt.tags, existingTag]);
-    }
+    onUpdateTags?.(prompt.id, (currentTags) => {
+      const currentTagKeys = new Set(currentTags.map(normalizeTag));
+      return currentTagKeys.has(normalizeTag(existingTag))
+        ? currentTags
+        : [...currentTags, existingTag];
+    });
     resetTagInput();
   }
 
   function removeTag(tag: string) {
-    onUpdateTags?.(prompt.id, prompt.tags.filter((item) => item !== tag));
+    onUpdateTags?.(prompt.id, (currentTags) => currentTags.filter((item) => item !== tag));
   }
 
   function handleAddButtonClick() {

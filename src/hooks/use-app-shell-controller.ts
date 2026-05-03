@@ -101,6 +101,7 @@ export function useAppShellController({
     deletePrompt,
     duplicatePrompt,
     mode,
+    prompts,
     screen,
     selectedPromptId,
     setEditorHasUnsavedChanges,

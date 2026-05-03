@@ -21,7 +21,7 @@ export interface PromptInspectorProps {
   onDelete?: (id: string) => void;
   onCopyBody?: (body: string, promptId?: string) => void;
   onUpdateFolder?: (id: string, folderId: string | null) => void;
-  onUpdateTags?: (id: string, tags: string[]) => void;
+  onUpdateTags?: (id: string, updateTags: (tags: string[]) => string[]) => void;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────

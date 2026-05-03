@@ -133,7 +133,9 @@ describe('PromptInspector', () => {
       fireEvent.keyDown(tagInput, { key: 'Enter' });
 
       expect(onUpdateTags).toHaveBeenCalledTimes(1);
-      expect(onUpdateTags).toHaveBeenCalledWith(mockPrompt.id, [
+      const updateTags = onUpdateTags.mock.calls[0][1];
+      expect(onUpdateTags.mock.calls[0][0]).toBe(mockPrompt.id);
+      expect(updateTags(mockPrompt.tags)).toEqual([
         ...mockPrompt.tags,
         'new-tag',
       ]);
@@ -153,7 +155,31 @@ describe('PromptInspector', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Remove summarization tag' }));
 
       expect(onUpdateTags).toHaveBeenCalledTimes(1);
-      expect(onUpdateTags).toHaveBeenCalledWith(mockPrompt.id, ['writing']);
+      const updateTags = onUpdateTags.mock.calls[0][1];
+      expect(onUpdateTags.mock.calls[0][0]).toBe(mockPrompt.id);
+      expect(updateTags(mockPrompt.tags)).toEqual(['writing']);
+    });
+
+    it('composes rapid tag updates from the latest tag list', () => {
+      const onUpdateTags = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={[]}
+          onUpdateTags={onUpdateTags}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+      const tagInput = screen.getByLabelText('Add tag');
+      fireEvent.change(tagInput, { target: { value: 'new-tag' } });
+      fireEvent.keyDown(tagInput, { key: 'Enter' });
+      fireEvent.click(screen.getByRole('button', { name: 'Remove summarization tag' }));
+
+      const addTag = onUpdateTags.mock.calls[0][1];
+      const removeTag = onUpdateTags.mock.calls[1][1];
+      expect(removeTag(addTag(mockPrompt.tags))).toEqual(['writing', 'new-tag']);
     });
 
     it('calls onUpdateFolder when a folder is selected inline', () => {

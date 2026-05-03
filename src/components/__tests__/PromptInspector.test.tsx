@@ -35,6 +35,26 @@ describe('PromptInspector', () => {
     expect(screen.getByText('Writing')).toBeDefined();
   });
 
+  it('renders the folder editor above the tags editor', () => {
+    render(
+      <PromptInspector
+        prompt={mockPrompt}
+        folder={mockFolder}
+        folders={MOCK_FOLDERS}
+        variables={[]}
+        onUpdateFolder={vi.fn()}
+        onUpdateTags={vi.fn()}
+      />
+    );
+
+    const folderControl = screen.getByRole('combobox', { name: 'Folder' });
+    const addTagButton = screen.getByRole('button', { name: 'Add tag' });
+
+    expect(folderControl.compareDocumentPosition(addTagButton)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it('renders the prompt body section with Copy button', () => {
     render(
       <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={[]} />

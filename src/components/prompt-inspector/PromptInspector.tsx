@@ -56,18 +56,18 @@ export function PromptInspector({
           onEdit={onEdit}
           onToggleFavorite={onToggleFavorite}
         />
-        <PromptTagsSection
-          availableTags={availableTags}
-          prompt={prompt}
-          onEdit={onEdit}
-          onUpdateTags={onUpdateTags}
-        />
         <PromptMetadataSection
           prompt={prompt}
           folder={folder}
           folders={folders}
           onCreateFolder={onCreateFolder}
           onUpdateFolder={onUpdateFolder}
+        />
+        <PromptTagsSection
+          availableTags={availableTags}
+          prompt={prompt}
+          onEdit={onEdit}
+          onUpdateTags={onUpdateTags}
         />
         <PromptBodySection prompt={prompt} onCopyBody={onCopyBody} />
         <PromptVariablesSection variables={variables} />

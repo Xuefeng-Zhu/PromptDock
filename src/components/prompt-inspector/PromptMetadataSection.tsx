@@ -1,18 +1,44 @@
 import type { Folder, PromptRecipe } from '../../types/index';
 import { formatDate, formatRelativeShort } from '../../utils/date-format';
+import { EditorFolderField } from '../prompt-editor/EditorFolderField';
 
 interface PromptMetadataSectionProps {
   folder?: Folder;
+  folders?: Folder[];
+  onCreateFolder?: (name: string) => Folder | void;
+  onUpdateFolder?: (id: string, folderId: string | null) => void;
   prompt: PromptRecipe;
 }
 
-export function PromptMetadataSection({ folder, prompt }: PromptMetadataSectionProps) {
+export function PromptMetadataSection({
+  folder,
+  folders = [],
+  onCreateFolder,
+  onUpdateFolder,
+  prompt,
+}: PromptMetadataSectionProps) {
+  const folderOptions = [
+    { value: '', label: 'No folder' },
+    ...folders.map((item) => ({ value: item.id, label: item.name })),
+  ];
+
   return (
     <div className="px-5 pb-4 space-y-2.5">
       <MetadataRow label="Last used" value={formatRelativeShort(prompt.lastUsedAt)} />
       <MetadataRow label="Created" value={formatDate(prompt.createdAt)} />
       <MetadataRow label="Updated" value={formatDate(prompt.updatedAt)} />
-      {folder && <MetadataRow label="Folder" value={folder.name} />}
+      {onUpdateFolder ? (
+        <div className="pt-1">
+          <EditorFolderField
+            folderId={prompt.folderId}
+            folderOptions={folderOptions}
+            onCreateFolder={onCreateFolder}
+            onFolderChange={(folderId) => onUpdateFolder(prompt.id, folderId)}
+          />
+        </div>
+      ) : (
+        folder && <MetadataRow label="Folder" value={folder.name} />
+      )}
     </div>
   );
 }

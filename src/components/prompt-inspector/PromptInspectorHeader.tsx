@@ -1,4 +1,4 @@
-import { Archive, Files, FolderInput, Pencil, Star, Trash2 } from 'lucide-react';
+import { Archive, Files, Pencil, Star, Trash2, X } from 'lucide-react';
 import {
   PromptActionsMenu,
   type PromptActionMenuItem,
@@ -7,6 +7,7 @@ import type { PromptRecipe } from '../../types/index';
 
 interface PromptInspectorHeaderProps {
   onArchive?: (id: string) => void;
+  onClose?: () => void;
   onDelete?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onEdit?: (id: string) => void;
@@ -16,6 +17,7 @@ interface PromptInspectorHeaderProps {
 
 export function PromptInspectorHeader({
   onArchive,
+  onClose,
   onDelete,
   onDuplicate,
   onEdit,
@@ -34,12 +36,6 @@ export function PromptInspectorHeader({
       icon: <Files className="h-4 w-4" />,
       label: 'Duplicate',
       onSelect: () => onDuplicate?.(prompt.id),
-    },
-    {
-      type: 'item',
-      icon: <FolderInput className="h-4 w-4" />,
-      label: 'Move to folder',
-      onSelect: () => onEdit?.(prompt.id),
     },
     {
       type: 'item',
@@ -64,6 +60,17 @@ export function PromptInspectorHeader({
           {prompt.title}
         </h2>
         <div className="flex items-center gap-1 shrink-0">
+          {onClose && (
+            <button
+              type="button"
+              className="p-1 rounded-md hover:bg-gray-100 transition-colors text-[var(--color-text-muted)]"
+              aria-label="Close prompt details"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+
           <button
             type="button"
             className="p-1 rounded-md hover:bg-gray-100 transition-colors"

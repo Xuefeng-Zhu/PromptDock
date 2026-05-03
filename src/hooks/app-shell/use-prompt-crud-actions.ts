@@ -149,6 +149,28 @@ export function usePromptCrudActions({
     [setScreen],
   );
 
+  const handleUpdatePromptTags = useCallback(
+    (id: string, tags: string[]) => {
+      updatePrompt(id, { tags })
+        .then(() => trackPromptAction('updated'))
+        .catch((err: unknown) => {
+          addToast(`Failed to update tags: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        });
+    },
+    [addToast, updatePrompt],
+  );
+
+  const handleUpdatePromptFolder = useCallback(
+    (id: string, folderId: string | null) => {
+      updatePrompt(id, { folderId })
+        .then(() => trackPromptAction('updated'))
+        .catch((err: unknown) => {
+          addToast(`Failed to update folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        });
+    },
+    [addToast, updatePrompt],
+  );
+
   const handleCopyPromptBody = useCallback(
     (body: string, promptId?: string) => {
       copyText({ text: body, promptId, source: 'prompt_body' })
@@ -192,5 +214,7 @@ export function usePromptCrudActions({
     handleEditorDuplicate,
     handleEditorSave,
     handleToggleFavorite,
+    handleUpdatePromptFolder,
+    handleUpdatePromptTags,
   };
 }

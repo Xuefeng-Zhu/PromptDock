@@ -19,6 +19,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     authService,
     handleAuthSuccess,
     handleArchivePrompt,
+    handleClosePromptInspector,
     handleCommandPaletteOpen,
     handleConflictBadgeClick,
     handleCopyPromptBody,
@@ -33,6 +34,8 @@ export function AppShellView({ controller }: AppShellViewProps) {
     handleSignOutSuccess,
     handleToggleTheme,
     handleToggleFavorite,
+    handleUpdatePromptFolder,
+    handleUpdatePromptTags,
     libraryData,
     mode,
     screen,
@@ -106,14 +109,20 @@ export function AppShellView({ controller }: AppShellViewProps) {
           <div className="w-80 shrink-0 overflow-y-auto pt-14">
             <PromptInspector
               prompt={libraryData.selectedPrompt}
+              availableTags={libraryData.availableTags}
               folder={libraryData.selectedPromptFolder}
+              folders={libraryData.derivedFolders}
               variables={libraryData.selectedPromptVariables}
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleEditPrompt}
               onDuplicate={handleDuplicatePrompt}
               onArchive={handleArchivePrompt}
+              onClose={handleClosePromptInspector}
               onDelete={handleDeletePrompt}
               onCopyBody={handleCopyPromptBody}
+              onCreateFolder={handleCreateFolder}
+              onUpdateFolder={handleUpdatePromptFolder}
+              onUpdateTags={handleUpdatePromptTags}
             />
           </div>
         )}

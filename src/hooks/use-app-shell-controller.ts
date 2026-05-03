@@ -140,10 +140,6 @@ export function useAppShellController({
     [setSearchQuery],
   );
 
-  const handleClosePromptInspector = useCallback(() => {
-    setSelectedPromptId(null);
-  }, [setSelectedPromptId]);
-
   const handleToggleTheme = useCallback(() => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     updateSettings({ theme: nextTheme }).catch((err: unknown) => {
@@ -164,7 +160,6 @@ export function useAppShellController({
     editorPromptId: promptCrud.editorPromptId,
     handleAuthSuccess: appModeActions.handleAuthSuccess,
     handleArchivePrompt: promptCrud.handleArchivePrompt,
-    handleClosePromptInspector,
     handleCommandPaletteClose: promptLaunchFlow.handleCommandPaletteClose,
     handleCommandPaletteOpen: navigation.handleCommandPaletteOpen,
     handleCommandPaletteSelect: promptLaunchFlow.handleCommandPaletteSelect,

@@ -88,7 +88,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   }, []);
 
   const handleSelectPrompt = useCallback((id: string) => {
-    setSelectedPromptId(id);
+    setSelectedPromptId((currentId) => (currentId === id ? null : id));
   }, []);
 
   const handleFilterChange = useCallback((filter: FilterType) => {

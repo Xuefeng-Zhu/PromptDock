@@ -92,22 +92,6 @@ describe('PromptInspector', () => {
       expect(onCopyBody).toHaveBeenCalledWith(mockPrompt.body, mockPrompt.id);
     });
 
-    it('calls onClose when the close button is clicked', () => {
-      const onClose = vi.fn();
-      render(
-        <PromptInspector
-          prompt={mockPrompt}
-          folder={mockFolder}
-          variables={[]}
-          onClose={onClose}
-        />
-      );
-
-      fireEvent.click(screen.getByRole('button', { name: 'Close prompt details' }));
-
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
     it('calls onUpdateTags with a new tag when a tag is added inline', () => {
       const onUpdateTags = vi.fn();
       render(

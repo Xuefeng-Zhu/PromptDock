@@ -627,7 +627,7 @@ describe('AppShell', () => {
       });
     });
 
-    it('closes the inspector when the close button is clicked', async () => {
+    it('closes the inspector when the selected prompt card is clicked again', async () => {
       await renderOnLibraryScreen();
 
       const selectedCard = screen.getByTestId('prompt-card-prompt-1');
@@ -635,9 +635,10 @@ describe('AppShell', () => {
         fireEvent.click(selectedCard);
       });
 
-      const inspector = screen.getByRole('complementary', { name: 'Prompt details' });
+      expect(screen.getByRole('complementary', { name: 'Prompt details' })).toBeDefined();
+
       await act(async () => {
-        fireEvent.click(within(inspector).getByRole('button', { name: 'Close prompt details' }));
+        fireEvent.click(selectedCard);
       });
 
       expect(screen.queryByRole('complementary', { name: 'Prompt details' })).toBeNull();

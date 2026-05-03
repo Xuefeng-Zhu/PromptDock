@@ -19,7 +19,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
     authService,
     handleAuthSuccess,
     handleArchivePrompt,
-    handleClosePromptInspector,
     handleCommandPaletteOpen,
     handleConflictBadgeClick,
     handleCopyPromptBody,
@@ -117,7 +116,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
               onEdit={handleEditPrompt}
               onDuplicate={handleDuplicatePrompt}
               onArchive={handleArchivePrompt}
-              onClose={handleClosePromptInspector}
               onDelete={handleDeletePrompt}
               onCopyBody={handleCopyPromptBody}
               onCreateFolder={handleCreateFolder}

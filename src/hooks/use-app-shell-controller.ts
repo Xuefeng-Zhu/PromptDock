@@ -100,7 +100,6 @@ export function useAppShellController({
     createPrompt,
     deletePrompt,
     duplicatePrompt,
-    editorPrompt,
     mode,
     screen,
     selectedPromptId,

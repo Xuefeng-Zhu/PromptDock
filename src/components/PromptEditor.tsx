@@ -12,19 +12,23 @@ export { countChars, countWords } from '../utils/text-counts';
 export interface PromptEditorProps {
   promptId?: string;
   prompt?: PromptRecipe;
+  availableTags?: string[];
   folders: Folder[];
+  onCreateFolder?: (name: string) => Folder | void;
   onSave: (data: Partial<PromptRecipe>) => void | Promise<void>;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
   onDuplicate?: () => void;
   onArchive?: () => void;
-  onCopy?: () => void;
+  onCopy?: (body: string) => void;
 }
 
 export function PromptEditor({
   promptId,
   prompt,
+  availableTags = [],
   folders,
+  onCreateFolder,
   onSave,
   onCancel,
   onDirtyChange,
@@ -33,6 +37,7 @@ export function PromptEditor({
   onCopy,
 }: PromptEditorProps) {
   const form = usePromptEditorForm({
+    availableTags,
     folders,
     onDirtyChange,
     onSave,
@@ -50,7 +55,6 @@ export function PromptEditor({
             isSaving={form.isSaving}
             onArchive={onArchive}
             onCancel={onCancel}
-            onCopy={onCopy}
             onDuplicate={onDuplicate}
             onSave={() => void form.savePrompt()}
             promptTitle={prompt?.title}
@@ -66,6 +70,7 @@ export function PromptEditor({
           )}
 
           <PromptBasicsFields
+            availableTags={availableTags}
             description={form.description}
             favorite={form.favorite}
             folderId={form.folderId}
@@ -73,8 +78,10 @@ export function PromptEditor({
             onAddTag={form.handleAddTag}
             onDescriptionChange={form.setDescription}
             onFavoriteChange={form.setFavorite}
+            onCreateFolder={onCreateFolder}
             onFolderChange={form.setFolderId}
             onRemoveTag={form.handleRemoveTag}
+            onSelectTag={form.handleSelectTag}
             onShowTagInputChange={form.setShowTagInput}
             onTagInputChange={form.setTagInput}
             onTagKeyDown={form.handleTagKeyDown}
@@ -93,6 +100,7 @@ export function PromptEditor({
             showFormattingHelp={form.showFormattingHelp}
             wordCount={form.wordCount}
             onBodyChange={form.setBody}
+            onCopyPrompt={onCopy ? () => onCopy(form.body) : undefined}
             onInsertVariable={form.handleInsertVariable}
             onToggleExpanded={() => form.setIsEditorExpanded((prev) => !prev)}
             onToggleFormattingHelp={() => form.setShowFormattingHelp((prev) => !prev)}

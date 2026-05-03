@@ -44,6 +44,83 @@ describe('PromptEditor', () => {
     expect(screen.getByText('Insert variable')).toBeDefined();
   });
 
+  it('quick-adds existing tags from suggestions', () => {
+    render(
+      <PromptEditor
+        {...defaultProps}
+        availableTags={['writing', 'research', 'ops']}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+    expect(screen.getByRole('option', { name: '#writing' })).toBeDefined();
+
+    fireEvent.change(screen.getByLabelText('Add tag'), { target: { value: 'res' } });
+    expect(screen.queryByRole('option', { name: '#writing' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('option', { name: '#research' }));
+    expect(screen.getByRole('button', { name: 'Remove research tag' })).toBeDefined();
+  });
+
+  it('quick-selects existing folders from the folder field', async () => {
+    const onSave = vi.fn();
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Folder' }), {
+      target: { value: 'eng' },
+    });
+    fireEvent.click(screen.getByRole('option', { name: 'Engineering' }));
+
+    expect(screen.getByRole('combobox', { name: 'Folder' }).textContent).toContain('Engineering');
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Ready' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        folderId: 'folder-engineering',
+      }));
+    });
+  });
+
+  it('creates and selects a new folder from the folder field', async () => {
+    const onCreateFolder = vi.fn((name: string) => ({
+      id: 'folder-client-work',
+      name,
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-01'),
+    }));
+    const onSave = vi.fn();
+    render(
+      <PromptEditor
+        {...defaultProps}
+        onCreateFolder={onCreateFolder}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Folder' }), {
+      target: { value: 'Client Work' },
+    });
+    fireEvent.click(screen.getByRole('option', { name: 'Create "Client Work"' }));
+
+    expect(onCreateFolder).toHaveBeenCalledWith('Client Work');
+    expect(screen.getByRole('combobox', { name: 'Folder' }).textContent).toContain('Client Work');
+
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Ready' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        folderId: 'folder-client-work',
+      }));
+    });
+  });
+
   it('opens formatting help when Formatting help is clicked', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.queryByText('Template formatting')).toBeNull();
@@ -66,6 +143,7 @@ describe('PromptEditor', () => {
   it('renders action buttons including Save', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Save')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Save options' })).toBeNull();
   });
 
   it('requires title and body before saving', async () => {
@@ -105,7 +183,7 @@ describe('PromptEditor', () => {
     expect(screen.getByText('Save')).toBeDefined();
   });
 
-  it('shows Duplicate, Archive, Copy buttons when editing', () => {
+  it('shows edit actions and the body copy action when editing', () => {
     render(
       <PromptEditor
         {...defaultProps}
@@ -118,7 +196,7 @@ describe('PromptEditor', () => {
     );
     expect(screen.getByText('Duplicate')).toBeDefined();
     expect(screen.getByText('Archive')).toBeDefined();
-    expect(screen.getByText('Copy')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Copy prompt' })).toBeDefined();
   });
 
   it('shows metadata footer when editing', () => {
@@ -157,7 +235,7 @@ describe('PromptEditor', () => {
       expect(onArchive).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onCopy when Copy button is clicked', () => {
+    it('calls onCopy with the current body when Copy prompt is clicked', () => {
       const onCopy = vi.fn();
       render(
         <PromptEditor
@@ -167,8 +245,11 @@ describe('PromptEditor', () => {
           onCopy={onCopy}
         />,
       );
-      fireEvent.click(screen.getByText('Copy'));
-      expect(onCopy).toHaveBeenCalledTimes(1);
+      fireEvent.change(screen.getByLabelText('Body'), {
+        target: { value: 'Draft body in progress' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
+      expect(onCopy).toHaveBeenCalledWith('Draft body in progress');
     });
 
     it('hides unavailable actions when callbacks are not provided', () => {
@@ -181,7 +262,7 @@ describe('PromptEditor', () => {
       );
       expect(screen.queryByText('Duplicate')).toBeNull();
       expect(screen.queryByText('Archive')).toBeNull();
-      expect(screen.queryByText('Copy')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Copy prompt' })).toBeNull();
     });
   });
 });

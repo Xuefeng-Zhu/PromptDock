@@ -1,9 +1,13 @@
-import type { KeyboardEvent } from 'react';
+import { useId, useMemo, type KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
+import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
+import { TagPill } from '../TagPill';
 
 interface EditorTagFieldProps {
+  availableTags?: string[];
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
+  onSelectTag: (tag: string) => void;
   onShowTagInputChange: (show: boolean) => void;
   onTagInputChange: (value: string) => void;
   onTagKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -12,9 +16,15 @@ interface EditorTagFieldProps {
   tags: string[];
 }
 
+function normalizeTag(tag: string): string {
+  return tag.trim().toLowerCase();
+}
+
 export function EditorTagField({
+  availableTags = [],
   onAddTag,
   onRemoveTag,
+  onSelectTag,
   onShowTagInputChange,
   onTagInputChange,
   onTagKeyDown,
@@ -22,6 +32,59 @@ export function EditorTagField({
   tagInput,
   tags,
 }: EditorTagFieldProps) {
+  const listboxId = useId();
+  const selectedTagKeys = useMemo(
+    () => new Set(tags.map(normalizeTag)),
+    [tags],
+  );
+  const quickTagOptions = useMemo(() => {
+    const query = normalizeTag(tagInput);
+    const seen = new Set<string>();
+
+    return availableTags
+      .map((tag) => tag.trim())
+      .filter((tag) => tag !== '')
+      .filter((tag) => {
+        const key = normalizeTag(tag);
+        if (selectedTagKeys.has(key) || seen.has(key)) return false;
+        seen.add(key);
+        return query === '' || key.includes(query);
+      })
+      .slice(0, 6);
+  }, [availableTags, selectedTagKeys, tagInput]);
+  const {
+    highlightedIndex,
+    moveHighlightedIndex,
+    setHighlightedIndex,
+  } = useHighlightedIndex(quickTagOptions.length, tagInput);
+  const clampedHighlightedIndex = Math.min(highlightedIndex, quickTagOptions.length - 1);
+  const activeOptionId =
+    quickTagOptions.length > 0 ? `${listboxId}-option-${clampedHighlightedIndex}` : undefined;
+
+  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (quickTagOptions.length > 0) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveHighlightedIndex(1);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        moveHighlightedIndex(-1);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        onSelectTag(quickTagOptions[clampedHighlightedIndex]);
+        return;
+      }
+    }
+
+    onTagKeyDown(event);
+  }
+
   return (
     <div>
       <label className="mb-2 block text-sm font-medium text-[var(--color-text-main)]">
@@ -29,28 +92,62 @@ export function EditorTagField({
       </label>
       <div className="flex flex-wrap items-center gap-2">
         {tags.map((tag) => (
-          <button
+          <TagPill
             key={tag}
-            type="button"
-            onClick={() => onRemoveTag(tag)}
-            className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-200 transition-colors"
-            aria-label={`Remove ${tag} tag`}
-          >
-            #{tag}
-          </button>
+            tag={tag}
+            onRemove={() => onRemoveTag(tag)}
+          />
         ))}
         {showTagInput ? (
-          <input
-            type="text"
-            value={tagInput}
-            onChange={(event) => onTagInputChange(event.target.value)}
-            onKeyDown={onTagKeyDown}
-            onBlur={onAddTag}
-            autoFocus
-            placeholder="tag name"
-            className="w-24 rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1 text-xs outline-none focus:border-[var(--color-primary)]"
-            aria-label="Add tag"
-          />
+          <div className="relative w-44">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(event) => onTagInputChange(event.target.value)}
+              onKeyDown={handleInputKeyDown}
+              onBlur={onAddTag}
+              autoFocus
+              placeholder="tag name"
+              className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1 text-xs outline-none focus:border-[var(--color-primary)]"
+              aria-label="Add tag"
+              aria-autocomplete="list"
+              aria-controls={quickTagOptions.length > 0 ? listboxId : undefined}
+              aria-expanded={quickTagOptions.length > 0}
+              aria-haspopup="listbox"
+              aria-activedescendant={activeOptionId}
+              role="combobox"
+            />
+
+            {quickTagOptions.length > 0 && (
+              <div
+                id={listboxId}
+                role="listbox"
+                aria-label="Existing tags"
+                className="absolute left-0 top-full z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-1 shadow-lg"
+              >
+                {quickTagOptions.map((tag, index) => (
+                  <button
+                    key={tag}
+                    id={`${listboxId}-option-${index}`}
+                    type="button"
+                    role="option"
+                    aria-selected={index === clampedHighlightedIndex}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => onSelectTag(tag)}
+                    className={[
+                      'block w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                      index === clampedHighlightedIndex
+                        ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-main)] hover:bg-gray-50',
+                    ].join(' ')}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <button
             type="button"

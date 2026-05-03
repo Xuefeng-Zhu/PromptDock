@@ -25,6 +25,7 @@ export function AppScreenRouter({ controller }: AppScreenRouterProps) {
     handleEditorDuplicate,
     handleEditorSave,
     handleFilterChange,
+    handleCreateFolder,
     handleNewPrompt,
     handleSelectPrompt,
     handleSettingsBack,
@@ -63,13 +64,15 @@ export function AppScreenRouter({ controller }: AppScreenRouterProps) {
         <PromptEditor
           promptId={screen.promptId}
           prompt={editorPrompt}
+          availableTags={libraryData.availableTags}
           folders={libraryData.derivedFolders}
+          onCreateFolder={handleCreateFolder}
           onSave={handleEditorSave}
           onCancel={handleEditorCancel}
           onDirtyChange={setEditorHasUnsavedChanges}
           onDuplicate={editorPromptId ? handleEditorDuplicate : undefined}
           onArchive={editorPromptId ? handleEditorArchive : undefined}
-          onCopy={editorPromptId && editorPrompt ? handleEditorCopy : undefined}
+          onCopy={handleEditorCopy}
         />
       )}
 

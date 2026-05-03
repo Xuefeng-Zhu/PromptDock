@@ -91,5 +91,6 @@ describe('useLibraryData', () => {
     expect(result.current.variableFillVariables).toEqual(['topic']);
     expect(result.current.sidebarFilterCounts.archived).toBe(1);
     expect(result.current.sidebarTagCounts).toEqual({ writing: 1, research: 1 });
+    expect(result.current.availableTags).toEqual(['research', 'writing']);
   });
 });

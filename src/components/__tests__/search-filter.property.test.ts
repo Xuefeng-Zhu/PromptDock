@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { filterPrompts } from '../AppShell';
+import { filterPrompts } from '../app-shell';
 import type { PromptRecipe } from '../../types/index';
 
 /**

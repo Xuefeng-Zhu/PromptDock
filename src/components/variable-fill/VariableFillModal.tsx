@@ -1,9 +1,9 @@
-import { useVariableFill } from '../hooks/use-variable-fill';
-import { VariableFillActions } from './variable-fill/VariableFillActions';
-import { VariableFillHeader } from './variable-fill/VariableFillHeader';
-import { VariableInputList } from './variable-fill/VariableInputList';
-import { VariablePreview } from './variable-fill/VariablePreview';
-import type { PromptRecipe, UserSettings } from '../types/index';
+import { useVariableFill } from '../../hooks/use-variable-fill';
+import { VariableFillActions } from './VariableFillActions';
+import { VariableFillHeader } from './VariableFillHeader';
+import { VariableInputList } from './VariableInputList';
+import { VariablePreview } from './VariablePreview';
+import type { PromptRecipe, UserSettings } from '../../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

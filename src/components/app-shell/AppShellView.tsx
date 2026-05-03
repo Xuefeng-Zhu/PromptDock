@@ -1,9 +1,9 @@
 import type { useAppShellController } from '../../hooks/use-app-shell-controller';
-import { ConflictBadge } from '../../screens/ConflictCenter';
-import { OnboardingScreen } from '../OnboardingScreen';
-import { PromptInspector } from '../PromptInspector';
-import { Sidebar } from '../Sidebar';
-import { TopBar } from '../TopBar';
+import { ConflictBadge } from '../conflicts';
+import { OnboardingScreen } from '../onboarding';
+import { PromptInspector } from '../prompt-inspector';
+import { Sidebar } from '../sidebar';
+import { TopBar } from '../top-bar';
 import { AppOverlays } from './AppOverlays';
 import { AppScreenRouter } from './AppScreenRouter';
 

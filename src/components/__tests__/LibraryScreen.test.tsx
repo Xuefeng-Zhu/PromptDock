@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { LibraryScreen } from '../LibraryScreen';
+import { LibraryScreen } from '../library';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 import type { PromptRecipe } from '../../types/index';
 

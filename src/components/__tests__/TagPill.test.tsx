@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { TagPill } from '../TagPill';
+import { TagPill } from '../ui';
 
 describe('TagPill', () => {
   it('renders the tag name', () => {

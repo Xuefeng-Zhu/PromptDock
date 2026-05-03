@@ -1,13 +1,13 @@
-import type { Folder, PromptRecipe } from '../types/index';
-import { usePromptEditorForm } from '../hooks/use-prompt-editor-form';
-import { BodyTemplateEditor } from './prompt-editor/BodyTemplateEditor';
-import { LivePreviewPanel } from './prompt-editor/LivePreviewPanel';
-import { PromptBasicsFields } from './prompt-editor/PromptBasicsFields';
-import { PromptEditorHeader } from './prompt-editor/PromptEditorHeader';
-import { PromptMetadataFooter } from './prompt-editor/PromptMetadataFooter';
+import type { Folder, PromptRecipe } from '../../types/index';
+import { usePromptEditorForm } from '../../hooks/use-prompt-editor-form';
+import { BodyTemplateEditor } from './BodyTemplateEditor';
+import { LivePreviewPanel } from './LivePreviewPanel';
+import { PromptBasicsFields } from './PromptBasicsFields';
+import { PromptEditorHeader } from './PromptEditorHeader';
+import { PromptMetadataFooter } from './PromptMetadataFooter';
 
-export { extractVariables } from '../utils/prompt-template';
-export { countChars, countWords } from '../utils/text-counts';
+export { extractVariables } from '../../utils/prompt-template';
+export { countChars, countWords } from '../../utils/text-counts';
 
 export interface PromptEditorProps {
   promptId?: string;

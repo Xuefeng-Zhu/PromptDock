@@ -1,12 +1,11 @@
-import { ConflictCenterHeader } from '../components/conflicts/ConflictCenterHeader';
-import { ConflictEmptyState } from '../components/conflicts/ConflictEmptyState';
-import { ConflictList } from '../components/conflicts/ConflictList';
-import { ConflictBadge } from '../components/conflicts/ConflictBadge';
+import {
+  ConflictCenterHeader,
+  ConflictEmptyState,
+  ConflictList,
+} from '../components/conflicts';
 import { useConflictResolution, useConflicts } from '../hooks/use-conflicts';
 import type { ConflictService } from '../services/conflict-service';
 import type { PromptRecipe } from '../types/index';
-
-export { ConflictBadge };
 
 export interface ConflictCenterProps {
   conflictService: ConflictService;

@@ -26,7 +26,7 @@ vi.mock('../../utils/window', () => ({
   hideMainWindow: mockHideMainWindow,
 }));
 
-import { AppShell, filterPrompts } from '../AppShell';
+import { AppShell, filterPrompts } from '../app-shell';
 
 // ─── Test Helpers ──────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-import { VariableFillModal } from '../components/VariableFillModal';
-import { PromptSearchShortcutHints } from '../components/prompt-search/PromptSearchShortcutHints';
+import { PromptSearchShortcutHints } from '../components/prompt-search';
+import { VariableFillModal } from '../components/variable-fill';
 import { QuickLauncherError } from './quick-launcher/QuickLauncherError';
 import { QuickLauncherResults } from './quick-launcher/QuickLauncherResults';
 import { QuickLauncherSearchInput } from './quick-launcher/QuickLauncherSearchInput';

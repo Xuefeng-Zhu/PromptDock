@@ -5,7 +5,7 @@ import {
   type FilterType,
   type PromptFilters,
   type SortFilter,
-} from '../utils/prompt-filters';
+} from '../../utils/prompt-filters';
 
 interface PromptSortDropdownProps {
   activeFilter: FilterType;

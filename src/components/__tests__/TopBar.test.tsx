@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { TopBar } from '../TopBar';
+import { TopBar } from '../top-bar';
 import type { IAuthService } from '../../services/interfaces';
 import type { AuthResult } from '../../types/index';
 

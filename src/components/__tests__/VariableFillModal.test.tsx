@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { VariableFillModal } from '../VariableFillModal';
+import { VariableFillModal } from '../variable-fill';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 
 // Use MOCK_PROMPTS[0] — "Summarize Text" with variables: audience, text, format

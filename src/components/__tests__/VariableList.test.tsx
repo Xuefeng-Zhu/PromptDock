@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { VariableList } from '../VariableList';
+import { VariableList } from '../prompt-variables';
 
 describe('VariableList', () => {
   it('renders variable names wrapped in double braces', () => {

@@ -15,8 +15,8 @@ import type { MigrationChoice } from './services/sync-service';
 import { ConflictService } from './services/conflict-service';
 import { initializeAnalyticsTracking } from './services/analytics-service';
 import { AppModeProvider } from './contexts/AppModeProvider';
-import { AppShell } from './components/AppShell';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppShell } from './components/app-shell';
+import { ErrorBoundary } from './components/shared';
 import { applyTheme } from './utils/theme';
 import { isTauriRuntime } from './utils/runtime';
 

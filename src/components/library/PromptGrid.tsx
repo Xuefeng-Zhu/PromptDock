@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react';
-import type { PromptRecipe } from '../types/index';
-import { PromptCard } from './PromptCard';
-import { EmptyState } from './EmptyState';
+import type { PromptRecipe } from '../../types/index';
+import { PromptCard } from '../prompt-card';
+import { EmptyState } from '../shared';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 

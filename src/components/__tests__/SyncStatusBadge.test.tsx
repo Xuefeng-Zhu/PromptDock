@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { SyncStatusBadge } from '../SyncStatusBadge';
+import { SyncStatusBadge } from '../sync';
 
 describe('SyncStatusBadge', () => {
   it('renders "Local" text for local status', () => {

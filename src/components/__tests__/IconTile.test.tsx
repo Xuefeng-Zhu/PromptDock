@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { IconTile } from '../IconTile';
+import { IconTile } from '../ui';
 
 describe('IconTile', () => {
   it('renders the provided icon', () => {

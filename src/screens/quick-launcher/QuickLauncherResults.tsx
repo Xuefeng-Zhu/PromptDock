@@ -1,5 +1,4 @@
-import { PromptResultTags } from '../../components/prompt-search/PromptResultTags';
-import { PromptSearchEmptyState } from '../../components/prompt-search/PromptSearchEmptyState';
+import { PromptResultTags, PromptSearchEmptyState } from '../../components/prompt-search';
 import type { PromptRecipe } from '../../types/index';
 
 interface QuickLauncherResultsProps {

@@ -17,9 +17,9 @@ import {
   createAppModeStore,
   type AppModeStore,
 } from '../../../stores/app-mode-store';
-import { LibraryScreen } from '../../LibraryScreen';
-import { SettingsScreen } from '../../SettingsScreen';
-import { SyncStatusBar } from '../../SyncStatusBar';
+import { LibraryScreen } from '../../library';
+import { SettingsScreen } from '../../settings';
+import { SyncStatusBar } from '../../sync';
 
 // ─── Mock stores ───────────────────────────────────────────────────────────────
 

@@ -213,24 +213,9 @@ The UI lets the user skip duplicates or overwrite existing prompts.
 
 ## Build and Test Issues
 
-### `npm run build` fails with `Property 'pasted' does not exist on type 'never'`
+### Verification fails
 
-Current known failure:
-
-```text
-src/components/AppShell.tsx(578,24): error TS2339: Property 'pasted' does not exist on type 'never'.
-```
-
-Cause:
-
-- `pasteToActiveApp()` currently returns `Promise<void>`.
-- `AppShell` awaits it and checks `result?.pasted`.
-
-TODO: Align the helper return type and the `AppShell` caller.
-
-### `npm test` has failures
-
-Current known failures are documented in [Testing](TESTING.md). They appear to be a mix of implementation/test drift and one property expectation mismatch around trimmed search queries.
+Current verification status is documented in [Testing](TESTING.md). Start by rerunning the same command locally, then run a targeted test or build step for the failing area.
 
 Run a targeted test while debugging:
 
@@ -244,9 +229,7 @@ Some component tests trigger asynchronous state updates after events. Wrap async
 
 ## Known Limitations
 
-- No checked-in CI workflow.
 - No configured E2E runner for full Tauri behavior.
 - No Rust unit tests for native commands.
 - Sync conflict state is in memory.
 - Folder persistence is not workspace-aware and currently bypasses the repository abstraction.
-- Settings screen contains a product version string (`v1.0.0`) that does not match package/Tauri/Cargo version `0.1.0`.

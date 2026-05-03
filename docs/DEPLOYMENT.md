@@ -4,7 +4,7 @@ PromptDock can be built as a static frontend, packaged as a Tauri desktop app, a
 
 ## Build Prerequisites
 
-- Node.js 18 or newer.
+- Node.js 20.19 or newer. Use the checked-in `.nvmrc` for the recommended local version.
 - npm dependencies installed with `npm install`.
 - Rust stable.
 - Tauri 2 OS prerequisites for the target platform.

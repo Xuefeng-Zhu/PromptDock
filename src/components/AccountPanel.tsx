@@ -105,7 +105,7 @@ export function AccountPanel({
     if (!authService) return undefined;
 
     return authService.onAuthStateChanged(setAuthUser);
-  }, [authService, isSignedIn]);
+  }, [authService, isSignedIn, setAuthUser]);
 
   if (isSignedIn) {
     const initials = getAccountInitials(authUser, userId);

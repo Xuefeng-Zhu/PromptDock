@@ -70,18 +70,18 @@ VITE_USE_EMULATOR=true
 | Icons | Prefer `lucide-react`. |
 | Tests | Co-locate tests in `__tests__/` directories. Use `.property.test.ts` for fast-check invariants and `.integration.test.tsx` for cross-module UI flows. |
 
-There is no lint command configured at the time of writing. Use `npm run build` for TypeScript validation and `npm test` for behavioral coverage.
+Use `npm run lint` for static TypeScript/React guardrails, `npm run build` for TypeScript validation and production bundling, and `npm test` for behavioral coverage.
 
 ## Branching and PR Expectations
 
-No repository CI workflow is currently checked in, so contributors should run verification locally before opening a PR.
+The repository CI workflow runs lint, frontend build, frontend tests, and Rust tests on pull requests and `main` pushes. Contributors should run the same verification locally before opening a PR when practical.
 
 Recommended PR checklist:
 
 - Explain the user-facing change and affected runtime: browser, Tauri, or sync.
 - Add or update tests close to the changed module.
 - Run targeted tests for the changed area.
-- Run `npm test` and `npm run build`, or explicitly call out known failures.
+- Run `npm run lint`, `npm test`, and `npm run build`, or explicitly call out known failures.
 - For UI changes, include screenshots or a short screen recording.
 - For Tauri changes, smoke-test `npm run tauri dev`.
 - For sync changes, test against Firebase emulators when possible.

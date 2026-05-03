@@ -87,6 +87,9 @@ Firebase Analytics:
 |---|---|
 | `package.json` | npm scripts, frontend dependencies, Tauri CLI version. |
 | `package-lock.json` | Locked npm dependency graph. |
+| `.nvmrc` | Recommended Node.js major version for local development and CI. |
+| `rust-toolchain.toml` | Rust stable toolchain selection for Tauri development. |
+| `eslint.config.js` | ESLint flat config for TypeScript, React Hooks, and React refresh rules. |
 | `tsconfig.json` | Strict TypeScript config. |
 | `vite.config.ts` | React/Tailwind Vite config, Tauri-oriented dev server on port 1420. |
 | `vitest.config.ts` | Vitest include patterns, default `node` environment, V8 coverage config. |
@@ -133,6 +136,6 @@ The Rust layer also registers a tray icon and default hotkey in `src-tauri/src/l
 | `package.json` | `0.1.0` |
 | `src-tauri/tauri.conf.json` | `0.1.0` |
 | `src-tauri/Cargo.toml` | `0.1.0` |
-| Settings screen text | `v1.0.0` |
+| Settings screen text | `v0.1.0` |
 
-TODO: Decide the authoritative product version and align the Settings screen with package/Tauri metadata.
+Keep these values aligned when cutting a release.

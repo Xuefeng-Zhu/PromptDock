@@ -17,11 +17,14 @@ The default Vitest environment is `node`. Component tests that need a DOM use pe
 ## Commands
 
 ```bash
+npm run lint
+npm run build
 npm test
 npm run test:watch
 npx vitest run src/services/__tests__/
 npx vitest run src/components/__tests__/AppShell.test.tsx
 npx vitest run --coverage
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 `npm run build` is also an important verification command because it runs `tsc` before Vite builds the frontend.
@@ -57,46 +60,28 @@ Current property tests cover, among other things:
 
 ## Current Verification Status
 
-Last checked during this docs pass:
+Last checked locally:
 
 ```bash
+npm run lint
+npm run build
 npm test
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 Result:
 
-- 59 test files discovered.
-- 52 passed.
-- 5 failed.
+- ESLint passed.
+- Frontend production build passed.
+- 80 Vitest files discovered.
+- 78 passed.
+- 0 failed.
 - 2 skipped.
-- 677 tests total.
-- 669 passed.
-- 6 failed.
+- 775 tests total.
+- 773 passed.
+- 0 failed.
 - 2 skipped.
-
-Known failing tests:
-
-| File | Failing behavior |
-|---|---|
-| `src/components/__tests__/AppShell.test.tsx` | New-prompt save test expects `mockRepo.create` to be called. |
-| `src/components/__tests__/PromptInspector.test.tsx` | Copy callback expectation only includes body, but implementation passes body and prompt ID. |
-| `src/components/__tests__/Sidebar.folder-tag.integration.test.tsx` | Two PromptEditor tag persistence tests do not observe `onSave`. |
-| `src/components/__tests__/search-filter.property.test.ts` | Whitespace-trimmed query counterexample: generated query `"9 "` matches title `"9"` after implementation trimming, while the property checks the untrimmed query. |
-| `src/screens/__tests__/QuickLauncherApp.test.tsx` | Test expects no background services/session restore, but implementation initializes with background services and session restore enabled. |
-
-Build status:
-
-```bash
-npm run build
-```
-
-Current failure:
-
-```text
-src/components/AppShell.tsx(578,24): error TS2339: Property 'pasted' does not exist on type 'never'.
-```
-
-The implementation awaits `pasteToActiveApp(...)`, whose current TypeScript signature returns `Promise<void>`, then checks `result?.pasted`.
+- Rust/Tauri compiled with 0 Rust tests currently present.
 
 ## Recommended Missing Tests
 

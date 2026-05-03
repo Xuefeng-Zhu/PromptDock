@@ -48,12 +48,12 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 
 ## Prerequisites
 
-- Node.js 18 or newer.
+- Node.js 20.19 or newer. The checked-in `.nvmrc` uses Node 24.
 - npm, using the committed `package-lock.json`.
 - Rust stable and the Tauri 2 platform prerequisites for your OS.
 - Optional: Firebase CLI for Auth/Firestore emulators and rules deployment.
 
-Assumption: Node.js 18+ remains the intended minimum because the existing docs and Vite/Tauri setup target it. Add an `engines` field to `package.json` if the project wants package-manager enforcement.
+The package metadata enforces the Node.js minimum through the `engines` field.
 
 ## Local Setup
 
@@ -107,6 +107,7 @@ See [Configuration](docs/CONFIGURATION.md) for examples and config-file details.
 ```bash
 npm run dev          # Vite dev server, browser runtime
 npm run tauri dev    # Tauri desktop dev app
+npm run lint         # ESLint for TypeScript/React guardrails
 npm run build        # TypeScript check plus Vite production build
 npm run preview      # Preview the production frontend build
 npm test             # Run Vitest once
@@ -132,7 +133,7 @@ npx vitest run src/services/__tests__/
 npx vitest run src/components/__tests__/AppShell.test.tsx
 ```
 
-Current verification note: during this docs pass, `npm test` reported 669 passing tests, 6 failing tests, and 2 skipped tests; `npm run build` failed on an existing TypeScript error in `src/components/AppShell.tsx`. Details are tracked in [Testing](docs/TESTING.md).
+Current verification note: `npm run build`, `npm test`, and `cargo test` pass locally. Details are tracked in [Testing](docs/TESTING.md).
 
 ## Deployment
 

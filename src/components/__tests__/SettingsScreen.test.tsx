@@ -115,7 +115,6 @@ vi.mock('../../stores/settings-store', async () => {
   return {
     ...actual,
     useSettingsStore: (selector?: (state: SettingsStore) => unknown) => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const { useStore } = require('zustand');
       return selector ? useStore(testStore, selector) : useStore(testStore);
     },
@@ -129,7 +128,6 @@ vi.mock('../../stores/app-mode-store', async () => {
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },
@@ -143,7 +141,6 @@ vi.mock('../../stores/prompt-store', async () => {
   return {
     ...actual,
     usePromptStore: (selector?: (state: PromptStore) => unknown) => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
       const { useStore } = require('zustand');
       return selector ? useStore(testPromptStore, selector) : useStore(testPromptStore);
     },
@@ -244,7 +241,7 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('Dark')).toBeDefined();
     expect(screen.getByText('System')).toBeDefined();
     expect(screen.getByText('PromptDock')).toBeDefined();
-    expect(screen.getByText('v1.0.0')).toBeDefined();
+    expect(screen.getByText('v0.1.0')).toBeDefined();
   });
 
   it('calls onBack when the Back button is clicked', () => {

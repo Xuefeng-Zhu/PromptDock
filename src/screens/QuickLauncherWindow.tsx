@@ -6,6 +6,9 @@ import { useSettingsStore } from '../stores/settings-store';
 import { usePromptExecution } from '../hooks/use-prompt-execution';
 import { useHighlightedIndex } from '../hooks/use-highlighted-index';
 import { usePromptSearchResults } from '../hooks/use-prompt-search-results';
+import { PromptResultTags } from '../components/prompt-search/PromptResultTags';
+import { PromptSearchEmptyState } from '../components/prompt-search/PromptSearchEmptyState';
+import { PromptSearchShortcutHints } from '../components/prompt-search/PromptSearchShortcutHints';
 import { extractVariables } from '../utils/prompt-template';
 import type { PromptRecipe } from '../types/index';
 
@@ -229,13 +232,11 @@ export function QuickLauncherWindow() {
       {/* Results list */}
       <div className="flex-1 overflow-y-auto" role="listbox" aria-label="Search results">
         {isLoading && prompts.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
-            Loading prompts…
-          </div>
+          <PromptSearchEmptyState variant="launcher">Loading prompts…</PromptSearchEmptyState>
         ) : results.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+          <PromptSearchEmptyState variant="launcher">
             {query.trim() ? 'No prompts found.' : 'Start typing to search…'}
-          </div>
+          </PromptSearchEmptyState>
         ) : (
           results.map((prompt, index) => (
             <button
@@ -266,39 +267,13 @@ export function QuickLauncherWindow() {
                   {prompt.description}
                 </p>
               )}
-              {prompt.tags.length > 0 && (
-                <div className="mt-1 flex gap-1">
-                  {prompt.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {prompt.tags.length > 3 && (
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                      +{prompt.tags.length - 3}
-                    </span>
-                  )}
-                </div>
-              )}
+              <PromptResultTags tags={prompt.tags} variant="launcher" />
             </button>
           ))
         )}
       </div>
 
-      {/* Footer hint */}
-      <div className="border-t border-gray-200 px-4 py-1.5 dark:border-gray-700">
-        <p className="text-[10px] text-gray-400 dark:text-gray-500">
-          <kbd className="rounded border border-gray-300 px-1 dark:border-gray-600">↑↓</kbd>{' '}
-          navigate{' '}
-          <kbd className="rounded border border-gray-300 px-1 dark:border-gray-600">Enter</kbd>{' '}
-          select{' '}
-          <kbd className="rounded border border-gray-300 px-1 dark:border-gray-600">Esc</kbd>{' '}
-          close
-        </p>
-      </div>
+      <PromptSearchShortcutHints variant="launcher" />
     </div>
   );
 }

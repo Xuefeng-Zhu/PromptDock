@@ -3,6 +3,9 @@ import { Search } from 'lucide-react';
 import type { PromptRecipe } from '../types/index';
 import type { SearchOptions } from '../services/search-engine';
 import { useHighlightedIndex } from '../hooks/use-highlighted-index';
+import { PromptResultTags } from './prompt-search/PromptResultTags';
+import { PromptSearchEmptyState } from './prompt-search/PromptSearchEmptyState';
+import { PromptSearchShortcutHints } from './prompt-search/PromptSearchShortcutHints';
 import {
   searchPromptResults,
   usePromptSearchResults,
@@ -202,12 +205,7 @@ export function CommandPalette({
           className="max-h-72 overflow-y-auto py-1"
         >
           {filtered.length === 0 ? (
-            <li
-              className="px-4 py-6 text-center text-sm"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              No prompts found
-            </li>
+            <PromptSearchEmptyState variant="palette">No prompts found</PromptSearchEmptyState>
           ) : (
             filtered.map((prompt, index) => (
               <li
@@ -235,48 +233,13 @@ export function CommandPalette({
                 >
                   {prompt.description}
                 </span>
-                {prompt.tags.length > 0 && (
-                  <div className="mt-0.5 flex flex-wrap gap-1">
-                    {prompt.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full px-1.5 py-0.5 text-[10px]"
-                        style={{
-                          backgroundColor: 'var(--color-primary-light)',
-                          color: 'var(--color-text-muted)',
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <PromptResultTags tags={prompt.tags} variant="palette" />
               </li>
             ))
           )}
         </ul>
 
-        {/* Keyboard shortcut hints */}
-        <div
-          className="flex items-center gap-4 border-t px-4 py-2 text-xs"
-          style={{
-            borderColor: 'var(--color-border)',
-            color: 'var(--color-text-muted)',
-          }}
-        >
-          <span className="flex items-center gap-1">
-            <kbd className="rounded border px-1 py-0.5 text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}>↑↓</kbd>
-            navigate
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="rounded border px-1 py-0.5 text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}>Enter</kbd>
-            select
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="rounded border px-1 py-0.5 text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}>Esc</kbd>
-            close
-          </span>
-        </div>
+        <PromptSearchShortcutHints variant="palette" />
       </dialog>
     </div>
   );

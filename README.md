@@ -60,7 +60,7 @@ The package metadata enforces the Node.js minimum through the `engines` field.
 ```bash
 git clone <repository-url>
 cd PromptDock
-npm ci
+npm install
 cp .env.example .env.local
 ```
 

@@ -5,7 +5,7 @@ This guide is for contributors working on PromptDock locally.
 ## First-Time Setup
 
 ```bash
-npm ci
+npm install
 cp .env.example .env.local
 ```
 

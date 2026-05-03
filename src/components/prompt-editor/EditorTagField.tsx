@@ -1,7 +1,7 @@
 import { useId, useMemo, type KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
-import { TagPill } from '../TagPill';
+import { TagPill } from '../ui';
 
 interface EditorTagFieldProps {
   availableTags?: string[];

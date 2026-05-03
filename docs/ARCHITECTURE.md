@@ -310,7 +310,6 @@ Stores follow a factory plus singleton pattern:
 - Active workspace state is split across settings, prompt store, and sync assumptions.
 - User-created folder persistence currently uses a localStorage utility outside the repository abstraction.
 - Tags are derived from prompt arrays instead of a canonical tag index, which limits scalability and tag metadata workflows.
-- No CI workflow is present in the repository.
 - No E2E test runner is configured for full Tauri window/hotkey/paste flows.
 
 See [Deferred Issues](Issues.md), [Testing](TESTING.md), and [Troubleshooting](TROUBLESHOOTING.md).

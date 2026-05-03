@@ -10,6 +10,9 @@ pub struct CurrentHotkey(pub Mutex<Option<String>>);
 #[derive(Default)]
 pub struct LastActiveApp(pub Mutex<Option<isize>>);
 
+#[cfg(any(not(target_os = "macos"), test))]
+const PASTE_WINDOW_LABELS: [&str; 2] = ["quick-launcher", "main"];
+
 // ---------------------------------------------------------------------------
 // Clipboard & Paste Commands
 // ---------------------------------------------------------------------------
@@ -89,11 +92,7 @@ pub fn register_hotkey<R: Runtime>(
         return unregister_hotkey(app, current_hotkey);
     }
 
-    let existing = current_hotkey
-        .0
-        .lock()
-        .map_err(|_| "Failed to access current hotkey state".to_string())?
-        .clone();
+    let existing = read_current_hotkey(&current_hotkey)?;
 
     if existing.as_deref() == Some(shortcut.as_str()) {
         return Ok(());
@@ -119,10 +118,7 @@ pub fn register_hotkey<R: Runtime>(
         }
     }
 
-    *current_hotkey
-        .0
-        .lock()
-        .map_err(|_| "Failed to update current hotkey state".to_string())? = Some(shortcut);
+    write_current_hotkey(&current_hotkey, Some(shortcut))?;
 
     Ok(())
 }
@@ -133,11 +129,7 @@ pub fn unregister_hotkey<R: Runtime>(
     app: AppHandle<R>,
     current_hotkey: State<'_, CurrentHotkey>,
 ) -> Result<(), String> {
-    let existing = current_hotkey
-        .0
-        .lock()
-        .map_err(|_| "Failed to access current hotkey state".to_string())?
-        .clone();
+    let existing = read_current_hotkey(&current_hotkey)?;
 
     let gs = app.global_shortcut();
     if let Some(shortcut) = existing {
@@ -148,10 +140,7 @@ pub fn unregister_hotkey<R: Runtime>(
             .map_err(|e| format!("Failed to unregister hotkey: {e}"))?;
     }
 
-    *current_hotkey
-        .0
-        .lock()
-        .map_err(|_| "Failed to update current hotkey state".to_string())? = None;
+    write_current_hotkey(&current_hotkey, None)?;
 
     Ok(())
 }
@@ -404,6 +393,26 @@ fn format_paste_error<E: std::fmt::Display>(error: E) -> String {
     }
 }
 
+fn read_current_hotkey(current_hotkey: &CurrentHotkey) -> Result<Option<String>, String> {
+    current_hotkey
+        .0
+        .lock()
+        .map_err(|_| "Failed to access current hotkey state".to_string())
+        .map(|hotkey| hotkey.clone())
+}
+
+fn write_current_hotkey(
+    current_hotkey: &CurrentHotkey,
+    shortcut: Option<String>,
+) -> Result<(), String> {
+    *current_hotkey
+        .0
+        .lock()
+        .map_err(|_| "Failed to update current hotkey state".to_string())? = shortcut;
+
+    Ok(())
+}
+
 #[cfg(target_os = "macos")]
 fn hide_promptdock_for_paste<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     app.hide()
@@ -412,7 +421,7 @@ fn hide_promptdock_for_paste<R: Runtime>(app: &AppHandle<R>) -> Result<(), Strin
 
 #[cfg(not(target_os = "macos"))]
 fn hide_promptdock_for_paste<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
-    for label in ["quick-launcher", "main"] {
+    for label in PASTE_WINDOW_LABELS {
         if let Some(window) = app.get_webview_window(label) {
             if window.is_visible().unwrap_or(false) {
                 window
@@ -434,4 +443,56 @@ fn show_promptdock<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
 #[cfg(not(target_os = "macos"))]
 fn show_promptdock<R: Runtime>(_app: &AppHandle<R>) -> Result<(), String> {
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hotkey_state_round_trips_registered_shortcut() {
+        let current_hotkey = CurrentHotkey::default();
+
+        write_current_hotkey(
+            &current_hotkey,
+            Some("CommandOrControl+Shift+P".to_string()),
+        )
+        .expect("hotkey should be stored");
+
+        assert_eq!(
+            read_current_hotkey(&current_hotkey).expect("hotkey should be readable"),
+            Some("CommandOrControl+Shift+P".to_string()),
+        );
+    }
+
+    #[test]
+    fn hotkey_state_clears_registered_shortcut() {
+        let current_hotkey =
+            CurrentHotkey(Mutex::new(Some("CommandOrControl+Shift+P".to_string())));
+
+        write_current_hotkey(&current_hotkey, None).expect("hotkey should clear");
+
+        assert_eq!(
+            read_current_hotkey(&current_hotkey).expect("hotkey should be readable"),
+            None,
+        );
+    }
+
+    #[test]
+    fn paste_error_message_keeps_native_error_detail() {
+        let message = format_paste_error("keyboard driver refused input");
+
+        assert!(message.contains("Paste failed: keyboard driver refused input"));
+
+        #[cfg(target_os = "macos")]
+        assert!(message.contains("Privacy & Security > Accessibility"));
+
+        #[cfg(target_os = "windows")]
+        assert!(message.contains("allowed to send simulated keyboard input"));
+    }
+
+    #[test]
+    fn paste_hides_launcher_before_main_window() {
+        assert_eq!(PASTE_WINDOW_LABELS, ["quick-launcher", "main"]);
+    }
 }

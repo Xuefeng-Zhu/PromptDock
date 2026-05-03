@@ -81,11 +81,11 @@ Result:
 - 773 passed.
 - 0 failed.
 - 0 skipped.
-- Rust/Tauri compiled with 0 Rust tests currently present.
+- Rust/Tauri compiled with 4 Rust unit tests currently present.
 
 ## Recommended Missing Tests
 
-- Rust/Tauri command tests for clipboard, paste simulation, hotkey registration, and window toggling.
+- Higher-level Tauri integration tests for clipboard commands, real hotkey registration, window toggling, and paste simulation.
 - End-to-end tests for the real Tauri desktop app, including quick launcher focus, hide/show behavior, and paste into an active target.
 - Firebase emulator integration tests that create a user, bootstrap a workspace, write prompts, and verify rules.
 - Firestore security rules tests.

@@ -14,9 +14,10 @@ import {
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { useAuthForm } from '../hooks/use-auth-form';
 import { useAppModeStore } from '../stores/app-mode-store';
-import { authErrorMessage } from '../utils/auth-error-message';
 import type { IAuthService } from '../services/interfaces';
+import type { AuthUser } from '../types/index';
 
 // ─── Onboarding persistence ────────────────────────────────────────────────────
 
@@ -135,27 +136,36 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
   const setMode = useAppModeStore((s) => s.setMode);
   const setUserId = useAppModeStore((s) => s.setUserId);
 
-  // Sign-in form state
   const [showSignInForm, setShowSignInForm] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncSubmitting, setIsSyncSubmitting] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  const completeAuth = useCallback(
-    (result: Awaited<ReturnType<IAuthService['signIn']>>) => {
-      if (result.success) {
-        setUserId(result.user.uid);
-        setMode('synced');
-        markOnboardingComplete();
-        onComplete('signin');
-      } else {
-        setAuthError(authErrorMessage(result.error));
-      }
+  const handleAuthSuccess = useCallback(
+    (user: AuthUser) => {
+      setUserId(user.uid);
+      setMode('synced');
+      markOnboardingComplete();
+      onComplete('signin');
     },
     [setMode, setUserId, onComplete],
   );
+
+  const {
+    authError,
+    clearAuthError,
+    email,
+    handleEmailAuthSubmit,
+    handleGoogleSignIn,
+    isSubmitting: isAuthSubmitting,
+    password,
+    setEmail,
+    setPassword,
+  } = useAuthForm({
+    authService,
+    onAuthSuccess: handleAuthSuccess,
+  });
+
+  const isSubmitting = isAuthSubmitting || isSyncSubmitting;
 
   // ── "Start locally" handler (Task 6.1) ─────────────────────────────────────
   const handleStartLocally = useCallback(() => {
@@ -167,42 +177,13 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
   // ── "Sign in" button handler (Task 6.2) ────────────────────────────────────
   const handleSignInClick = useCallback(() => {
     setShowSignInForm(true);
-    setAuthError(null);
-  }, []);
-
-  // ── Sign-in form submission (Task 6.2) ─────────────────────────────────────
-  const handleSignInSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!authService) return;
-      setAuthError(null);
-      setIsSubmitting(true);
-      try {
-        const result = await authService.signIn(email, password);
-        completeAuth(result);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [authService, completeAuth, email, password],
-  );
-
-  const handleGoogleSignIn = useCallback(async () => {
-    if (!authService) return;
-    setAuthError(null);
-    setIsSubmitting(true);
-    try {
-      const result = await authService.signInWithGoogle();
-      completeAuth(result);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [authService, completeAuth]);
+    clearAuthError();
+  }, [clearAuthError]);
 
   // ── "Enable sync" handler (Task 6.3) ───────────────────────────────────────
   const handleEnableSync = useCallback(async () => {
     setSyncError(null);
-    setIsSubmitting(true);
+    setIsSyncSubmitting(true);
     try {
       if (syncService) {
         const guestUserId = `guest-${Date.now()}`;
@@ -220,7 +201,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
         `Failed to enable sync: ${err instanceof Error ? err.message : String(err)}`,
       );
     } finally {
-      setIsSubmitting(false);
+      setIsSyncSubmitting(false);
     }
   }, [syncService, setMode, setUserId, onComplete]);
 
@@ -301,7 +282,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
             <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-main)]">
               Sign in to your account
             </h3>
-            <form onSubmit={handleSignInSubmit} className="space-y-3">
+            <form onSubmit={handleEmailAuthSubmit} className="space-y-3">
               <div>
                 <label
                   htmlFor="onboarding-email"
@@ -359,7 +340,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
                   size="sm"
                   onClick={() => {
                     setShowSignInForm(false);
-                    setAuthError(null);
+                    clearAuthError();
                   }}
                 >
                   Cancel

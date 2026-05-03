@@ -1,12 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect } from 'react';
 import { BadgeCheck, Chrome, LogOut } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { authErrorMessage } from '../utils/auth-error-message';
+import { useAuthForm } from '../hooks/use-auth-form';
 import type { IAuthService } from '../services/interfaces';
 import type { AppMode, AuthUser, SyncStatus } from '../types/index';
 
-type AuthFormMode = 'sign-in' | 'sign-up';
 type AccountPanelVariant = 'card' | 'popover';
 
 export interface AccountPanelProps {
@@ -74,12 +73,25 @@ export function AccountPanel({
   onAuthSuccess,
   onSignOutSuccess,
 }: AccountPanelProps) {
-  const [authFormMode, setAuthFormMode] = useState<AuthFormMode>('sign-in');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    authError,
+    authFormMode,
+    authUser,
+    email,
+    handleEmailAuthSubmit,
+    handleGoogleSignIn,
+    handleSignOut,
+    isSubmitting,
+    password,
+    selectAuthFormMode,
+    setAuthUser,
+    setEmail,
+    setPassword,
+  } = useAuthForm({
+    authService,
+    onAuthSuccess,
+    onSignOutSuccess,
+  });
 
   const isSignedIn = mode !== 'local' && Boolean(userId);
   const isPopover = variant === 'popover';
@@ -94,72 +106,6 @@ export function AccountPanel({
 
     return authService.onAuthStateChanged(setAuthUser);
   }, [authService, isSignedIn]);
-
-  function completeAuth(result: Awaited<ReturnType<IAuthService['signIn']>>) {
-    if (result.success) {
-      setAuthUser(result.user);
-      setEmail('');
-      setPassword('');
-      setAuthError(null);
-      onAuthSuccess(result.user);
-    } else {
-      setAuthError(authErrorMessage(result.error));
-    }
-  }
-
-  async function handleEmailAuthSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!authService) {
-      setAuthError('Cloud sign-in is unavailable in this build.');
-      return;
-    }
-
-    setAuthError(null);
-    setIsSubmitting(true);
-    try {
-      const result = authFormMode === 'sign-in'
-        ? await authService.signIn(email, password)
-        : await authService.signUp(email, password);
-      completeAuth(result);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    if (!authService) {
-      setAuthError('Cloud sign-in is unavailable in this build.');
-      return;
-    }
-
-    setAuthError(null);
-    setIsSubmitting(true);
-    try {
-      const result = await authService.signInWithGoogle();
-      completeAuth(result);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleSignOut() {
-    if (!authService) {
-      setAuthError('Cloud sign-out is unavailable in this build.');
-      return;
-    }
-
-    setAuthError(null);
-    setIsSubmitting(true);
-    try {
-      await authService.signOut();
-      setAuthUser(null);
-      onSignOutSuccess();
-    } catch (err) {
-      setAuthError(`Failed to sign out: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   if (isSignedIn) {
     const initials = getAccountInitials(authUser, userId);
@@ -252,8 +198,7 @@ export function AccountPanel({
         <button
           type="button"
           onClick={() => {
-            setAuthFormMode('sign-in');
-            setAuthError(null);
+            selectAuthFormMode('sign-in');
           }}
           className={[
             'rounded-md px-3 py-1.5 font-medium transition-colors',
@@ -268,8 +213,7 @@ export function AccountPanel({
         <button
           type="button"
           onClick={() => {
-            setAuthFormMode('sign-up');
-            setAuthError(null);
+            selectAuthFormMode('sign-up');
           }}
           className={[
             'rounded-md px-3 py-1.5 font-medium transition-colors',

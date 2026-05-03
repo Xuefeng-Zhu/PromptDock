@@ -191,11 +191,14 @@ firebase emulators:start # Auth (9099), Firestore (8080), UI (4000)
 - **Environment**: Tests default to `node`; component tests use `// @vitest-environment jsdom` directive
 - **Mocking**: Zustand stores are mocked via `vi.mock()` with test-scoped store instances
 - **DOM**: `@testing-library/react` for component rendering and interaction
+- **Extracted hooks/helpers**: When moving logic out of a component into `src/hooks/` or `src/utils/`, add focused tests in `src/hooks/__tests__/` or `src/utils/__tests__/` that cover the moved behavior. Keep component tests for user-facing contracts, but do not rely on component tests alone for reusable hook or helper logic.
 
 ### Running specific tests
 
 ```bash
 npx vitest run src/components/__tests__/AppShell     # AppShell tests
+npx vitest run src/hooks/__tests__/                  # All hook tests
+npx vitest run src/utils/__tests__/                  # All utility tests
 npx vitest run src/services/__tests__/               # All service tests
 npx vitest run --grep "Property"                     # All property-based tests
 ```

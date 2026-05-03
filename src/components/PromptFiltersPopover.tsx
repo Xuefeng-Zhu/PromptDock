@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ListFilter, Search, X } from 'lucide-react';
 import {
-  countActivePromptFilters,
-  createDefaultPromptFilters,
-  normalizePromptFilters,
   type FilterType,
   type FolderFilter,
-  type LastUsedFilter,
-  type PromptFilters,
-  type StatusFilter,
   type TagFilter,
 } from '../utils/prompt-filters';
+import {
+  LAST_USED_OPTIONS,
+  STATUS_OPTIONS,
+  toggleFilterValue,
+} from '../utils/prompt-filter-chips';
+import { usePromptFilterPopover } from '../hooks/use-prompt-filter-popover';
 import { Button } from './ui/Button';
 import {
   SearchableMultiSelect,
@@ -24,204 +23,29 @@ interface PromptFiltersPopoverProps {
   tagOptions: Array<SearchableMultiSelectOption<TagFilter>>;
 }
 
-const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
-  { label: 'Favorites only', value: 'favorites' },
-  { label: 'Recent', value: 'recent' },
-  { label: 'Archived', value: 'archived' },
-  { label: 'Has variables', value: 'hasVariables' },
-];
-
-const LAST_USED_OPTIONS: Array<{ label: string; value: LastUsedFilter }> = [
-  { label: 'Any time', value: 'any' },
-  { label: 'Today', value: 'today' },
-  { label: 'Last 7 days', value: 'last7Days' },
-  { label: 'Last 30 days', value: 'last30Days' },
-];
-
-const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((option) => [option.value, option.label])) as Record<StatusFilter, string>;
-const LAST_USED_LABELS = Object.fromEntries(LAST_USED_OPTIONS.map((option) => [option.value, option.label])) as Record<LastUsedFilter, string>;
-
-type ActiveFilterChip =
-  | { id: string; label: string; kind: 'query' }
-  | { id: string; label: string; kind: 'status'; value: StatusFilter }
-  | { id: string; label: string; kind: 'folder'; value: FolderFilter }
-  | { id: string; label: string; kind: 'tag'; value: TagFilter }
-  | { id: string; label: string; kind: 'lastUsed' };
-
-function toggleFilterValue<T extends string>(values: T[], value: T): T[] {
-  return values.includes(value)
-    ? values.filter((item) => item !== value)
-    : [...values, value];
-}
-
-function fallbackFilterLabel(value: string): string {
-  const cleaned = value
-    .replace(/^folder-/, '')
-    .replace(/[-_]+/g, ' ')
-    .trim();
-
-  if (cleaned === '') return value;
-
-  return cleaned.replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function getActiveFilterChips(
-  filters: PromptFilters,
-  folderLabels: Record<string, string>,
-  tagLabels: Record<string, string>,
-): ActiveFilterChip[] {
-  const chips: ActiveFilterChip[] = [];
-
-  if (filters.query.trim() !== '') {
-    chips.push({
-      id: 'query',
-      label: `Search: ${filters.query.trim()}`,
-      kind: 'query',
-    });
-  }
-
-  for (const status of filters.statuses) {
-    chips.push({
-      id: `status-${status}`,
-      label: `Status: ${STATUS_LABELS[status]}`,
-      kind: 'status',
-      value: status,
-    });
-  }
-
-  for (const folder of filters.folders) {
-    chips.push({
-      id: `folder-${folder}`,
-      label: `Folder: ${folderLabels[folder] ?? fallbackFilterLabel(folder)}`,
-      kind: 'folder',
-      value: folder,
-    });
-  }
-
-  for (const tag of filters.tags) {
-    chips.push({
-      id: `tag-${tag}`,
-      label: `#${(tagLabels[tag] ?? tag).toLowerCase()}`,
-      kind: 'tag',
-      value: tag,
-    });
-  }
-
-  if (filters.lastUsed !== 'any') {
-    chips.push({
-      id: 'last-used',
-      label: `Last used: ${LAST_USED_LABELS[filters.lastUsed]}`,
-      kind: 'lastUsed',
-    });
-  }
-
-  return chips;
-}
-
 export function PromptFiltersPopover({
   activeFilter,
   onFilterChange,
   folderOptions,
   tagOptions,
 }: PromptFiltersPopoverProps) {
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
-  const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
-  const [draftFilters, setDraftFilters] = useState<PromptFilters>(() => appliedFilters);
-  const filterPopoverRef = useRef<HTMLDivElement>(null);
-  const activeFilterCount = countActivePromptFilters(appliedFilters);
-  const folderLabels = useMemo(
-    () => Object.fromEntries(folderOptions.map((option) => [option.value, option.label])),
-    [folderOptions],
-  );
-  const tagLabels = useMemo(
-    () => Object.fromEntries(tagOptions.map((option) => [option.value, option.label])),
-    [tagOptions],
-  );
-  const draftFilterChips = useMemo(
-    () => getActiveFilterChips(draftFilters, folderLabels, tagLabels),
-    [draftFilters, folderLabels, tagLabels],
-  );
-
-  useEffect(() => {
-    if (!filterPopoverOpen) {
-      setDraftFilters(appliedFilters);
-    }
-  }, [appliedFilters, filterPopoverOpen]);
-
-  useEffect(() => {
-    if (!filterPopoverOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (filterPopoverRef.current && !filterPopoverRef.current.contains(event.target as Node)) {
-        setFilterPopoverOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setFilterPopoverOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [filterPopoverOpen]);
-
-  function handleFilterButtonClick() {
-    setDraftFilters(appliedFilters);
-    setFilterPopoverOpen((open) => !open);
-  }
-
-  function updateDraftFilters(nextFilters: Partial<PromptFilters>) {
-    setDraftFilters((current) => ({
-      ...current,
-      ...nextFilters,
-    }));
-  }
-
-  function resetDraftFilters() {
-    setDraftFilters(createDefaultPromptFilters());
-  }
-
-  function removeFilterChip(chip: ActiveFilterChip) {
-    setDraftFilters((current) => {
-      if (chip.kind === 'query') {
-        return { ...current, query: '' };
-      }
-
-      if (chip.kind === 'lastUsed') {
-        return { ...current, lastUsed: 'any' };
-      }
-
-      if (chip.kind === 'status') {
-        return {
-          ...current,
-          statuses: current.statuses.filter((status) => status !== chip.value),
-        };
-      }
-
-      if (chip.kind === 'folder') {
-        return {
-          ...current,
-          folders: current.folders.filter((folder) => folder !== chip.value),
-        };
-      }
-
-      return {
-        ...current,
-        tags: current.tags.filter((tag) => tag !== chip.value),
-      };
-    });
-  }
-
-  function applyDraftFilters() {
-    onFilterChange(draftFilters);
-    setFilterPopoverOpen(false);
-  }
+  const {
+    activeFilterCount,
+    applyDraftFilters,
+    draftFilterChips,
+    draftFilters,
+    filterPopoverOpen,
+    filterPopoverRef,
+    handleFilterButtonClick,
+    removeFilterChip,
+    resetDraftFilters,
+    updateDraftFilters,
+  } = usePromptFilterPopover({
+    activeFilter,
+    folderOptions,
+    onFilterChange,
+    tagOptions,
+  });
 
   return (
     <div className="relative" ref={filterPopoverRef}>

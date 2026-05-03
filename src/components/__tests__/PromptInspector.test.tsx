@@ -35,7 +35,7 @@ describe('PromptInspector', () => {
     expect(screen.getByText('Writing')).toBeDefined();
   });
 
-  it('renders the folder editor above the tags editor', () => {
+  it('renders folder and tags editors above date metadata', () => {
     render(
       <PromptInspector
         prompt={mockPrompt}
@@ -49,8 +49,12 @@ describe('PromptInspector', () => {
 
     const folderControl = screen.getByRole('combobox', { name: 'Folder' });
     const addTagButton = screen.getByRole('button', { name: 'Add tag' });
+    const lastUsedLabel = screen.getByText('Last used');
 
     expect(folderControl.compareDocumentPosition(addTagButton)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(addTagButton.compareDocumentPosition(lastUsedLabel)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
   });

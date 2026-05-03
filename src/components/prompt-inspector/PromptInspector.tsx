@@ -1,7 +1,7 @@
 import type { PromptRecipe, Folder } from '../../types/index';
 import { PromptBodySection } from './PromptBodySection';
 import { PromptInspectorHeader } from './PromptInspectorHeader';
-import { PromptMetadataSection } from './PromptMetadataSection';
+import { PromptFolderSection, PromptMetadataSection } from './PromptMetadataSection';
 import { PromptTagsSection } from './PromptTagsSection';
 import { PromptVariablesSection } from './PromptVariablesSection';
 
@@ -56,7 +56,7 @@ export function PromptInspector({
           onEdit={onEdit}
           onToggleFavorite={onToggleFavorite}
         />
-        <PromptMetadataSection
+        <PromptFolderSection
           prompt={prompt}
           folder={folder}
           folders={folders}
@@ -69,6 +69,7 @@ export function PromptInspector({
           onEdit={onEdit}
           onUpdateTags={onUpdateTags}
         />
+        <PromptMetadataSection prompt={prompt} />
         <PromptBodySection prompt={prompt} onCopyBody={onCopyBody} />
         <PromptVariablesSection variables={variables} />
       </div>

@@ -166,6 +166,11 @@ Required GitHub Actions secrets:
 | `APPLE_PASSWORD` | App-specific password for the Apple ID. |
 | `APPLE_TEAM_ID` | Apple Developer Team ID. |
 
+If these secrets are not configured, the macOS release workflow skips the DMG
+build instead of failing the release run. After configuring the secrets, rerun
+the macOS release workflow manually with the target release tag to attach macOS
+assets.
+
 To create `APPLE_CERTIFICATE`, export the Developer ID Application certificate
 from Keychain Access as a `.p12`, then encode it:
 

@@ -20,8 +20,54 @@ permissions:
   contents: write
 
 jobs:
+  signing-preflight:
+    name: Check macOS signing setup
+    runs-on: ubuntu-latest
+    outputs:
+      signing_configured: ${{ steps.check.outputs.signing_configured }}
+
+    steps:
+      - name: Check Apple signing secrets
+        id: check
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=()
+
+          [ -n "$APPLE_CERTIFICATE" ] || missing+=("APPLE_CERTIFICATE")
+          [ -n "$APPLE_CERTIFICATE_PASSWORD" ] || missing+=("APPLE_CERTIFICATE_PASSWORD")
+          [ -n "$APPLE_ID" ] || missing+=("APPLE_ID")
+          [ -n "$APPLE_PASSWORD" ] || missing+=("APPLE_PASSWORD")
+          [ -n "$APPLE_TEAM_ID" ] || missing+=("APPLE_TEAM_ID")
+
+          if [ "${#missing[@]}" -eq 0 ]; then
+            echo "signing_configured=true" >> "$GITHUB_OUTPUT"
+            echo "Apple signing and notarization secrets are configured." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "signing_configured=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "## macOS release skipped"
+            echo
+            echo "The macOS release workflow requires Apple signing and notarization secrets before it can build distributable DMGs."
+            echo
+            echo "Missing secrets:"
+            for secret in "${missing[@]}"; do
+              echo "- \`$secret\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          printf 'Missing Apple signing secrets: %s\n' "${missing[*]}"
+
   build-macos:
     name: Build macOS ${{ matrix.target }}
+    needs: signing-preflight
+    if: needs.signing-preflight.outputs.signing_configured == 'true'
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -138,7 +184,10 @@ jobs:
   publish-release:
     name: Publish macOS release
     runs-on: ubuntu-latest
-    needs: build-macos
+    needs:
+      - signing-preflight
+      - build-macos
+    if: needs.signing-preflight.outputs.signing_configured == 'true' && needs.build-macos.result == 'success'
     permissions:
       contents: write
 

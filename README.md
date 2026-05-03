@@ -168,7 +168,7 @@ See [Deployment](docs/DEPLOYMENT.md) before publishing a release; desktop releas
 - If the global hotkey does not work, check for OS-level shortcut conflicts and rerun the app through Tauri rather than the browser-only Vite runtime.
 - If paste into the active app fails on macOS, check system privacy permissions for automation/accessibility-style input simulation.
 - If paste into the active app fails on Windows, make sure the target app accepts Ctrl+V and that no security tool is blocking simulated keyboard input.
-- If tests or builds fail, compare against the current known failures in [Testing](docs/TESTING.md) and [Troubleshooting](docs/TROUBLESHOOTING.md).
+- If tests or builds fail, compare against the current verification status in [Testing](docs/TESTING.md) and the setup notes in [Troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## License
 

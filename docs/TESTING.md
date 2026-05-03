@@ -73,14 +73,14 @@ Result:
 
 - ESLint passed.
 - Frontend production build passed.
-- 80 Vitest files discovered.
+- 78 Vitest files discovered.
 - 78 passed.
 - 0 failed.
-- 2 skipped.
-- 775 tests total.
+- 0 skipped.
+- 773 tests total.
 - 773 passed.
 - 0 failed.
-- 2 skipped.
+- 0 skipped.
 - Rust/Tauri compiled with 0 Rust tests currently present.
 
 ## Recommended Missing Tests

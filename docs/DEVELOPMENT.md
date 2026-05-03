@@ -160,7 +160,3 @@ Touch points usually include:
 | Firebase sync fails immediately | Confirm Firebase env vars and emulator settings. See [Configuration](CONFIGURATION.md). |
 | Firestore returns `permission-denied` | Deploy the latest `firestore.rules`, then check that `/workspaces/{uid}/members/{uid}` exists for the signed-in user. |
 | UI test cannot find text | Check whether onboarding localStorage state or store singleton initialization is required. |
-
-## Current Verification Caveat
-
-As of this documentation pass, the repository has known test/build failures. See [Testing](TESTING.md) for exact commands and current failing cases. These docs intentionally do not change application code.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { getConflictService } from '../App';
-import { isOnboardingComplete } from '../components/OnboardingScreen';
+import { isOnboardingComplete } from '../utils/onboarding';
 import type { AppShellProps, Screen } from '../components/app-shell/types';
 import { useLibraryData } from './use-library-data';
 import { usePromptExecution } from './use-prompt-execution';

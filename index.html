@@ -15,7 +15,7 @@
     />
     <meta property="og:image" content="assets/promptdock-hero.png" />
     <link rel="icon" href="assets/promptdock-icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="assets/landing.css" />
+    <link rel="stylesheet" href="assets/landing.css?v=20260503" />
   </head>
   <body>
     <header class="site-header" aria-label="Primary">
@@ -25,6 +25,7 @@
         <small>v0.1</small>
       </a>
       <nav class="nav-links" aria-label="Site navigation">
+        <a href="#demo">Demo</a>
         <a href="#features">Features</a>
         <a href="#faq">FAQs</a>
         <a class="web-link" href="https://promptdock-95e31.web.app">
@@ -126,6 +127,108 @@
         <span>above</span>
       </section>
 
+      <section class="demo-section" id="demo" aria-label="PromptDock mock demo">
+        <div class="demo-copy">
+          <p class="eyebrow">Mock demo</p>
+          <h2>Search a prompt, paste anywhere.</h2>
+          <p>
+            A browser-safe version of the desktop flow: focus a text box, launch
+            PromptDock, find a prompt, and insert it into the active field.
+          </p>
+        </div>
+
+        <div class="demo-stage" data-launcher-open="false">
+          <section class="demo-target-app" aria-label="Mock target app">
+            <div class="demo-target-bar">
+              <div class="window-top" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <strong>Active app</strong>
+              <span id="demoFlowStatus">Text box focused</span>
+            </div>
+            <div class="demo-target-body">
+              <div class="demo-target-tabs" aria-label="Target app tabs">
+                <button type="button" class="is-active" data-demo-tab="reply">Reply</button>
+                <button type="button" data-demo-tab="notes">Notes</button>
+                <button type="button" data-demo-tab="editor">Editor</button>
+              </div>
+              <div class="demo-target-pane is-active" data-demo-pane="reply">
+                <label class="demo-any-input" for="demoReplySubject">
+                  <span>Email subject</span>
+                  <input
+                    id="demoReplySubject"
+                    type="text"
+                    data-demo-target-input
+                    value="Re: Sync failed after sign-in"
+                  />
+                </label>
+                <label class="demo-any-input" for="demoReplyBody">
+                  <span>Reply body</span>
+                  <textarea
+                    id="demoReplyBody"
+                    rows="8"
+                    spellcheck="false"
+                    data-demo-target-input
+                    placeholder="PromptDock will paste the selected prompt here."
+                  ></textarea>
+                </label>
+              </div>
+              <div class="demo-target-pane" data-demo-pane="notes">
+                <label class="demo-any-input" for="demoNotesInput">
+                  <span>Meeting notes</span>
+                  <textarea
+                    id="demoNotesInput"
+                    rows="9"
+                    spellcheck="false"
+                    data-demo-target-input
+                    placeholder="Select this field, launch PromptDock, and insert a prompt."
+                  ></textarea>
+                </label>
+              </div>
+              <div class="demo-target-pane" data-demo-pane="editor">
+                <label class="demo-any-input" for="demoEditorInput">
+                  <span>Markdown editor</span>
+                  <textarea
+                    id="demoEditorInput"
+                    rows="9"
+                    spellcheck="false"
+                    data-demo-target-input
+                    placeholder="The selected prompt can land in this editor too."
+                  ></textarea>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="demo-launcher" id="demoLauncher" aria-label="PromptDock launcher">
+            <div class="demo-launcher-search">
+              <input
+                id="demoLauncherSearch"
+                type="search"
+                placeholder="Search prompts…"
+                aria-label="Search prompts"
+              />
+            </div>
+            <div class="demo-launcher-results" id="demoLauncherResults" role="listbox"></div>
+            <div class="demo-launcher-footer">
+              <span><kbd>↑↓</kbd> navigate</span>
+              <span><kbd>Enter</kbd> select</span>
+              <span><kbd>Esc</kbd> close</span>
+            </div>
+          </section>
+
+          <button class="demo-launch-button" id="demoLaunchButton" type="button">
+            Launch PromptDock <kbd>⇧⌘P</kbd>
+          </button>
+
+          <div class="demo-toast" id="demoToast" role="status" aria-live="polite">
+            Prompt pasted
+          </div>
+        </div>
+      </section>
+
       <section class="feature-cloud" id="features" aria-label="Features">
         <article>
           <span>01</span>
@@ -218,6 +321,275 @@
       </section>
     </main>
     <script>
+      const mockDemoPrompts = [
+        {
+          id: 'reply',
+          title: 'Customer reply',
+          description: 'Calm support response with one concrete next step.',
+          tags: ['support', 'email'],
+          body:
+            'Draft a calm customer reply. Acknowledge the issue, explain that I am checking the sync state, ask for console logs, and give one short workaround they can try now.',
+        },
+        {
+          id: 'review',
+          title: 'Code review checklist',
+          description: 'Highest-risk findings first, then missing tests.',
+          tags: ['code', 'review'],
+          body:
+            'Review this change for behavioral regressions. Prioritize bugs, data-loss risk, broken keyboard flows, and missing tests. Return findings first with file and line references.',
+        },
+        {
+          id: 'launch',
+          title: 'Product launch brief',
+          description: 'Short launch note for a focused product update.',
+          tags: ['product', 'writing'],
+          body:
+            'Write a concise product launch brief for the desktop quick launcher. Cover who it helps, the problem it solves, launch risks, and a crisp announcement paragraph.',
+        },
+        {
+          id: 'summarize',
+          title: 'Meeting summary',
+          description: 'Extract decisions, open questions, and owners.',
+          tags: ['meeting', 'summary'],
+          body:
+            'Summarize the notes below. Separate decisions, open questions, action items, owners, and deadlines. Keep the wording direct and easy to scan.',
+        },
+      ];
+
+      function initializeMockDemo() {
+        const stage = document.querySelector('.demo-stage');
+        const launchButton = document.getElementById('demoLaunchButton');
+        const launcher = document.getElementById('demoLauncher');
+        const search = document.getElementById('demoLauncherSearch');
+        const results = document.getElementById('demoLauncherResults');
+        const targetInputs = Array.from(document.querySelectorAll('[data-demo-target-input]'));
+        const tabButtons = Array.from(document.querySelectorAll('[data-demo-tab]'));
+        const tabPanes = Array.from(document.querySelectorAll('[data-demo-pane]'));
+        const flowStatus = document.getElementById('demoFlowStatus');
+        const toast = document.getElementById('demoToast');
+        let highlightedIndex = 0;
+        let activeTarget = targetInputs[1] || targetInputs[0] || null;
+        let toastTimer = null;
+
+        if (!stage || !launchButton || !launcher || !search || !results || !activeTarget || !flowStatus || !toast) {
+          return;
+        }
+
+        function isLauncherOpen() {
+          return stage.dataset.launcherOpen === 'true';
+        }
+
+        function getTargetName(target = activeTarget) {
+          return target.closest('.demo-any-input')?.querySelector('span')?.textContent || 'Input';
+        }
+
+        function updateActiveTarget(target) {
+          if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement)) {
+            return;
+          }
+
+          activeTarget = target;
+          targetInputs.forEach((input) => {
+            input.closest('.demo-any-input')?.classList.toggle('is-active', input === activeTarget);
+          });
+
+          if (!isLauncherOpen()) {
+            flowStatus.textContent = `${getTargetName(target)} focused`;
+          }
+        }
+
+        function filteredPrompts() {
+          const query = search.value.trim().toLowerCase();
+          if (!query) return mockDemoPrompts;
+
+          return mockDemoPrompts.filter((prompt) => {
+            const haystack = `${prompt.title} ${prompt.description} ${prompt.tags.join(' ')} ${prompt.body}`.toLowerCase();
+            return haystack.includes(query);
+          });
+        }
+
+        function setLauncherOpen(isOpen, options = {}) {
+          if (isOpen && options.scrollIntoView) {
+            stage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          stage.dataset.launcherOpen = String(isOpen);
+          flowStatus.textContent = isOpen ? 'PromptDock open' : `${getTargetName()} focused`;
+          if (isOpen) {
+            if (options.resetSearch) {
+              search.value = '';
+              highlightedIndex = 0;
+            }
+            renderResults();
+            window.setTimeout(() => search.focus(), 0);
+          } else {
+            if (options.resetSearch) {
+              search.value = '';
+              highlightedIndex = 0;
+              renderResults();
+            }
+            activeTarget.focus();
+          }
+        }
+
+        function showToast(message) {
+          toast.textContent = message;
+          toast.classList.remove('is-visible');
+          window.requestAnimationFrame(() => toast.classList.add('is-visible'));
+          window.clearTimeout(toastTimer);
+          toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 1800);
+        }
+
+        function setActiveTab(tabName) {
+          tabButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.demoTab === tabName);
+          });
+          tabPanes.forEach((pane) => {
+            pane.classList.toggle('is-active', pane.dataset.demoPane === tabName);
+          });
+
+          const pane = tabPanes.find((item) => item.dataset.demoPane === tabName);
+          const input = pane?.querySelector('[data-demo-target-input]');
+          if (input) {
+            updateActiveTarget(input);
+            input.focus();
+          }
+        }
+
+        function pastePrompt(prompt) {
+          const start = typeof activeTarget.selectionStart === 'number' ? activeTarget.selectionStart : activeTarget.value.length;
+          const end = typeof activeTarget.selectionEnd === 'number' ? activeTarget.selectionEnd : start;
+          const nextCaret = start + prompt.body.length;
+          activeTarget.value = `${activeTarget.value.slice(0, start)}${prompt.body}${activeTarget.value.slice(end)}`;
+          activeTarget.classList.remove('is-pasted');
+          window.requestAnimationFrame(() => activeTarget.classList.add('is-pasted'));
+          setLauncherOpen(false, { resetSearch: true });
+          activeTarget.setSelectionRange(nextCaret, nextCaret);
+          flowStatus.textContent = `${getTargetName()} focused`;
+          showToast(`Inserted "${prompt.title}"`);
+        }
+
+        function syncHighlightedOption() {
+          Array.from(results.querySelectorAll('.demo-result')).forEach((button, index) => {
+            const isHighlighted = index === highlightedIndex;
+            button.classList.toggle('is-highlighted', isHighlighted);
+            button.setAttribute('aria-selected', String(isHighlighted));
+            button.tabIndex = isHighlighted ? 0 : -1;
+          });
+        }
+
+        function setHighlightedIndex(index) {
+          highlightedIndex = index;
+          syncHighlightedOption();
+        }
+
+        function renderResults() {
+          const prompts = filteredPrompts();
+          if (highlightedIndex >= prompts.length) highlightedIndex = Math.max(prompts.length - 1, 0);
+          if (highlightedIndex < 0) highlightedIndex = 0;
+
+          results.innerHTML = '';
+          if (prompts.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'demo-empty-result';
+            empty.textContent = 'No prompts found.';
+            results.append(empty);
+            return;
+          }
+
+          prompts.forEach((prompt, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `demo-result${index === highlightedIndex ? ' is-highlighted' : ''}`;
+            button.setAttribute('role', 'option');
+            button.setAttribute('aria-selected', String(index === highlightedIndex));
+            button.setAttribute('data-demo-prompt-option', prompt.id);
+            button.tabIndex = index === highlightedIndex ? 0 : -1;
+            const title = document.createElement('span');
+            title.textContent = prompt.title;
+            const description = document.createElement('small');
+            description.textContent = prompt.description;
+            const tags = document.createElement('b');
+            prompt.tags.forEach((tag) => {
+              const tagPill = document.createElement('i');
+              tagPill.textContent = tag;
+              tags.append(tagPill);
+            });
+            button.append(title, description, tags);
+            button.addEventListener('mouseenter', () => {
+              setHighlightedIndex(index);
+            });
+            button.addEventListener('focus', () => {
+              setHighlightedIndex(index);
+            });
+            button.addEventListener('pointerdown', () => {
+              setHighlightedIndex(index);
+            });
+            button.addEventListener('click', () => pastePrompt(prompt));
+            results.append(button);
+          });
+        }
+
+        launchButton.addEventListener('click', () => {
+          setLauncherOpen(true, { resetSearch: true });
+        });
+
+        search.addEventListener('input', () => {
+          highlightedIndex = 0;
+          renderResults();
+        });
+
+        search.addEventListener('keydown', (event) => {
+          const prompts = filteredPrompts();
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setLauncherOpen(false, { resetSearch: true });
+            return;
+          }
+
+          if (prompts.length === 0) return;
+
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setHighlightedIndex(Math.min(highlightedIndex + 1, prompts.length - 1));
+          } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setHighlightedIndex(Math.max(highlightedIndex - 1, 0));
+          } else if (event.key === 'Enter' && prompts[highlightedIndex]) {
+            event.preventDefault();
+            pastePrompt(prompts[highlightedIndex]);
+          }
+        });
+
+        targetInputs.forEach((input) => {
+          input.addEventListener('focus', () => updateActiveTarget(input));
+          input.addEventListener('click', () => updateActiveTarget(input));
+        });
+
+        tabButtons.forEach((button) => {
+          button.addEventListener('click', () => setActiveTab(button.dataset.demoTab));
+        });
+
+        document.addEventListener('keydown', (event) => {
+          const isShortcut = (event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'p';
+          if (!isShortcut) return;
+
+          event.preventDefault();
+          setLauncherOpen(!isLauncherOpen(), { resetSearch: true, scrollIntoView: true });
+        });
+
+        launcher.addEventListener('click', (event) => {
+          event.stopPropagation();
+        });
+
+        document.addEventListener('click', (event) => {
+          if (!isLauncherOpen() || stage.contains(event.target)) return;
+          setLauncherOpen(false, { resetSearch: true });
+        });
+
+        renderResults();
+        updateActiveTarget(activeTarget);
+      }
+
       const analyticsMeasurementId = 'G-M1Z8P53RRS';
 
       function initializeLandingAnalytics() {
@@ -261,6 +633,7 @@
         }
       }
 
+      initializeMockDemo();
       initializeLandingAnalytics();
     </script>
   </body>

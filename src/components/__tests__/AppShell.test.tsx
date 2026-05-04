@@ -802,7 +802,7 @@ describe('AppShell', () => {
     });
 
     it('clicking Archive in inspector dropdown calls archivePrompt on the store', async () => {
-      const { mockRepo } = await renderOnLibraryScreen();
+      const { mockRepo, store } = await renderOnLibraryScreen();
 
       await selectPromptCard('prompt-1');
 
@@ -821,6 +821,15 @@ describe('AppShell', () => {
       });
 
       expect(mockRepo.softDelete).toHaveBeenCalledWith('prompt-1');
+      await waitFor(() => {
+        expect(store.getState().prompts.find((p) => p.id === 'prompt-1')?.archived).toBe(true);
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Archived/i }));
+      });
+
+      expect(screen.getByText('Summarize Text')).toBeDefined();
     });
 
     it('clicking Delete in inspector dropdown calls deletePrompt on the store', async () => {

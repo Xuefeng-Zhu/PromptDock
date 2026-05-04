@@ -158,11 +158,6 @@ pub fn toggle_quick_launcher<R: Runtime>(
     do_toggle_quick_launcher(&app, &last_active_app)
 }
 
-pub fn toggle_quick_launcher_from_hotkey<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    let last_active_app = app.state::<LastActiveApp>();
-    do_toggle_quick_launcher(&app, &last_active_app)
-}
-
 /// Show the main application window and bring it to focus.
 #[tauri::command]
 pub fn show_main_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {

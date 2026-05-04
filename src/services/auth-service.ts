@@ -10,6 +10,7 @@
 
 import type { IAuthService } from './interfaces';
 import type { AuthResult, AuthUser, AuthError } from '../types/index';
+import { isFirebaseCoreConfigured } from '../firebase/env';
 
 const AUTH_RESTORE_TIMEOUT_MS = 3000;
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
@@ -80,6 +81,10 @@ function toAuthUser(firebaseUser: { uid: string; email: string | null; displayNa
 // ─── AuthService ───────────────────────────────────────────────────────────────
 
 export class AuthService implements IAuthService {
+  isConfigured(): boolean {
+    return isFirebaseCoreConfigured();
+  }
+
   /**
    * Ensure the signed-in user has the Firestore documents required by sync.
    *

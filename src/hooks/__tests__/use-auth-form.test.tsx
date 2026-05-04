@@ -109,7 +109,7 @@ describe('useAuthForm', () => {
       await unavailable.result.current.handleEmailAuthSubmit(formEvent());
     });
 
-    expect(unavailable.result.current.authError).toBe('Cloud sign-in is unavailable in this build.');
+    expect(unavailable.result.current.authError).toContain('Firebase is not configured');
 
     const authService = makeAuthService();
     const onSignOutSuccess = vi.fn();
@@ -132,5 +132,23 @@ describe('useAuthForm', () => {
     expect(authService.signOut).toHaveBeenCalledTimes(1);
     expect(onSignOutSuccess).toHaveBeenCalledTimes(1);
     expect(available.result.current.authUser).toBeNull();
+  });
+
+  it('does not submit when the auth service reports missing configuration', async () => {
+    const authService = makeAuthService({
+      isConfigured: vi.fn(() => false),
+    });
+    const { result } = renderHook(() =>
+      useAuthForm({ authService, onAuthSuccess: vi.fn() }),
+    );
+
+    expect(result.current.authServiceAvailable).toBe(false);
+
+    await act(async () => {
+      await result.current.handleEmailAuthSubmit(formEvent());
+    });
+
+    expect(authService.signIn).not.toHaveBeenCalled();
+    expect(result.current.authError).toContain('Firebase is not configured');
   });
 });

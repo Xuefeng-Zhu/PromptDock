@@ -1,12 +1,16 @@
+import { useLayoutEffect, useRef } from 'react';
 import { Code, Copy, Info, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { splitPromptTemplateParts } from '../../utils/prompt-template';
+
+const BODY_EDITOR_MIN_ROWS = 12;
+const BODY_EDITOR_LINE_HEIGHT_REM = 1.625;
+const BODY_EDITOR_VERTICAL_PADDING_REM = 1.5;
 
 interface BodyTemplateEditorProps {
   body: string;
   charCount: number;
   isExpanded: boolean;
-  lineCount: number;
   showFormattingHelp: boolean;
   wordCount: number;
   onBodyChange: (body: string) => void;
@@ -16,23 +20,10 @@ interface BodyTemplateEditorProps {
   onToggleFormattingHelp: () => void;
 }
 
-function LineNumbers({ count }: { count: number }) {
-  return (
-    <div
-      className="select-none pr-3 text-right font-[var(--font-mono)] text-xs leading-[1.625rem] text-[var(--color-text-placeholder)]"
-      aria-hidden="true"
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i + 1}>{i + 1}</div>
-      ))}
-    </div>
-  );
-}
-
 function HighlightedBody({ text }: { text: string }) {
   const parts = splitPromptTemplateParts(text);
   return (
-    <div className="whitespace-pre-wrap font-[var(--font-mono)] text-sm leading-[1.625rem] text-[var(--color-text-main)]">
+    <div className="whitespace-pre-wrap break-words font-[var(--font-mono)] text-sm leading-[1.625rem] text-[var(--color-text-main)] [overflow-wrap:anywhere]">
       {parts.map((part, index) =>
         part.isVariable ? (
           <span
@@ -53,7 +44,6 @@ export function BodyTemplateEditor({
   body,
   charCount,
   isExpanded,
-  lineCount,
   showFormattingHelp,
   wordCount,
   onBodyChange,
@@ -62,10 +52,22 @@ export function BodyTemplateEditor({
   onToggleExpanded,
   onToggleFormattingHelp,
 }: BodyTemplateEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorMinHeight = `${BODY_EDITOR_MIN_ROWS * BODY_EDITOR_LINE_HEIGHT_REM + BODY_EDITOR_VERTICAL_PADDING_REM}rem`;
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = editorMinHeight;
+    const nextHeight = Math.max(textarea.scrollHeight, textarea.clientHeight);
+    textarea.style.height = `${nextHeight}px`;
+  }, [body, editorMinHeight, isExpanded]);
+
   return (
     <div className="mb-2">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           <label
             htmlFor="prompt-body-editor"
             className="text-sm font-medium text-[var(--color-text-main)]"
@@ -76,7 +78,7 @@ export function BodyTemplateEditor({
             Use {'{{variable}}'} to insert variables
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={onInsertVariable}>
             <Code className="mr-1.5 h-3.5 w-3.5" />
             Insert variable
@@ -91,26 +93,25 @@ export function BodyTemplateEditor({
       </div>
 
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden focus-within:border-[var(--color-primary)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20">
-        <div className="flex">
-          <div className="border-r border-[var(--color-border)] bg-gray-50 py-3 pl-3">
-            <LineNumbers count={lineCount} />
+        <div className="relative min-w-0" style={{ minHeight: editorMinHeight }}>
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden px-4 py-3"
+            style={{ minHeight: editorMinHeight }}
+          >
+            <HighlightedBody text={body} />
           </div>
-          <div className="relative flex-1">
-            <div className="pointer-events-none absolute inset-0 px-4 py-3 overflow-hidden">
-              <HighlightedBody text={body} />
-            </div>
-            <textarea
-              id="prompt-body-editor"
-              value={body}
-              onChange={(event) => onBodyChange(event.target.value)}
-              placeholder="Write your prompt template here. Use {{variable_name}} for variables."
-              rows={Math.max(lineCount + 2, 12)}
-              className="relative w-full resize-none border-none bg-transparent px-4 py-3 font-[var(--font-mono)] text-sm text-transparent caret-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none leading-[1.625rem]"
-              style={{ caretColor: 'var(--color-text-main)' }}
-              aria-label="Body"
-              aria-describedby="body-footer"
-            />
-          </div>
+          <textarea
+            ref={textareaRef}
+            id="prompt-body-editor"
+            value={body}
+            onChange={(event) => onBodyChange(event.target.value)}
+            placeholder="Write your prompt template here. Use {{variable_name}} for variables."
+            rows={BODY_EDITOR_MIN_ROWS}
+            className="relative w-full resize-none overflow-hidden border-none bg-transparent px-4 py-3 font-[var(--font-mono)] text-sm leading-[1.625rem] text-transparent caret-[var(--color-text-main)] break-words placeholder:text-[var(--color-text-placeholder)] outline-none [overflow-wrap:anywhere]"
+            style={{ caretColor: 'var(--color-text-main)', minHeight: editorMinHeight }}
+            aria-label="Body"
+            aria-describedby="body-footer"
+          />
         </div>
 
         <div

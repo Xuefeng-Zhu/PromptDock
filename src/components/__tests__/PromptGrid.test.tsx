@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PromptGrid } from '../library';
 import { MOCK_PROMPTS } from '../../data/mock-data';
+import type { PromptRecipe } from '../../types/index';
 
 const defaultProps = {
   prompts: MOCK_PROMPTS,
@@ -11,6 +12,15 @@ const defaultProps = {
   onToggleFavorite: vi.fn(),
   categoryColorMap: {} as Record<string, string>,
 };
+
+function makePrompts(count: number): PromptRecipe[] {
+  return Array.from({ length: count }, (_, index) => ({
+    ...MOCK_PROMPTS[0],
+    id: `prompt-${index}`,
+    title: `Prompt ${index}`,
+    tags: ['bulk', `tag-${index}`],
+  }));
+}
 
 describe('PromptGrid', () => {
   it('renders prompt cards in a grid', () => {
@@ -38,5 +48,19 @@ describe('PromptGrid', () => {
   it('does not show empty state when prompts exist', () => {
     render(<PromptGrid {...defaultProps} />);
     expect(screen.queryByText('No prompts found')).toBeNull();
+  });
+
+  it('virtualizes large prompt collections', () => {
+    const prompts = makePrompts(200);
+    render(<PromptGrid {...defaultProps} prompts={prompts} />);
+
+    const listbox = screen.getByRole('listbox', { name: 'Prompt list' });
+    const options = screen.getAllByRole('option');
+
+    expect(listbox.getAttribute('data-virtualized')).toBe('true');
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.length).toBeLessThan(prompts.length);
+    expect(screen.getByText('Prompt 0')).toBeDefined();
+    expect(screen.queryByText('Prompt 199')).toBeNull();
   });
 });

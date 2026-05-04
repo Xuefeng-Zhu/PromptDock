@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { Folder, PromptRecipe } from '../types/index';
 import { extractVariables } from '../utils/prompt-template';
+import { normalizeTag, resolveExistingTagName } from '../utils/tag-options';
 import { countChars, countWords } from '../utils/text-counts';
 
 interface UsePromptEditorFormOptions {
@@ -21,10 +22,6 @@ interface UsePromptEditorFormOptions {
 function areTagsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((tag, index) => tag === right[index]);
-}
-
-function normalizeTag(tag: string): string {
-  return tag.trim().toLowerCase();
 }
 
 export function usePromptEditorForm({
@@ -99,10 +96,7 @@ export function usePromptEditorForm({
   const addTagValue = useCallback((tag: string) => {
     const trimmed = tag.trim();
     if (trimmed) {
-      const normalizedTag = normalizeTag(trimmed);
-      const existingTag =
-        availableTags.find((candidate) => normalizeTag(candidate) === normalizedTag)?.trim()
-        ?? trimmed;
+      const existingTag = resolveExistingTagName(availableTags, trimmed);
 
       setTags((prev) =>
         prev.some((current) => normalizeTag(current) === normalizeTag(existingTag))

@@ -112,10 +112,10 @@ vi.mock('../../stores/settings-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/settings-store')>(
     '../../stores/settings-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useSettingsStore: (selector?: (state: SettingsStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testStore, selector) : useStore(testStore);
     },
   };
@@ -125,10 +125,10 @@ vi.mock('../../stores/app-mode-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/app-mode-store')>(
     '../../stores/app-mode-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },
   };
@@ -138,10 +138,10 @@ vi.mock('../../stores/prompt-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/prompt-store')>(
     '../../stores/prompt-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     usePromptStore: (selector?: (state: PromptStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testPromptStore, selector) : useStore(testPromptStore);
     },
   };
@@ -449,6 +449,93 @@ describe('SettingsScreen + hotkey registration', () => {
     });
     expect(mockRepo.update).toHaveBeenCalledWith({
       hotkeyCombo: 'CommandOrControl+Shift+P',
+    });
+  });
+
+  it('captures hotkeys from the document while recording', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(document, {
+        code: 'KeyP',
+        key: 'p',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRegisterHotkey).toHaveBeenCalledWith('CommandOrControl+Alt+P');
+    });
+    expect(mockRepo.update).toHaveBeenCalledWith({
+      hotkeyCombo: 'CommandOrControl+Alt+P',
+    });
+  });
+
+  it('stops document hotkey capture after clicking outside the recorder', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.pointerDown(document.body);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).not.toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(document, {
+        code: 'KeyP',
+        key: 'p',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    expect(mockRegisterHotkey).not.toHaveBeenCalledWith('CommandOrControl+Alt+P');
+  });
+
+  it('lets Tab leave recording without being swallowed', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+    let tabWasAllowed = false;
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      tabWasAllowed = fireEvent.keyDown(document, {
+        key: 'Tab',
+        shiftKey: true,
+      });
+    });
+
+    expect(tabWasAllowed).toBe(true);
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).not.toContain('Recording');
     });
   });
 

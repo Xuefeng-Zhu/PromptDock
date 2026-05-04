@@ -16,6 +16,7 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | [API](docs/API.md) | Internal TypeScript interfaces, Tauri commands, Firestore collections, and import/export schema. |
 | [Deployment](docs/DEPLOYMENT.md) | Browser/Tauri builds, Firebase deployment, CI/CD notes, and rollback strategy. |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common setup, runtime, sync, and build/test issues. |
+| [Architecture Decision Records](docs/adr) | Durable engineering decisions and their consequences. |
 | [Deferred Issues](docs/Issues.md) | Known implementation issues intentionally not fixed in the docs pass. |
 
 ## Key Features

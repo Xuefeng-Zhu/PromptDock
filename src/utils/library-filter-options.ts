@@ -1,16 +1,6 @@
 import type { Folder, PromptRecipe } from '../types/index';
 import type { SearchableMultiSelectOption } from '../components/ui/SearchableMultiSelect';
-
-function formatFolderLabel(folderId: string): string {
-  const cleaned = folderId
-    .replace(/^folder-/, '')
-    .replace(/[-_]+/g, ' ')
-    .trim();
-
-  if (cleaned === '') return folderId;
-
-  return cleaned.replace(/\b\w/g, (character) => character.toUpperCase());
-}
+import { formatFolderLabel } from './folder-label';
 
 function sortFilterOptions<T extends string>(
   options: Array<SearchableMultiSelectOption<T>>,

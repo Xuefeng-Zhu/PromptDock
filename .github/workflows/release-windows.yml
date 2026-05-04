@@ -26,10 +26,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -67,7 +67,7 @@ jobs:
           Get-ChildItem $assetDir
 
       - name: Upload Windows assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: promptdock-windows
           path: release-assets/*
@@ -82,10 +82,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Windows assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-assets
           merge-multiple: true

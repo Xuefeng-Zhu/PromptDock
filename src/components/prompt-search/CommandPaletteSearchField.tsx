@@ -2,7 +2,7 @@ import type { ChangeEventHandler, RefObject } from 'react';
 import { Search } from 'lucide-react';
 
 interface CommandPaletteSearchFieldProps {
-  inputRef: RefObject<HTMLInputElement>;
+  inputRef: RefObject<HTMLInputElement | null>;
   query: string;
   onChange: ChangeEventHandler<HTMLInputElement>;
 }

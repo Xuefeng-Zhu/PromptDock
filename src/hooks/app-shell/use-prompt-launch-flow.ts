@@ -78,12 +78,13 @@ export function usePromptLaunchFlow({
           source: 'variable_fill',
         });
         addToast(result.message, 'success');
+        setVariableFillPromptId(null);
       } catch (err) {
         addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
         throw err;
       }
     },
-    [addToast, copyText, variableFillPromptId],
+    [addToast, copyText, setVariableFillPromptId, variableFillPromptId],
   );
 
   const handleVariableFillPaste = useCallback(
@@ -95,12 +96,13 @@ export function usePromptLaunchFlow({
           source: 'variable_fill',
         });
         addToast(result.message, 'success');
+        setVariableFillPromptId(null);
       } catch (err) {
         addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
         throw err;
       }
     },
-    [addToast, pasteText, variableFillPromptId],
+    [addToast, pasteText, setVariableFillPromptId, variableFillPromptId],
   );
 
   return {

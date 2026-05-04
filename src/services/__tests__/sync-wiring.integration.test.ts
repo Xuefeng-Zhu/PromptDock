@@ -345,7 +345,7 @@ describe('SyncService ↔ PromptStore wiring', () => {
       const firestoreDelegate = createMockFirestoreDelegate();
 
       // Create a prompt first via the delegate
-      await (firestoreDelegate.create as ReturnType<typeof vi.fn>)({
+      await firestoreDelegate.create({
         workspaceId: 'ws-1',
         title: 'Original',
         description: '',
@@ -383,7 +383,7 @@ describe('SyncService ↔ PromptStore wiring', () => {
       const firestoreDelegate = createMockFirestoreDelegate();
 
       // Create a prompt first
-      await (firestoreDelegate.create as ReturnType<typeof vi.fn>)({
+      await firestoreDelegate.create({
         workspaceId: 'ws-1',
         title: 'Fav Test',
         description: '',
@@ -442,7 +442,7 @@ describe('SyncService ↔ PromptStore wiring', () => {
       const firestoreDelegate = createMockFirestoreDelegate();
 
       // Create a prompt first
-      const created = await (firestoreDelegate.create as ReturnType<typeof vi.fn>)({
+      const created = await firestoreDelegate.create({
         workspaceId: 'ws-1',
         title: 'Dup Test',
         description: '',

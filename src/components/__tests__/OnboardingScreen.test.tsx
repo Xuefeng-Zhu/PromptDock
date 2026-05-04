@@ -21,10 +21,10 @@ vi.mock('../../stores/app-mode-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/app-mode-store')>(
     '../../stores/app-mode-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },
   };

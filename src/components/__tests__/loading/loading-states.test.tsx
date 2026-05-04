@@ -90,10 +90,10 @@ vi.mock('../../../stores/settings-store', async () => {
   const actual = await vi.importActual<typeof import('../../../stores/settings-store')>(
     '../../../stores/settings-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useSettingsStore: (selector?: (state: SettingsStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testSettingsStore, selector) : useStore(testSettingsStore);
     },
   };
@@ -103,10 +103,10 @@ vi.mock('../../../stores/app-mode-store', async () => {
   const actual = await vi.importActual<typeof import('../../../stores/app-mode-store')>(
     '../../../stores/app-mode-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },
   };
@@ -116,10 +116,10 @@ vi.mock('../../../stores/prompt-store', async () => {
   const actual = await vi.importActual<typeof import('../../../stores/prompt-store')>(
     '../../../stores/prompt-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     usePromptStore: (selector?: (state: PromptStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testPromptStore, selector) : useStore(testPromptStore);
     },
   };

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import {
   displayHotkeyToken,
@@ -62,6 +62,7 @@ export function HotkeyRecorder({
   ariaLabel,
   disabled = false,
 }: HotkeyRecorderProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [previewHotkey, setPreviewHotkey] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -106,6 +107,11 @@ export function HotkeyRecorder({
 
   const handleRecordingKeyDown = useCallback(
     (event: RecordingKeyEvent) => {
+      if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        cancelRecording();
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
 
@@ -157,12 +163,22 @@ export function HotkeyRecorder({
     const handleDocumentKeyDown = (event: KeyboardEvent) => {
       handleRecordingKeyDown(event);
     };
+    const cancelIfOutsideRecorder = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && !rootRef.current?.contains(target)) {
+        cancelRecording();
+      }
+    };
 
     document.addEventListener('keydown', handleDocumentKeyDown, true);
+    document.addEventListener('pointerdown', cancelIfOutsideRecorder, true);
+    document.addEventListener('focusin', cancelIfOutsideRecorder, true);
     return () => {
       document.removeEventListener('keydown', handleDocumentKeyDown, true);
+      document.removeEventListener('pointerdown', cancelIfOutsideRecorder, true);
+      document.removeEventListener('focusin', cancelIfOutsideRecorder, true);
     };
-  }, [handleRecordingKeyDown, isRecording]);
+  }, [cancelRecording, handleRecordingKeyDown, isRecording]);
 
   const handleRecorderKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -198,7 +214,7 @@ export function HotkeyRecorder({
             : 'Disabled';
 
   return (
-    <div className="space-y-2">
+    <div ref={rootRef} className="space-y-2">
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"

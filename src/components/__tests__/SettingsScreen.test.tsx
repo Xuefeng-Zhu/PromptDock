@@ -481,6 +481,64 @@ describe('SettingsScreen + hotkey registration', () => {
     });
   });
 
+  it('stops document hotkey capture after clicking outside the recorder', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.pointerDown(document.body);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).not.toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(document, {
+        code: 'KeyP',
+        key: 'p',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    expect(mockRegisterHotkey).not.toHaveBeenCalledWith('CommandOrControl+Alt+P');
+  });
+
+  it('lets Tab leave recording without being swallowed', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+    let tabWasAllowed = false;
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      tabWasAllowed = fireEvent.keyDown(document, {
+        key: 'Tab',
+        shiftKey: true,
+      });
+    });
+
+    expect(tabWasAllowed).toBe(true);
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).not.toContain('Recording');
+    });
+  });
+
   it('rejects incomplete hotkeys before registering them', async () => {
     render(<SettingsScreen onBack={() => {}} />);
     const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');

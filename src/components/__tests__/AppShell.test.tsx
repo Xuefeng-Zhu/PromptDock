@@ -156,10 +156,18 @@ async function renderOnLibraryScreen(
   return { ...result, store, mockRepo };
 }
 
+function mockTauriRuntime() {
+  Object.defineProperty(window, '__TAURI_INTERNALS__', {
+    configurable: true,
+    value: {},
+  });
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('AppShell', () => {
   beforeEach(() => {
+    Reflect.deleteProperty(window, '__TAURI_INTERNALS__');
     vi.restoreAllMocks();
     mockCopyToClipboard.mockReset();
     mockCopyToClipboard.mockResolvedValue(undefined);
@@ -212,6 +220,7 @@ describe('AppShell', () => {
     });
 
     it('pastes a prompt from the command palette when default action is paste', async () => {
+      mockTauriRuntime();
       await renderOnLibraryScreen();
 
       fireEvent.keyDown(window, { key: 'k', metaKey: true });
@@ -241,6 +250,23 @@ describe('AppShell', () => {
         expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello world');
       });
       expect(mockPasteToActiveApp).not.toHaveBeenCalled();
+    });
+
+    it('uses copy as the browser variable-fill primary action when settings contain paste', async () => {
+      await renderOnLibraryScreen([
+        makePrompt({ id: 'prompt-variable', title: 'Greeting', body: 'Hello {{name}}' }),
+      ]);
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Greeting'));
+      });
+
+      const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
+      expect(within(modal).getByRole('button', { name: /Copy final prompt/i })).toBeDefined();
+      expect(within(modal).queryByRole('button', { name: /Paste into active app/i })).toBeNull();
     });
   });
 

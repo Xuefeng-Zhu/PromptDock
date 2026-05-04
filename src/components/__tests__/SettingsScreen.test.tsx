@@ -301,10 +301,11 @@ describe('SettingsScreen + SettingsStore integration', () => {
     expect(hotkeyRecorder.getAttribute('data-hotkey-value')).toBe('CommandOrControl+Shift+P');
   });
 
-  it('reads defaultAction from SettingsStore and displays the correct active option', () => {
+  it('uses copy as the browser default behavior option', () => {
     render(<SettingsScreen onBack={() => {}} />);
-    const pasteRadio = screen.getByRole('radio', { name: /Paste into Active App/i }) as HTMLInputElement;
-    expect(pasteRadio.checked).toBe(true);
+    const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i }) as HTMLInputElement;
+    expect(copyRadio.checked).toBe(true);
+    expect(screen.queryByRole('radio', { name: /Paste into Active App/i })).toBeNull();
   });
 
   it('calls updateSettings({ theme }) when theme is changed', async () => {
@@ -319,6 +320,7 @@ describe('SettingsScreen + SettingsStore integration', () => {
   });
 
   it('calls updateSettings({ defaultAction }) when default action is changed', async () => {
+    mockTauriRuntime();
     render(<SettingsScreen onBack={() => {}} />);
     const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i });
 

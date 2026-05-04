@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
+import { canPasteToActiveApp, resolveDefaultAction } from '../utils/default-action';
 import { registerHotkey } from '../utils/hotkey';
 import { isTauriRuntime } from '../utils/runtime';
 import {
@@ -10,13 +11,21 @@ import {
 } from '../components/settings/settings-data';
 
 export function useSettingsActions() {
-  const settings = useSettingsStore((s) => s.settings);
+  const storedSettings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const [density, setDensity] = useState<DensityOption>('comfortable');
   const [hotkeyError, setHotkeyError] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const canUseGlobalHotkeys = isTauriRuntime();
+  const canUsePasteAction = canPasteToActiveApp();
+  const settings = useMemo(
+    () => ({
+      ...storedSettings,
+      defaultAction: resolveDefaultAction(storedSettings.defaultAction, canUsePasteAction),
+    }),
+    [canUsePasteAction, storedSettings],
+  );
   const visibleNavItems = useMemo(
     () =>
       canUseGlobalHotkeys
@@ -58,6 +67,7 @@ export function useSettingsActions() {
 
   const handleDefaultActionChange = useCallback(
     async (defaultAction: DefaultAction) => {
+      if (defaultAction === 'paste' && !canUsePasteAction) return;
       setSettingsError(null);
       try {
         await updateSettings({ defaultAction });
@@ -67,11 +77,12 @@ export function useSettingsActions() {
         );
       }
     },
-    [updateSettings],
+    [canUsePasteAction, updateSettings],
   );
 
   return {
     canUseGlobalHotkeys,
+    canUsePasteAction,
     density,
     handleDefaultActionChange,
     handleHotkeyChange,

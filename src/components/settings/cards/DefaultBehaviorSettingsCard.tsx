@@ -3,6 +3,7 @@ import type { DefaultAction } from '../settings-data';
 import { SettingsCardTitle } from './SettingsCardTitle';
 
 interface DefaultBehaviorSettingsCardProps {
+  canUsePasteAction: boolean;
   defaultAction: DefaultAction;
   onDefaultActionChange: (action: DefaultAction) => void | Promise<void>;
 }
@@ -25,9 +26,14 @@ const DEFAULT_ACTION_OPTIONS: Array<{
 ];
 
 export function DefaultBehaviorSettingsCard({
+  canUsePasteAction,
   defaultAction,
   onDefaultActionChange,
 }: DefaultBehaviorSettingsCardProps) {
+  const options = canUsePasteAction
+    ? DEFAULT_ACTION_OPTIONS
+    : DEFAULT_ACTION_OPTIONS.filter((opt) => opt.key !== 'paste');
+
   return (
     <Card padding="lg">
       <SettingsCardTitle>Default Behavior</SettingsCardTitle>
@@ -36,7 +42,7 @@ export function DefaultBehaviorSettingsCard({
           When selecting a prompt
         </legend>
         <div className="space-y-2">
-          {DEFAULT_ACTION_OPTIONS.map((opt) => {
+          {options.map((opt) => {
             const isActive = defaultAction === opt.key;
             return (
               <label

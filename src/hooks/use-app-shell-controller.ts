@@ -5,6 +5,7 @@ import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
+import { resolveDefaultAction } from '../utils/default-action';
 import { hideMainWindow } from '../utils/window';
 import { useLibraryData } from './use-library-data';
 import { usePromptExecution } from './use-prompt-execution';
@@ -37,7 +38,7 @@ export function useAppShellController({
   const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
 
   const theme = useSettingsStore((s) => s.settings.theme);
-  const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
+  const storedDefaultAction = useSettingsStore((s) => s.settings.defaultAction);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const mode = useAppModeStore((s) => s.mode);
   const userId = useAppModeStore((s) => s.userId);
@@ -61,6 +62,7 @@ export function useAppShellController({
     userFolders,
     variableFillPromptId,
   } = navigation;
+  const defaultAction = resolveDefaultAction(storedDefaultAction);
 
   const { copyText, pasteText, executePrompt } = usePromptExecution({
     defaultAction,

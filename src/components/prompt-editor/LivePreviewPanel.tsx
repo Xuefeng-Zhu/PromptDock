@@ -76,7 +76,7 @@ export function LivePreviewPanel({
       <div className="border-t border-[var(--color-border)] px-5 py-4">
         <h3 className="mb-3 text-sm font-semibold text-[var(--color-text-main)]">Preview Result</h3>
         {body ? (
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3 max-h-64 overflow-y-auto">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
             <pre className="whitespace-pre-wrap font-[var(--font-mono)] text-xs leading-relaxed text-[var(--color-text-main)]">
               {renderedPreview}
             </pre>

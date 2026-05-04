@@ -76,7 +76,7 @@ export function PromptBasicsFields({
         onChange={onDescriptionChange}
       />
 
-      <div className="mb-8 grid grid-cols-3 gap-6">
+      <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
         <EditorTagField
           availableTags={availableTags}
           onAddTag={onAddTag}

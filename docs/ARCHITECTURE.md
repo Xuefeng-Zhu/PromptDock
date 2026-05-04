@@ -1,315 +1,476 @@
-# Architecture
+# PromptDock Architecture
 
-PromptDock is split into a React frontend, a small Rust/Tauri native layer, and swappable persistence backends. The default product experience is local-first: prompts are available without an account, network, or Firebase configuration.
+PromptDock is a local-first prompt recipe manager with two runtime shells:
+a Tauri desktop app and a browser-compatible React app. The product surface is
+React, the durable state flows through repository interfaces, and native
+capabilities are isolated behind small TypeScript utilities and Rust Tauri
+commands.
 
-## System Overview
+This document maps the repo as it exists today: main modules, data flow, state
+ownership, API boundaries, and a practical reading path for new contributors.
 
-```text
-React UI
-  AppShell, LibraryScreen, PromptEditor, SettingsScreen,
-  CommandPalette, VariableFillModal, QuickLauncherWindow, ConflictCenter
-        |
-Zustand stores
-  PromptStore, SettingsStore, AppModeStore, ToastStore
-        |
-Services
-  AuthService, SyncService, ConflictService, ImportExportService,
-  SearchEngine, VariableParser, PromptRenderer
-        |
-Repositories
-  PromptRepository, SettingsRepository, WorkspaceRepository
-        |
-Storage and sync backends
-  LocalStorageBackend       BrowserStorageBackend       FirestoreBackend
-  Tauri Store JSON files    window.localStorage         Cloud Firestore
-        |
-Native Tauri commands
-  clipboard, paste, hotkey, window, tray integration
-```
-
-## Runtime Modes
-
-| Runtime | Detection | Storage | Native features |
-|---|---|---|---|
-| Tauri desktop | `__TAURI_INTERNALS__ in window` in `src/App.tsx` | `LocalStorageBackend`, backed by Tauri Store plugin JSON files | Global hotkey, tray, clipboard command, paste simulation, window hide/show |
-| Browser | Tauri detection fails | `BrowserStorageBackend`, backed by `window.localStorage` | Browser clipboard fallback where available |
-| Synced mode | User signs in or session restores | `PromptRepository` delegates prompt operations to `FirestoreBackend` | Firebase Auth, Firestore snapshots, offline cache |
-
-The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
-
-| Window | Label | Purpose |
-|---|---|---|
-| Main app | `main` | Full PromptDock UI. |
-| Quick launcher | `quick-launcher` | Hidden, always-on-top prompt search overlay toggled by global hotkey. |
-
-`src/main.tsx` reads the current Tauri window label. The quick-launcher window renders `QuickLauncherApp`; all other contexts render the main `App`.
-
-## Main Modules
-
-| Area | Files | Responsibilities |
-|---|---|---|
-| App bootstrap | `src/App.tsx`, `src/main.tsx` | Runtime detection, backend selection, repository/store initialization, default seeding, theme manager, hotkey registration, auth-session restore. |
-| Layout and screens | `src/components/AppShell.tsx`, `src/screens/*` | Navigation, library, editor, settings, quick launcher, conflict center, modal orchestration. |
-| State | `src/stores/*` | Prompt library state, settings, app mode/sync status, transient toasts. |
-| Repositories | `src/repositories/*` | Data access contracts and concrete persistence implementations. |
-| Services | `src/services/*` | Business logic: analytics tracking, auth, sync, conflict detection, import/export, parsing, rendering, search. |
-| Firebase | `src/firebase/config.ts` | Lazy Firebase imports and cached Analytics/Auth/Firestore instances. |
-| Utilities | `src/utils/*` | Clipboard, hotkeys, theme application, file dialog fallback, sidebar counts, folder localStorage bridge. |
-| Native | `src-tauri/src/*` | Tauri command handlers, tray setup, global shortcut setup, paste simulation. |
-| Types | `src/types/index.ts` | Shared domain models and result types. |
-
-## Prompt Data Model
-
-`PromptRecipe` in `src/types/index.ts` is the central domain record. A prompt is scoped to one workspace, can be organized by a folder and inline tags, and is soft-deleted when archived.
-
-```mermaid
-erDiagram
-  WORKSPACE ||--o{ PROMPT_RECIPE : scopes
-  WORKSPACE ||--o{ WORKSPACE_MEMBER : has
-  FOLDER ||--o{ PROMPT_RECIPE : groups
-  PROMPT_RECIPE ||--o{ PROMPT_CONFLICT : can_conflict
-  USER_SETTINGS }o--|| WORKSPACE : selects_active
-
-  PROMPT_RECIPE {
-    string id PK
-    string workspaceId FK
-    string title
-    string description
-    string body
-    string_array tags
-    string folderId FK "nullable"
-    boolean favorite
-    boolean archived
-    datetime archivedAt "nullable"
-    datetime createdAt
-    datetime updatedAt
-    datetime lastUsedAt "nullable"
-    string createdBy
-    number version
-  }
-
-  FOLDER {
-    string id PK
-    string name
-    datetime createdAt
-    datetime updatedAt
-  }
-
-  WORKSPACE {
-    string id PK
-    string name
-    string ownerId
-    datetime createdAt
-    datetime updatedAt
-  }
-
-  WORKSPACE_MEMBER {
-    string id PK
-    string workspaceId FK
-    string userId
-    string role
-    datetime joinedAt
-  }
-
-  USER_SETTINGS {
-    string hotkeyCombo
-    string theme
-    string defaultAction
-    string activeWorkspaceId FK
-  }
-
-  PROMPT_CONFLICT {
-    string id PK
-    string promptId FK
-    object localVersion
-    object remoteVersion
-    datetime detectedAt
-    datetime resolvedAt "nullable"
-  }
-```
-
-The `Folder` model does not currently store `workspaceId`; prompts reference folders through `folderId`, while synced folders are scoped by their Firestore path.
-
-| Field group | Fields | Notes |
-|---|---|---|
-| Identity and tenancy | `id`, `workspaceId` | `workspaceId` is used by repositories and sync queries to isolate prompt lists. |
-| Prompt content | `title`, `description`, `body` | `body` may contain `{{variable}}` placeholders parsed by `VariableParser` and rendered by `PromptRenderer`. |
-| Organization | `tags`, `folderId`, `favorite` | Tags are inline strings on the prompt. Folders are referenced by ID. |
-| Lifecycle | `archived`, `archivedAt`, `lastUsedAt` | Delete/archive flows are soft deletes. Use flows update `lastUsedAt`. |
-| Audit and sync | `createdAt`, `updatedAt`, `createdBy`, `version` | Used for ordering, conflict detection, and local-to-Firestore migration. |
-
-Important invariants:
-
-- Components should treat the prompt returned by the repository/store action as the saved source of truth.
-- Local create assigns a new `id`, `createdAt`, `updatedAt`, `createdBy: 'local'`, and `version: 1`.
-- Local update preserves the existing `id`, refreshes `updatedAt`, and increments `version`.
-- Archive and restore preserve the prompt record and toggle `archived` / `archivedAt`.
-- Duplicate creates a new prompt ID, resets `version`, clears archive/use state, and prefixes the title with `Copy of`.
-- `CreatePromptData` currently includes `createdBy` and `version` because it mirrors `IPromptRepository.create()`, but the local repository normalizes those fields on write.
-
-## Prompt State Ownership
-
-There are two intentional in-memory prompt collections:
-
-| Owner | Collection | Purpose |
-|---|---|---|
-| `PromptRepository` | private `prompts` cache | Lazy-loaded persistence cache backed by `IStorageBackend`; filters by workspace when returning data. |
-| `PromptStore` | Zustand `prompts` state | React-facing list for the active workspace; drives library, quick launcher, filters, and rerenders. |
-
-The repository cache is not observable UI state. The store list is not durable storage. A store action calls the repository first, then merges the repository result into Zustand state.
-
-`PromptStore` also owns UI state that does not belong in the repository:
-
-| UI state | Why it belongs in the store |
-|---|---|
-| `isLoading` | Represents async load state for views. |
-| `activeWorkspaceId` | Chooses which workspace list the UI is showing. |
-| `selectedPromptId` | View/editor selection only. |
-| `searchQuery`, `folderFilter`, `favoriteFilter` | Presentation filters over loaded prompts. |
-
-`PromptRepository` owns persistence and record invariants:
-
-| Repository concern | Behavior |
-|---|---|
-| Backend abstraction | Reads/writes through `IStorageBackend` in local/browser mode. |
-| Firestore delegation | Forwards prompt operations to `FirestoreBackend` when synced mode installs a delegate. |
-| Metadata normalization | Creates IDs, timestamps, local creator metadata, and versions in local mode. |
-| Durable mutations | Persists every local create, update, archive, restore, duplicate, and favorite change. |
-| Workspace filtering | `getAll(workspaceId)` and `reloadAll(workspaceId)` return prompts scoped to the requested workspace. |
-
-## Data Flow
-
-### Startup
-
-1. `src/main.tsx` decides whether to render the main app or quick launcher.
-2. `initializeApp()` in `src/App.tsx` selects `LocalStorageBackend` or `BrowserStorageBackend`.
-3. Repositories are created around that backend.
-4. Zustand singleton stores are initialized.
-5. Default seed prompts are inserted into the `local` workspace if it is empty.
-6. Prompts and settings are loaded into stores.
-7. The global hotkey is registered best-effort in desktop mode.
-8. Background services are created, optional Firebase Analytics tracking starts if configured, and auth-session restore may transition the app to synced mode.
-
-### Local Prompt Create/Edit
-
-1. `PromptEditor` gathers title, description, body, tags, folder, and favorite state.
-2. `AppShell` calls `PromptStore.createPrompt()` or `PromptStore.updatePrompt()`.
-3. `PromptStore` delegates to `PromptRepository`.
-4. `PromptRepository` mutates an in-memory prompt cache and persists through `IStorageBackend`.
-5. The store state updates and the UI rerenders.
+## System Shape
 
 ```text
-PromptEditor or library UI
-  -> PromptStore action
-  -> PromptRepository method
+src/main.tsx
+  -> App                         main window / browser runtime
+  -> QuickLauncherApp             quick-launcher Tauri window
+
+initializeApp()
+  -> runtime detection
   -> LocalStorageBackend or BrowserStorageBackend
-  -> PromptRepository returns saved PromptRecipe
-  -> PromptStore merges result into Zustand state
-  -> React UI rerenders
+  -> PromptRepository + SettingsRepository
+  -> PromptStore + SettingsStore + AppModeStore
+  -> optional AuthService, SyncService, ConflictService, Analytics
+
+React screens and components
+  -> controller hooks
+  -> Zustand stores
+  -> repositories
+  -> storage backend or Firestore delegate
+
+Platform boundaries
+  -> utils/clipboard.ts, utils/hotkey.ts, utils/window.ts, utils/file-dialog.ts
+  -> src-tauri/src/commands.rs
+  -> firebase/config.ts dynamic Firebase imports
 ```
 
-For archive/delete actions, `PromptRepository.softDelete()` marks the durable prompt as archived, while `PromptStore` removes it from the visible prompt list and clears `selectedPromptId` if needed. Restore calls `PromptRepository.restore()` and reloads the active workspace list.
-
-### Search and Use
-
-1. `TopBar`, `CommandPalette`, or `QuickLauncherWindow` accepts a query.
-2. `SearchEngine` ranks matches across title, tags, description, and optionally body.
-3. If the selected prompt has variables, `VariableFillModal` collects values and renders a preview.
-4. Copy uses `copy_to_clipboard` in Tauri, falling back to browser clipboard APIs.
-5. Paste copies first, hides the main window when appropriate, then invokes `paste_to_active_app`.
-
-### Tag Derivation and Scalability
-
-Tags are currently stored only as strings on each `PromptRecipe.tags` array. The sidebar tag list, sidebar tag counts, and library tag filter options are derived by scanning the loaded prompt collection in memory.
-
-This keeps the local-first data model simple and works well for typical personal libraries, but the derivation cost is proportional to the number of loaded prompts times the average number of tags per prompt. Very large libraries or high-churn synced workspaces would repeatedly rescan the prompt list after create, update, archive, delete, or sync updates.
-
-Before adding advanced tag management or optimizing for large synced workspaces, introduce a canonical tag index. A store-level derived index would be enough for medium-sized libraries; first-class persisted tag records should be used if tags need metadata such as display names, colors, aliases, pinned order, rename/delete flows, or server-side aggregation.
-
-### Sync Transition
-
-1. `AuthService` signs in or restores a Firebase Auth user.
-2. `AppModeStore` moves toward `synced`.
-3. `SyncService.transitionToSynced()` creates a `FirestoreBackend`.
-4. Local prompts can be migrated into Firestore.
-5. Firestore `onSnapshot` listeners update `PromptStore`.
-6. `PromptRepository.setFirestoreDelegate()` forwards prompt CRUD to `FirestoreBackend`.
-7. Conflicts are detected by comparing local and remote prompt versions and stored in `ConflictService`.
-
-`AuthService` bootstraps the default user workspace and owner membership before synced mode starts Firestore prompt listeners.
-
-After sync transition, the component and store APIs do not change. The write path changes inside the repository:
+The main dependency direction is intentionally one-way:
 
 ```text
-Component
-  -> PromptStore action
-  -> PromptRepository method
-  -> FirestoreBackend delegate
-  -> Cloud Firestore write
-  -> immediate store update from operation result
-  -> later Firestore snapshot replaces PromptStore.prompts
+UI components
+  -> hooks/controllers
+  -> Zustand stores
+  -> repositories
+  -> storage backends
 ```
 
-Firestore snapshots are the authoritative visible list in synced mode. The store may update immediately from a write result, but the listener can replace the list with server-confirmed data, server timestamps, and remote changes from another client.
+Services sit beside that flow. Some services are pure domain logic
+(`VariableParser`, `PromptRenderer`, `SearchEngine`, `ImportExportService`);
+others wrap external systems (`AuthService`, `SyncService`,
+`FirestoreBackend`, analytics).
 
-See [Sync](SYNC.md) for the detailed local-to-synced transition, migration behavior, offline handling, sign-out flow, and current caveats.
+## Runtime Entry Points
 
-## API Boundaries
+| Runtime | Entry point | What it renders | Notes |
+|---|---|---|---|
+| Browser or main Tauri window | `src/main.tsx` -> `src/App.tsx` | `AppShell` | Full library, editor, settings, sync, overlays, and toast UI. |
+| Tauri quick-launcher window | `src/main.tsx` -> `src/screens/QuickLauncherApp.tsx` | `QuickLauncherWindow` | Separate webview with its own store instances, backed by the same storage; skips seeding and hotkey registration. |
+| Native desktop process | `src-tauri/src/main.rs` -> `src-tauri/src/lib.rs` | Tauri windows and commands | Registers plugins, tray behavior, global shortcut, and command handlers. |
 
-| Boundary | Contract | Notes |
+`src/main.tsx` asks Tauri for the current window label. If the label is
+`quick-launcher`, it mounts the launcher app. Otherwise it mounts the full app.
+Outside Tauri, the label lookup fails safely and the browser renders `App`.
+
+`initializeApp()` in `src/App.tsx` is the shared bootstrap. It is idempotent
+within a webview and does this work:
+
+1. Detects Tauri via `isTauriRuntime()`.
+2. Initializes `LocalStorageBackend` in desktop or `BrowserStorageBackend` in a
+   regular browser.
+3. Creates `PromptRepository` and `SettingsRepository`.
+4. Initializes the singleton Zustand stores.
+5. Seeds default prompts in the local workspace when requested.
+6. Loads prompts and settings into the stores.
+7. Registers the configured global hotkey in desktop mode.
+8. Creates background auth, sync, conflict, and analytics services when enabled.
+9. Restores Firebase auth and moves the app into synced mode if a session exists.
+
+## Module Map
+
+| Area | Files | Responsibility |
 |---|---|---|
-| UI to state | Zustand store actions and selectors | Components should avoid talking directly to repositories. |
-| State to data | Repository interfaces in `src/repositories/interfaces.ts` | Repositories hide local, browser, and Firestore persistence details. |
-| Business logic | Service interfaces in `src/services/interfaces.ts` | Parsing, rendering, search, import/export, auth. |
-| Web to native | Tauri `invoke()` commands | Clipboard, paste, hotkey, window commands are desktop-only and should have fallbacks or graceful failure. |
-| App to Firebase | Lazy functions in `src/firebase/config.ts` | Firebase SDK imports happen only when sync or configured Analytics is used. |
+| Bootstrap | `src/main.tsx`, `src/App.tsx` | Runtime routing, backend selection, store/repository initialization, seeding, auth restore, hotkey setup. |
+| App shell | `src/components/app-shell/*`, `src/hooks/use-app-shell-controller.ts`, `src/hooks/app-shell/*` | Screen routing, sidebar/top bar orchestration, CRUD handlers, command palette flow, conflict actions, navigation guards. |
+| Feature UI | `src/components/library/*`, `src/components/prompt-editor/*`, `src/components/settings/*`, `src/components/sidebar/*`, `src/components/prompt-search/*`, `src/components/variable-fill/*`, `src/components/prompt-inspector/*` | User-facing views and reusable feature components. |
+| Quick launcher | `src/screens/QuickLauncherApp.tsx`, `src/screens/QuickLauncherWindow.tsx`, `src/screens/quick-launcher/*` | Search-focused overlay window, keyboard navigation, variable fill, copy/paste, close-on-action behavior. |
+| State stores | `src/stores/*` | Prompt, settings, app mode, and toast state. Prompt/settings/app-mode stores use factory plus singleton initialization. |
+| Repositories | `src/repositories/*` | Durable data access contracts, local/browser storage-backed repositories, Firestore prompt repository delegate. |
+| Services | `src/services/*` | Auth, sync, conflict tracking, import/export, search, variable parsing, rendering, analytics, default seed data. |
+| Firebase | `src/firebase/config.ts` | Lazy Firebase app, analytics, auth, Firestore, emulator config, and test reset. |
+| Platform utils | `src/utils/clipboard.ts`, `src/utils/hotkey.ts`, `src/utils/window.ts`, `src/utils/file-dialog.ts`, `src/utils/runtime.ts` | Browser/Tauri boundary wrappers and fallbacks. |
+| Domain types | `src/types/index.ts` | Shared app models and result types. |
+| Native layer | `src-tauri/src/*`, `src-tauri/tauri.conf.json` | Tauri commands, plugins, tray, windows, global shortcut, clipboard, paste simulation. |
+| Tests | `src/**/__tests__/*`, `src/setup.test.ts`, `vitest.config.ts` | Unit, component, integration, and property-based coverage. |
+
+## Core Domain Model
+
+`PromptRecipe` in `src/types/index.ts` is the central record:
+
+| Field group | Fields | Purpose |
+|---|---|---|
+| Identity | `id`, `workspaceId` | Stable prompt ID and workspace scope. Local mode uses the `local` workspace; synced mode uses the user workspace ID. |
+| Content | `title`, `description`, `body` | Prompt text. `body` can contain `{{variable}}` placeholders. |
+| Organization | `tags`, `folderId`, `favorite` | Tags are inline strings. Folders are referenced by ID. |
+| Lifecycle | `archived`, `archivedAt`, `lastUsedAt` | Delete/archive is soft delete. Prompt execution updates use time. |
+| Sync metadata | `createdAt`, `updatedAt`, `createdBy`, `version` | Used for ordering, local writes, migration, and conflict detection. |
+
+Other important models:
+
+| Type | Role |
+|---|---|
+| `Folder` | Folder ID/name/timestamps. Current UI-created folders are persisted by `utils/folder-storage.ts`; prompt records persist only the `folderId`. |
+| `UserSettings` | Theme, global hotkey, default copy/paste action, active workspace ID. |
+| `Workspace` and `WorkspaceMember` | Local workspace metadata and Firestore authorization shape. |
+| `PromptConflict` | In-memory local/remote prompt versions requiring resolution. |
+| `AuthUser` and `AuthResult` | App-level Firebase auth result types with mapped errors. |
+
+Important prompt invariants live in `PromptRepository` and `FirestoreBackend`:
+
+- Local create generates `id`, `createdAt`, `updatedAt`, `createdBy: 'local'`,
+  and `version: 1`.
+- Local update preserves `id`, refreshes `updatedAt`, and increments `version`.
+- Archive/restore toggles `archived` and `archivedAt`; archived prompts remain
+  in durable storage.
+- Duplicate creates a new ID, prefixes the title with `Copy of`, clears
+  archive/use state, clears favorite, and resets `version`.
+- Synced prompt CRUD is delegated from `PromptRepository` to `FirestoreBackend`
+  after `SyncService` activates synced mode.
 
 ## State Management
 
-| Store | State | Important actions |
+The app uses Zustand. Three stores are initialized during bootstrap and expose
+both a factory for tests and a singleton hook for production:
+
+| Store | File | Owns |
 |---|---|---|
-| `PromptStore` | prompts, loading state, active workspace, selection, filters, search query | load, create, update, duplicate, archive, restore, favorite, mark-used |
-| `SettingsStore` | hotkey, theme, default action, active workspace | load, update |
-| `AppModeStore` | `local`, `synced`, `offline-synced`, user ID, online state, sync status | set mode, user ID, online state, sync status |
-| `ToastStore` | transient toast queue | add/remove toast |
+| `PromptStore` | `src/stores/prompt-store.ts` | Loaded prompt list, loading state, active workspace, selected prompt ID, basic query/filter state, prompt CRUD actions. |
+| `SettingsStore` | `src/stores/settings-store.ts` | Loaded `UserSettings`, settings loading state, settings update action. |
+| `AppModeStore` | `src/stores/app-mode-store.ts` | `local`, `synced`, or `offline-synced` mode, current user ID, online flag, sync status, last synced timestamp. |
+| `ToastStore` | `src/stores/toast-store.ts` | Transient toast queue. This store is created directly because it has no repository dependency. |
 
-Stores follow a factory plus singleton pattern:
+Navigation and screen state are not in Zustand. `useShellNavigation()` owns
+the current screen, selected prompt, command palette state, active sidebar item,
+active filter object, local folder list, variable fill prompt ID, and editor
+dirty guard. That keeps route-like UI state local to the app shell.
 
-- `createXxxStore(...)` creates a standalone store for tests.
-- `initXxxStore(...)` initializes the production singleton.
-- `useXxxStore(...)` reads from the initialized singleton.
+Derived data is calculated in `useLibraryData()`:
 
-## External Dependencies
+- Filtered prompts via `utils/library-filtering.ts`.
+- Sidebar counts via `utils/sidebar-counts.ts`.
+- Folder list by combining persisted user folders with prompt `folderId` values.
+- Available tags from loaded prompt tags.
+- Selected prompt, selected folder, and extracted variables.
+- Variable-fill prompt and variables.
 
-| Dependency | Role |
+The key ownership rule:
+
+```text
+Repository cache = durable data helper, not observable UI state.
+Zustand prompt list = observable UI state, not durable storage.
+```
+
+Store actions call repository methods first, then merge the saved result into
+Zustand. Components should treat store state as the React-facing source of truth
+and repository return values as persistence-confirmed records.
+
+## Persistence Boundaries
+
+`src/repositories/interfaces.ts` defines the main internal data contracts.
+
+### Storage Backends
+
+`IStorageBackend` is the local persistence boundary:
+
+```text
+readPrompts/writePrompts
+readFolders/writeFolders
+readSettings/writeSettings
+readWorkspace/writeWorkspace
+```
+
+Implementations:
+
+| Backend | Runtime | Storage |
+|---|---|---|
+| `LocalStorageBackend` | Tauri desktop | Tauri Store plugin JSON files: `prompts.json`, `folders.json`, `settings.json`, `workspace.json`. |
+| `BrowserStorageBackend` | Browser | `window.localStorage` keys under `promptdock:*`. |
+
+Both backends revive dates into `Date` objects. The Tauri backend also attempts
+basic recovery if a store file cannot be read or deserialized.
+
+### Repositories
+
+| Repository | Boundary |
 |---|---|
-| Tauri 2 | Desktop shell, windows, tray, command bridge. |
-| Tauri plugins | Store, clipboard manager, global shortcut. |
-| `enigo` | Cross-platform keyboard simulation for paste into active app. |
-| Firebase | Optional Auth and Firestore sync. |
-| React, Vite, TypeScript | Frontend runtime and build toolchain. |
-| Zustand | Client state. |
-| Tailwind CSS v4 | Utility CSS with local design tokens in `src/styles.css`. |
-| Testing Library, Vitest, fast-check | Component, unit, integration, and property tests. |
-| lucide-react | Icons. |
+| `PromptRepository` | Implements `IPromptRepository`, keeps a lazy in-memory cache, persists every local mutation through `IStorageBackend`, filters by workspace, and forwards to Firestore when a delegate is installed. |
+| `SettingsRepository` | Implements `ISettingsRepository`, lazily caches settings and persists updates through `IStorageBackend`. |
+| `WorkspaceRepository` | Local single-workspace repository around `LocalStorageBackend`. |
+| `FirestoreBackend` | Implements `IPromptRepository` for `/workspaces/{workspaceId}/prompts`. It is used as the synced-mode prompt delegate. |
 
-## Design Decisions
+The repository layer is the place to enforce durable prompt invariants. UI code
+should not write directly to storage backends, Firestore, or localStorage for
+prompt records.
 
-- Local-first default keeps the app useful without account setup or network access.
-- Repository interfaces make storage backends swappable.
-- Firestore is a delegate of `PromptRepository` instead of a separate UI pathway.
-- Firebase imports are dynamic to avoid initializing sync dependencies in local mode.
-- Tauri native calls are wrapped so browser development remains possible.
-- The quick launcher is a separate Tauri window so it can stay hidden, focused, and always on top.
-- Conflict tracking is currently in memory through `ConflictService`.
-- Import/export is versioned JSON and excludes archived prompts.
+### Current Folder Note
 
-## Known Architecture Gaps
+The storage backend interface supports folders, but the current app shell reads
+and creates UI folders through `src/utils/folder-storage.ts`, a small
+localStorage bridge. Prompt records persist their `folderId`; `useLibraryData()`
+derives the displayed folder list from both user-created folders and prompt
+folder IDs. If you add richer folder features or folder sync, start by unifying
+folder ownership behind a repository.
 
-- Synced mode currently assumes a single default personal workspace where `workspaceId` equals the Firebase user ID.
-- Active workspace state is split across settings, prompt store, and sync assumptions.
-- User-created folder persistence currently uses a localStorage utility outside the repository abstraction.
-- Tags are derived from prompt arrays instead of a canonical tag index, which limits scalability and tag metadata workflows.
-- No E2E test runner is configured for full Tauri window/hotkey/paste flows.
+## External API Boundaries
 
-See [Deferred Issues](Issues.md), [Testing](TESTING.md), and [Troubleshooting](TROUBLESHOOTING.md).
+PromptDock does not expose an HTTP API. Its API boundaries are internal
+interfaces, Tauri commands, Firebase SDK calls, browser APIs, and the import
+JSON format.
+
+### Tauri Commands
+
+Rust commands are defined in `src-tauri/src/commands.rs` and registered in
+`src-tauri/src/lib.rs`.
+
+| Command | TypeScript wrapper | Responsibility |
+|---|---|---|
+| `copy_to_clipboard` | `copyToClipboard()` in `src/utils/clipboard.ts` | Write text to the system clipboard, with browser fallback. |
+| `paste_to_active_app` | `pasteToActiveApp()` in `src/utils/clipboard.ts` | Copy first, hide PromptDock, focus the previous app where possible, and simulate Cmd/Ctrl+V. |
+| `register_hotkey` / `unregister_hotkey` | `registerHotkey()` in `src/utils/hotkey.ts` | Manage the global shortcut that toggles the launcher. |
+| `toggle_quick_launcher` | Direct invoke from launcher controller and Rust hotkey callback | Show/hide the quick-launcher window. |
+| `show_main_window` / `hide_main_window` | `hideMainWindow()` wraps hide only today | Tray/window visibility controls. |
+
+Tauri-specific calls should stay behind utilities unless a component is already
+part of a Tauri-only surface. Utilities either no-op outside Tauri or provide a
+browser fallback.
+
+### Firebase
+
+Firebase imports are lazy and centralized in `src/firebase/config.ts`.
+
+| Caller | Firebase surface |
+|---|---|
+| `AuthService` | Auth sign-up, sign-in, Google sign-in, sign-out, auth session restore, password reset, and bootstrap of `/users/{uid}`, `/workspaces/{uid}`, `/workspaces/{uid}/members/{uid}`. |
+| `SyncService` | Firestore prompt snapshot listener, local prompt migration, online/offline mode transitions, conflict detection callback. |
+| `FirestoreBackend` | Prompt CRUD against `/workspaces/{workspaceId}/prompts`. |
+| `analytics-service.ts` | Optional Firebase Analytics event tracking when configured and supported. |
+
+The default synced workspace ID is currently the Firebase user ID. Prompt CRUD
+switches to Firestore by calling `PromptRepository.setFirestoreDelegate()`.
+Settings still flow through `SettingsRepository`; the current synced-mode
+wiring is primarily prompt sync.
+
+### Browser APIs
+
+Browser fallbacks are used for:
+
+- `window.localStorage` storage in browser runtime.
+- Clipboard writes through `navigator.clipboard.writeText()` and a textarea
+  fallback.
+- File import/export through file inputs, `showSaveFilePicker()` when
+  available, or an object URL download.
+- Online/offline events for sync status.
+- Onboarding and UI folder flags in localStorage.
+
+## Primary Data Flows
+
+### Startup
+
+```text
+src/main.tsx
+  -> detect Tauri window label
+  -> App or QuickLauncherApp
+  -> initializeApp(options)
+  -> choose storage backend
+  -> create repositories
+  -> init Zustand stores
+  -> seed/load prompts and settings
+  -> register hotkey if requested
+  -> create services
+  -> restore auth session if requested
+  -> render shell
+```
+
+Main `App` wraps `AppShell` with `AppModeProvider`, `ThemeManager`, and
+`ErrorBoundary`. The launcher wraps `QuickLauncherWindow` with `ThemeManager`
+and `ErrorBoundary`.
+
+### Prompt Create And Edit
+
+```text
+PromptEditor
+  -> useAppShellController()
+  -> usePromptCrudActions().handleEditorSave()
+  -> PromptStore.createPrompt() or updatePrompt()
+  -> PromptRepository.create() or update()
+  -> LocalStorageBackend / BrowserStorageBackend / FirestoreBackend
+  -> saved PromptRecipe
+  -> PromptStore updates prompt list
+  -> React rerenders library/editor/inspector
+```
+
+`usePromptCrudActions()` decides local versus synced metadata for new prompts:
+local prompts use workspace `local` and creator `local`; synced prompts use the
+active workspace ID and current user ID.
+
+### Library Search And Filtering
+
+```text
+TopBar search / Sidebar / Filter popover
+  -> navigation/filter state
+  -> useLibraryData()
+  -> filterPrompts(), sidebar counts, tag/folder derivation
+  -> LibraryScreen and Sidebar props
+```
+
+The command palette and quick launcher use search-specific hooks and
+`SearchEngine`-style ranking across title, tags, description, and body. Library
+filters are derived in memory from the loaded prompt collection.
+
+### Prompt Execution
+
+```text
+User selects prompt
+  -> extractVariables(body)
+  -> if variables exist: VariableFillModal
+  -> renderPromptTemplate()
+  -> usePromptExecution()
+  -> copyToClipboard() or pasteToActiveApp()
+  -> PromptStore.markPromptUsed()
+  -> analytics action event
+```
+
+Paste always copies first. In browser mode, paste cannot target another app, so
+the text remains on the clipboard and the result is reported as copied.
+
+### Quick Launcher
+
+```text
+Global hotkey
+  -> Rust toggle_quick_launcher
+  -> quick-launcher webview becomes visible
+  -> useQuickLauncherController()
+  -> loadPrompts() on focus/visibility
+  -> search results + highlighted index
+  -> copy/paste and hide window
+```
+
+The launcher has its own JS context and store instances. It refreshes prompts
+from shared persistence when focused or when the document becomes visible.
+
+### Sync Transition
+
+```text
+Auth success or restored session
+  -> AppModeStore.userId = uid
+  -> AppModeStore.mode = synced
+  -> App.tsx mode subscription creates SyncService
+  -> active workspace becomes uid
+  -> SyncService.transitionToSynced()
+  -> optional local prompt migration
+  -> Firestore onSnapshot listener
+  -> PromptRepository.setFirestoreDelegate(FirestoreBackend)
+  -> remote snapshots replace PromptStore.prompts
+```
+
+When the app returns to local mode, `SyncService` disposes listeners, the
+Firestore delegate is cleared, active workspace returns to `local`, conflicts
+are cleared, and local prompts are reloaded.
+
+Conflict detection compares local and remote prompt versions, timestamps, title,
+and body. `ConflictService` stores unresolved conflicts in memory and exposes a
+subscription used by `useConflictController()`.
+
+### Settings
+
+```text
+SettingsScreen
+  -> useSettingsActions()
+  -> SettingsStore.updateSettings()
+  -> SettingsRepository.update()
+  -> IStorageBackend.writeSettings()
+```
+
+Theme changes are applied by `ThemeManager`. Hotkey changes first call the
+Tauri hotkey command through `registerHotkey()` and then persist the setting.
+The hotkey settings section is hidden in browser mode.
+
+### Import And Export
+
+```text
+Settings import/export card
+  -> usePromptImportExport()
+  -> ImportExportService
+  -> file-dialog utility
+  -> PromptStore.createPrompt() or updatePrompt()
+```
+
+Export writes non-archived prompts to schema version `1.0`. Import validates the
+JSON shape, detects duplicates by title/body, and either skips, overwrites, or
+creates prompts in the current target workspace.
+
+## Where A New Developer Should Start
+
+Read in this order:
+
+1. `README.md` for product intent, commands, environment variables, and docs.
+2. `package.json`, `vite.config.ts`, and `src-tauri/tauri.conf.json` for the
+   build/runtime shape.
+3. `src/main.tsx` and `src/App.tsx` to understand bootstrapping, runtime
+   selection, singleton store initialization, sync wiring, and quick-launcher
+   routing.
+4. `src/types/index.ts`, `src/repositories/interfaces.ts`, and
+   `src/services/interfaces.ts` for the core contracts.
+5. `src/components/app-shell/AppShell.tsx`,
+   `src/hooks/use-app-shell-controller.ts`, and `src/hooks/app-shell/*` for how
+   user actions become store/repository calls.
+6. `src/stores/prompt-store.ts`, `src/stores/settings-store.ts`, and
+   `src/stores/app-mode-store.ts` for state ownership.
+7. `src/repositories/prompt-repository.ts`,
+   `src/repositories/local-storage-backend.ts`,
+   `src/repositories/browser-storage-backend.ts`, and
+   `src/repositories/firestore-backend.ts` for persistence behavior.
+8. `src/services/sync-service.ts`, `src/services/auth-service.ts`,
+   `src/services/conflict-service.ts`, and `src/firebase/config.ts` for synced
+   mode.
+9. `src/utils/clipboard.ts`, `src/utils/hotkey.ts`, `src/utils/window.ts`, and
+   `src-tauri/src/commands.rs` for desktop integration.
+10. `src/screens/QuickLauncherApp.tsx`,
+    `src/screens/quick-launcher/useQuickLauncherController.ts`, and
+    `src/components/prompt-search/*` for launcher/search behavior.
+
+Useful companion docs:
+
+- `docs/API.md` for internal interfaces, Tauri command signatures, Firestore
+  paths, and import/export schema.
+- `docs/SYNC.md` for deeper sync behavior and caveats.
+- `docs/DEVELOPMENT.md` for workflow conventions.
+- `docs/TESTING.md` for test strategy and commands.
+
+## Common Change Locations
+
+| Change | Start here | Then check |
+|---|---|---|
+| Add a prompt CRUD behavior | `src/hooks/app-shell/use-prompt-crud-actions.ts` | `PromptStore`, `PromptRepository`, component tests, repository/store tests. |
+| Add prompt fields | `src/types/index.ts` | repository serializers, Firestore converters, import/export schema, editor UI, tests, Firestore rules if synced. |
+| Add a library filter | `src/utils/library-filtering.ts` | `useLibraryData()`, filter popover components, sidebar counts, property tests. |
+| Add a setting | `UserSettings` in `src/types/index.ts` | default settings in stores/backends, settings UI cards, settings tests. |
+| Change copy/paste behavior | `src/hooks/use-prompt-execution.ts` | `src/utils/clipboard.ts`, `src-tauri/src/commands.rs`, clipboard property tests. |
+| Change the global hotkey | `src/utils/hotkey.ts` | `src-tauri/src/commands.rs`, settings hotkey UI, runtime tests. |
+| Change sync behavior | `src/services/sync-service.ts` | `AuthService`, `FirestoreBackend`, Firestore rules/indexes, sync integration tests. |
+| Add native capability | `src-tauri/src/commands.rs` | `src-tauri/src/lib.rs`, `tauri.conf.json` capabilities, TypeScript utility wrapper. |
+| Add import/export fields | `src/services/import-export.ts` | settings import/export UI, JSON schema docs, tests. |
+| Adjust quick launcher UX | `src/screens/quick-launcher/useQuickLauncherController.ts` | prompt search components, keyboard navigation tests. |
+
+## Testing Landmarks
+
+- Store tests live in `src/stores/__tests__/`.
+- Repository/backend tests live in `src/repositories/__tests__/`.
+- Service tests live in `src/services/__tests__/`.
+- Component and shell behavior tests live in `src/components/__tests__/` and
+  `src/screens/__tests__/`.
+- Property-based tests cover clipboard fallback, search/filter behavior,
+  variable extraction/fill conditions, sidebar counts, text counts, and keyboard
+  navigation invariants.
+
+Run the full suite with:
+
+```bash
+npm test
+```
+
+For architecture-sensitive changes, also run:
+
+```bash
+npm run build
+```

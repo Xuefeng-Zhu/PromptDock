@@ -6,7 +6,7 @@ import { PromptSearchEmptyState } from './PromptSearchEmptyState';
 interface CommandPaletteResultsProps {
   highlightedIndex: number;
   prompts: PromptRecipe[];
-  resultsListRef: RefObject<HTMLUListElement>;
+  resultsListRef: RefObject<HTMLUListElement | null>;
   onHighlight: (index: number) => void;
   onSelectPrompt: (prompt: PromptRecipe) => void;
 }

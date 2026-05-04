@@ -84,6 +84,7 @@ const STORE_FILES = {
 } as const;
 
 const DATA_KEY = 'data';
+const STORE_OPTIONS = { autoSave: false, defaults: {} };
 
 // ─── Default Values ────────────────────────────────────────────────────────────
 
@@ -117,14 +118,14 @@ export class LocalStorageBackend {
     if (existing) return existing;
 
     try {
-      const store = await load(fileName, { autoSave: false });
+      const store = await load(fileName, STORE_OPTIONS);
       this.stores.set(fileName, store);
       return store;
     } catch (error) {
       console.error(`Failed to load store "${fileName}":`, error);
       // Attempt to load with createNew to reinitialize
       try {
-        const store = await load(fileName, { autoSave: false, createNew: true });
+        const store = await load(fileName, { ...STORE_OPTIONS, createNew: true });
         this.stores.set(fileName, store);
         return store;
       } catch (retryError) {
@@ -167,7 +168,7 @@ export class LocalStorageBackend {
       // Attempt to preserve the corrupted data by saving current state as backup
       const backupName = fileName.replace('.json', '.backup.json');
       try {
-        const backupStore = await load(backupName, { autoSave: false });
+        const backupStore = await load(backupName, STORE_OPTIONS);
         // Copy all entries from corrupted store to backup
         const entries = await store.entries();
         for (const [key, value] of entries) {

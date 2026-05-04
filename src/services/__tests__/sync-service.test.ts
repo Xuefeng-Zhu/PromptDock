@@ -62,13 +62,13 @@ function createMockAppModeStore(): AppModeStore {
 describe('SyncService', () => {
   let mockStore: AppModeStore;
   let service: SyncService;
-  let onRemotePromptsChanged: ReturnType<typeof vi.fn>;
-  let onConflictDetected: ReturnType<typeof vi.fn>;
+  let onRemotePromptsChanged: (prompts: PromptRecipe[]) => void;
+  let onConflictDetected: (local: PromptRecipe, remote: PromptRecipe) => void;
 
   beforeEach(() => {
     mockStore = createMockAppModeStore();
-    onRemotePromptsChanged = vi.fn();
-    onConflictDetected = vi.fn();
+    onRemotePromptsChanged = vi.fn<(prompts: PromptRecipe[]) => void>();
+    onConflictDetected = vi.fn<(local: PromptRecipe, remote: PromptRecipe) => void>();
 
     service = new SyncService({
       appModeStore: mockStore,

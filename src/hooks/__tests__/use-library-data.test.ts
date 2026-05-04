@@ -50,7 +50,7 @@ describe('useLibraryData', () => {
         id: 'derived-folder',
         title: 'Derived folder prompt',
         body: 'Summarize {{topic}}',
-        folderId: 'folder-research',
+        folderId: 'folder-research-1777560341621',
         tags: ['research'],
       }),
       makePrompt({
@@ -66,7 +66,7 @@ describe('useLibraryData', () => {
     const { result } = renderHook(() =>
       useLibraryData({
         activeFilter: 'all',
-        activeSidebarItem: 'folder-research',
+        activeSidebarItem: 'folder-research-1777560341621',
         prompts,
         searchQuery: '',
         selectedPromptId: 'selected',
@@ -77,12 +77,12 @@ describe('useLibraryData', () => {
 
     expect(result.current.derivedFolders.map((folder) => [folder.id, folder.name])).toEqual([
       ['folder-work', 'Work'],
-      ['folder-research', 'Research'],
+      ['folder-research-1777560341621', 'Research'],
     ]);
     expect(result.current.filteredPrompts.map((prompt) => prompt.id)).toEqual(['derived-folder']);
     expect(result.current.promptCountByFolder).toEqual({
       'folder-work': 1,
-      'folder-research': 1,
+      'folder-research-1777560341621': 1,
     });
     expect(result.current.selectedPrompt?.id).toBe('selected');
     expect(result.current.selectedPromptFolder?.name).toBe('Work');

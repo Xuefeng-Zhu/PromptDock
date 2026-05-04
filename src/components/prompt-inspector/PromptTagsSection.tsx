@@ -2,16 +2,17 @@ import { useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { Plus, X } from 'lucide-react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import type { PromptRecipe } from '../../types/index';
+import {
+  getQuickTagOptions,
+  normalizeTag,
+  resolveExistingTagName,
+} from '../../utils/tag-options';
 
 interface PromptTagsSectionProps {
   availableTags?: string[];
   onEdit?: (id: string) => void;
   onUpdateTags?: (id: string, updateTags: (tags: string[]) => string[]) => void;
   prompt: PromptRecipe;
-}
-
-function normalizeTag(tag: string): string {
-  return tag.trim().toLowerCase();
 }
 
 export function PromptTagsSection({
@@ -24,25 +25,10 @@ export function PromptTagsSection({
   const [editing, setEditing] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const canEditTags = Boolean(onUpdateTags);
-  const selectedTagKeys = useMemo(
-    () => new Set(prompt.tags.map(normalizeTag)),
-    [prompt.tags],
+  const quickTagOptions = useMemo(
+    () => getQuickTagOptions({ availableTags, selectedTags: prompt.tags, query: tagInput }),
+    [availableTags, prompt.tags, tagInput],
   );
-  const quickTagOptions = useMemo(() => {
-    const query = normalizeTag(tagInput);
-    const seen = new Set<string>();
-
-    return availableTags
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== '')
-      .filter((tag) => {
-        const key = normalizeTag(tag);
-        if (selectedTagKeys.has(key) || seen.has(key)) return false;
-        seen.add(key);
-        return query === '' || key.includes(query);
-      })
-      .slice(0, 6);
-  }, [availableTags, selectedTagKeys, tagInput]);
   const {
     highlightedIndex,
     moveHighlightedIndex,
@@ -64,10 +50,7 @@ export function PromptTagsSection({
       return;
     }
 
-    const normalized = normalizeTag(trimmed);
-    const existingTag =
-      availableTags.find((candidate) => normalizeTag(candidate) === normalized)?.trim()
-      ?? trimmed;
+    const existingTag = resolveExistingTagName(availableTags, trimmed);
 
     onUpdateTags?.(prompt.id, (currentTags) => {
       const currentTagKeys = new Set(currentTags.map(normalizeTag));

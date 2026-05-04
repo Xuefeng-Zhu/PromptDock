@@ -10,7 +10,7 @@ export interface DropdownPosition {
 }
 
 interface UseAnchoredDropdownPositionOptions<T extends HTMLElement> {
-  anchorRef: RefObject<T>;
+  anchorRef: RefObject<T | null>;
   gap?: number;
   maxHeight?: number;
   minHeight?: number;

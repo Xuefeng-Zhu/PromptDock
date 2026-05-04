@@ -18,7 +18,7 @@ describe('prompt filter chips', () => {
   it('derives chips with human labels and fallback folder names', () => {
     const filters: PromptFilters = {
       ...createDefaultPromptFilters(),
-      folders: ['folder-work', 'folder-long_term-research'],
+      folders: ['folder-work', 'folder-long_term-research-1777560341621'],
       lastUsed: 'last30Days',
       query: 'draft',
       statuses: ['favorites', 'hasVariables'],

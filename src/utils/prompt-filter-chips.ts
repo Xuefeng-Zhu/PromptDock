@@ -5,6 +5,7 @@ import type {
   StatusFilter,
   TagFilter,
 } from './prompt-filters';
+import { formatFolderLabel } from './folder-label';
 
 export const STATUS_OPTIONS: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Favorites only', value: 'favorites' },
@@ -36,17 +37,6 @@ export function toggleFilterValue<T extends string>(values: T[], value: T): T[] 
     : [...values, value];
 }
 
-function fallbackFilterLabel(value: string): string {
-  const cleaned = value
-    .replace(/^folder-/, '')
-    .replace(/[-_]+/g, ' ')
-    .trim();
-
-  if (cleaned === '') return value;
-
-  return cleaned.replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
 export function getActiveFilterChips(
   filters: PromptFilters,
   folderLabels: Record<string, string>,
@@ -74,7 +64,7 @@ export function getActiveFilterChips(
   for (const folder of filters.folders) {
     chips.push({
       id: `folder-${folder}`,
-      label: `Folder: ${folderLabels[folder] ?? fallbackFilterLabel(folder)}`,
+      label: `Folder: ${folderLabels[folder] ?? formatFolderLabel(folder)}`,
       kind: 'folder',
       value: folder,
     });

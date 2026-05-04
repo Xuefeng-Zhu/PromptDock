@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeAll, describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { PromptGrid } from '../library';
 import { MOCK_PROMPTS } from '../../data/mock-data';
 import type { PromptRecipe } from '../../types/index';
@@ -12,6 +12,23 @@ const defaultProps = {
   onToggleFavorite: vi.fn(),
   categoryColorMap: {} as Record<string, string>,
 };
+
+beforeAll(() => {
+  HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect() {
+    const height = this.getAttribute('role') === 'listbox' ? 720 : 200;
+    return {
+      bottom: height,
+      height,
+      left: 0,
+      right: 1024,
+      top: 0,
+      width: 1024,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    };
+  };
+});
 
 function makePrompts(count: number): PromptRecipe[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -50,11 +67,16 @@ describe('PromptGrid', () => {
     expect(screen.queryByText('No prompts found')).toBeNull();
   });
 
-  it('virtualizes large prompt collections', () => {
+  it('virtualizes large prompt collections', async () => {
     const prompts = makePrompts(200);
     render(<PromptGrid {...defaultProps} prompts={prompts} />);
 
     const listbox = screen.getByRole('listbox', { name: 'Prompt list' });
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
+    });
+
     const options = screen.getAllByRole('option');
 
     expect(listbox.getAttribute('data-virtualized')).toBe('true');

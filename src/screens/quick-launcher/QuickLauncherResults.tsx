@@ -1,5 +1,5 @@
-import { useEffect, type CSSProperties } from 'react';
-import { useVirtualRows } from '../../hooks/use-virtual-rows';
+import { useEffect, useRef, type CSSProperties } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { PromptResultTags, PromptSearchEmptyState } from '../../components/prompt-search';
 import type { PromptRecipe } from '../../types/index';
 
@@ -15,6 +15,22 @@ interface QuickLauncherResultsProps {
 
 const VIRTUALIZATION_THRESHOLD = 80;
 const RESULT_ROW_HEIGHT = 76;
+const OVERSCAN_ROWS = 5;
+const INITIAL_VIRTUAL_VIEWPORT_HEIGHT = 480;
+
+function createInitialVirtualRows(rowCount: number) {
+  const visibleRowCount = Math.min(
+    rowCount,
+    Math.ceil(INITIAL_VIRTUAL_VIEWPORT_HEIGHT / RESULT_ROW_HEIGHT) + OVERSCAN_ROWS,
+  );
+
+  return Array.from({ length: visibleRowCount }, (_, index) => ({
+    index,
+    key: index,
+    size: RESULT_ROW_HEIGHT,
+    start: index * RESULT_ROW_HEIGHT,
+  }));
+}
 
 export function QuickLauncherResults({
   highlightIndex,
@@ -25,24 +41,23 @@ export function QuickLauncherResults({
   onHighlightPrompt,
   onSelectPrompt,
 }: QuickLauncherResultsProps) {
-  const {
-    containerRef,
-    scrollToRow,
-    shouldVirtualize,
-    totalSize,
-    virtualRows,
-  } = useVirtualRows<HTMLDivElement>({
-    enabled: results.length > VIRTUALIZATION_THRESHOLD,
-    rowCount: results.length,
-    rowHeight: RESULT_ROW_HEIGHT,
-    scrollElement: 'self',
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const shouldVirtualize = results.length > VIRTUALIZATION_THRESHOLD;
+  const resultVirtualizer = useVirtualizer<HTMLDivElement, HTMLButtonElement>({
+    count: results.length,
+    enabled: shouldVirtualize,
+    estimateSize: () => RESULT_ROW_HEIGHT,
+    getItemKey: (index) => results[index]?.id ?? index,
+    getScrollElement: () => scrollContainerRef.current,
+    initialRect: { height: INITIAL_VIRTUAL_VIEWPORT_HEIGHT, width: 640 },
+    overscan: OVERSCAN_ROWS,
   });
 
   useEffect(() => {
     if (shouldVirtualize) {
-      scrollToRow(highlightIndex);
+      resultVirtualizer.scrollToIndex(highlightIndex, { align: 'auto' });
     }
-  }, [highlightIndex, scrollToRow, shouldVirtualize]);
+  }, [highlightIndex, resultVirtualizer, shouldVirtualize]);
 
   const renderResult = (
     prompt: PromptRecipe,
@@ -84,9 +99,14 @@ export function QuickLauncherResults({
     </button>
   );
 
+  const virtualRows = resultVirtualizer.getVirtualItems();
+  const renderedVirtualRows = virtualRows.length > 0
+    ? virtualRows
+    : createInitialVirtualRows(results.length);
+
   return (
     <div
-      ref={containerRef}
+      ref={scrollContainerRef}
       className="flex-1 overflow-y-auto"
       role="listbox"
       aria-label="Search results"
@@ -99,8 +119,8 @@ export function QuickLauncherResults({
           {query.trim() ? 'No prompts found.' : 'Start typing to search…'}
         </PromptSearchEmptyState>
       ) : shouldVirtualize ? (
-        <div className="relative" style={{ height: totalSize }}>
-          {virtualRows.map((row) => {
+        <div className="relative" style={{ height: resultVirtualizer.getTotalSize() }}>
+          {renderedVirtualRows.map((row) => {
             const prompt = results[row.index];
             if (!prompt) return null;
 
@@ -109,7 +129,8 @@ export function QuickLauncherResults({
               left: 0,
               position: 'absolute',
               right: 0,
-              top: row.start,
+              top: 0,
+              transform: `translateY(${row.start}px)`,
             });
           })}
         </div>

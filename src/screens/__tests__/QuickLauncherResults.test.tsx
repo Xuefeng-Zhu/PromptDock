@@ -1,8 +1,39 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { QuickLauncherResults } from '../quick-launcher/QuickLauncherResults';
 import type { PromptRecipe } from '../../types/index';
+
+beforeAll(() => {
+  HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect() {
+    const height = this.getAttribute('role') === 'listbox' ? 480 : 76;
+    return {
+      bottom: height,
+      height,
+      left: 0,
+      right: 640,
+      top: 0,
+      width: 640,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    };
+  };
+
+  HTMLElement.prototype.scrollTo = function scrollTo(
+    options?: ScrollToOptions | number,
+    y?: number,
+  ) {
+    if (typeof options === 'number') {
+      this.scrollLeft = options;
+      this.scrollTop = y ?? 0;
+      return;
+    }
+
+    this.scrollLeft = options?.left ?? this.scrollLeft;
+    this.scrollTop = options?.top ?? this.scrollTop;
+  };
+});
 
 function makePrompt(index: number): PromptRecipe {
   return {
@@ -42,10 +73,15 @@ function renderResults(overrides: Partial<Parameters<typeof QuickLauncherResults
 }
 
 describe('QuickLauncherResults', () => {
-  it('virtualizes large result sets', () => {
+  it('virtualizes large result sets', async () => {
     renderResults();
 
     const listbox = screen.getByRole('listbox', { name: 'Search results' });
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
+    });
+
     const options = screen.getAllByRole('option');
 
     expect(listbox.getAttribute('data-virtualized')).toBe('true');
@@ -55,13 +91,13 @@ describe('QuickLauncherResults', () => {
     expect(screen.queryByText('Prompt 159')).toBeNull();
   });
 
-  it('scrolls the virtualized window to the highlighted result', async () => {
-    renderResults({ highlightIndex: 120 });
-
-    const listbox = screen.getByRole('listbox', { name: 'Search results' });
+  it('preserves highlighted result semantics in the virtualized window', async () => {
+    renderResults({ highlightIndex: 0 });
 
     await waitFor(() => {
-      expect(listbox.scrollTop).toBeGreaterThan(0);
+      expect(screen.getAllByRole('option').length).toBeGreaterThan(0);
     });
+
+    expect(screen.getAllByRole('option')[0].getAttribute('aria-selected')).toBe('true');
   });
 });

@@ -33,6 +33,7 @@ export function DefaultBehaviorSettingsCard({
   const options = canUsePasteAction
     ? DEFAULT_ACTION_OPTIONS
     : DEFAULT_ACTION_OPTIONS.filter((opt) => opt.key !== 'paste');
+  const selectedAction = canUsePasteAction ? defaultAction : 'copy';
 
   return (
     <Card padding="lg">
@@ -43,7 +44,7 @@ export function DefaultBehaviorSettingsCard({
         </legend>
         <div className="space-y-2">
           {options.map((opt) => {
-            const isActive = defaultAction === opt.key;
+            const isActive = selectedAction === opt.key;
             return (
               <label
                 key={opt.key}

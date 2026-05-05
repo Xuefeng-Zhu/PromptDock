@@ -10,21 +10,14 @@ import {
 } from '../components/settings/settings-data';
 
 export function useSettingsActions() {
-  const storedSettings = useSettingsStore((s) => s.settings);
+  const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const [density, setDensity] = useState<DensityOption>('comfortable');
   const [hotkeyError, setHotkeyError] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const canUseGlobalHotkeys = isTauriRuntime();
-  const canUsePasteAction = isTauriRuntime();
-  const settings = useMemo(
-    () =>
-      canUsePasteAction || storedSettings.defaultAction === 'copy'
-        ? storedSettings
-        : { ...storedSettings, defaultAction: 'copy' as const },
-    [canUsePasteAction, storedSettings],
-  );
+  const canUsePasteAction = canUseGlobalHotkeys;
   const visibleNavItems = useMemo(
     () =>
       canUseGlobalHotkeys

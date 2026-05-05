@@ -39,6 +39,25 @@ describe('PromptEditor', () => {
     expect(screen.getByText(/11 characters/)).toBeDefined();
   });
 
+  it('keeps large prompt bodies on the main editor scroll surface', () => {
+    const largeBody = Array.from({ length: 80 }, (_, index) => `Review item ${index + 1}`).join('\n');
+    render(
+      <PromptEditor
+        {...defaultProps}
+        promptId="large-prompt"
+        prompt={{ ...MOCK_PROMPTS[0], id: 'large-prompt', body: largeBody }}
+      />,
+    );
+
+    const bodyTextarea = screen.getByLabelText('Body') as HTMLTextAreaElement;
+    expect(bodyTextarea.rows).toBe(12);
+    expect(bodyTextarea.classList.contains('overflow-auto')).toBe(false);
+    expect(bodyTextarea.classList.contains('overflow-hidden')).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand editor' }));
+    expect(bodyTextarea.rows).toBe(12);
+  });
+
   it('renders the Insert variable button', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Insert variable')).toBeDefined();

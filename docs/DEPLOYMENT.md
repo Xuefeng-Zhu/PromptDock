@@ -68,6 +68,21 @@ src-tauri/target/release/bundle/
 
 The checked-in bundle config has `"active": true` and includes PNG, ICNS, and ICO icons.
 
+## Branching and Release Flow
+
+Use `develop` as the integration branch for day-to-day work. All regular
+feature, fix, and documentation pull requests should target `develop` instead
+of `main`.
+
+Keep `main` release-only. When cutting a release, open a release pull request
+from `develop` into `main`, confirm the release checklist is complete, then
+merge `develop` into `main`. The production Firebase Hosting workflow runs on
+pushes to `main`, and desktop release workflows run from `v*` tags or manual
+workflow dispatches.
+
+Release pull requests should use `.github/PULL_REQUEST_TEMPLATE/release.md`.
+Create release tags only from `main`, and use the `vX.Y.Z` format.
+
 ## Firebase Deployment
 
 The web app deploys to Firebase Hosting from GitHub Actions on pushes to `main`
@@ -233,6 +248,8 @@ desktop assets.
 
 ## Release Checklist
 
+- Release pull request from `develop` into `main` is open and green.
+- Release PR uses `.github/PULL_REQUEST_TEMPLATE/release.md`.
 - `npm test` passes or known failures are explicitly accepted.
 - `npm run build` passes.
 - Tauri desktop smoke test passes on the target OS.

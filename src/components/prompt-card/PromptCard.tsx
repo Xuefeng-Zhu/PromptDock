@@ -8,6 +8,7 @@ import { resolveIconFromColor } from './category-icons';
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface PromptCardProps {
+  className?: string;
   prompt: PromptRecipe;
   categoryColor: string;
   isSelected: boolean;
@@ -31,6 +32,7 @@ export { formatRelativeTime } from '../../utils/date-format';
  * like "bg-purple-100 text-purple-600" applied to the IconTile.
  */
 export function PromptCard({
+  className,
   prompt,
   categoryColor,
   isSelected,
@@ -59,7 +61,8 @@ export function PromptCard({
         isSelected
           ? 'border-[#2563EB] ring-1 ring-[#2563EB]'
           : 'border-[var(--color-border)]',
-      ].join(' ')}
+        className,
+      ].filter(Boolean).join(' ')}
       onClick={() => onSelect(prompt.id)}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -90,6 +93,7 @@ export function PromptCard({
       {!isList && (
         <PromptCardTags
           tags={prompt.tags}
+          limit={4}
           className="mt-3 flex flex-wrap gap-1.5"
         />
       )}

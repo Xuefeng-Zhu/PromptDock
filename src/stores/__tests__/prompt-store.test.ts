@@ -49,6 +49,7 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts[idx] = updated;
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -226,7 +227,7 @@ describe('PromptStore', () => {
       await store.getState().deletePrompt('p1');
 
       expect(store.getState().prompts.find((p) => p.id === 'p1')).toBeUndefined();
-      expect(repo.softDelete).toHaveBeenCalledWith('p1');
+      expect(repo.delete).toHaveBeenCalledWith('p1');
     });
 
     it('should clear selectedPromptId if the deleted prompt was selected', async () => {
@@ -296,11 +297,14 @@ describe('PromptStore', () => {
   // ── archivePrompt ──────────────────────────────────────────────────────────
 
   describe('archivePrompt', () => {
-    it('should remove the prompt from the store and call softDelete', async () => {
+    it('should keep the prompt in the store as archived and call softDelete', async () => {
       await store.getState().loadPrompts();
       await store.getState().archivePrompt('p1');
 
-      expect(store.getState().prompts.find((p) => p.id === 'p1')).toBeUndefined();
+      const archived = store.getState().prompts.find((p) => p.id === 'p1');
+      expect(archived).toBeDefined();
+      expect(archived?.archived).toBe(true);
+      expect(archived?.archivedAt).toBeInstanceOf(Date);
       expect(repo.softDelete).toHaveBeenCalledWith('p1');
     });
 

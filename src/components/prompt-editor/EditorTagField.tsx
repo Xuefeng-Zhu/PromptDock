@@ -1,6 +1,7 @@
 import { useId, useMemo, type KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
+import { getQuickTagOptions } from '../../utils/tag-options';
 import { TagPill } from '../ui';
 
 interface EditorTagFieldProps {
@@ -16,10 +17,6 @@ interface EditorTagFieldProps {
   tags: string[];
 }
 
-function normalizeTag(tag: string): string {
-  return tag.trim().toLowerCase();
-}
-
 export function EditorTagField({
   availableTags = [],
   onAddTag,
@@ -33,25 +30,10 @@ export function EditorTagField({
   tags,
 }: EditorTagFieldProps) {
   const listboxId = useId();
-  const selectedTagKeys = useMemo(
-    () => new Set(tags.map(normalizeTag)),
-    [tags],
+  const quickTagOptions = useMemo(
+    () => getQuickTagOptions({ availableTags, selectedTags: tags, query: tagInput }),
+    [availableTags, tagInput, tags],
   );
-  const quickTagOptions = useMemo(() => {
-    const query = normalizeTag(tagInput);
-    const seen = new Set<string>();
-
-    return availableTags
-      .map((tag) => tag.trim())
-      .filter((tag) => tag !== '')
-      .filter((tag) => {
-        const key = normalizeTag(tag);
-        if (selectedTagKeys.has(key) || seen.has(key)) return false;
-        seen.add(key);
-        return query === '' || key.includes(query);
-      })
-      .slice(0, 6);
-  }, [availableTags, selectedTagKeys, tagInput]);
   const {
     highlightedIndex,
     moveHighlightedIndex,

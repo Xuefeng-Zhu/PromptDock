@@ -5,18 +5,17 @@ import { isTauriRuntime } from '../utils/runtime';
 import {
   SETTINGS_NAV_ITEMS,
   type DefaultAction,
-  type DensityOption,
   type ThemeOption,
 } from '../components/settings/settings-data';
 
 export function useSettingsActions() {
   const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
-  const [density, setDensity] = useState<DensityOption>('comfortable');
   const [hotkeyError, setHotkeyError] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const canUseGlobalHotkeys = isTauriRuntime();
+  const canUsePasteAction = canUseGlobalHotkeys;
   const visibleNavItems = useMemo(
     () =>
       canUseGlobalHotkeys
@@ -58,6 +57,7 @@ export function useSettingsActions() {
 
   const handleDefaultActionChange = useCallback(
     async (defaultAction: DefaultAction) => {
+      if (defaultAction === 'paste' && !canUsePasteAction) return;
       setSettingsError(null);
       try {
         await updateSettings({ defaultAction });
@@ -67,17 +67,16 @@ export function useSettingsActions() {
         );
       }
     },
-    [updateSettings],
+    [canUsePasteAction, updateSettings],
   );
 
   return {
     canUseGlobalHotkeys,
-    density,
+    canUsePasteAction,
     handleDefaultActionChange,
     handleHotkeyChange,
     handleThemeChange,
     hotkeyError,
-    setDensity,
     settings,
     settingsError,
     visibleNavItems,

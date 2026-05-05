@@ -13,7 +13,7 @@ const KEYS = {
 const DEFAULT_SETTINGS: UserSettings = {
   hotkeyCombo: 'CommandOrControl+Shift+P',
   theme: 'system',
-  defaultAction: 'paste',
+  defaultAction: 'copy',
   activeWorkspaceId: 'local',
 };
 

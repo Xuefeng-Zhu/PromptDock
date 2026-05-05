@@ -316,7 +316,7 @@ fn activate_last_active_app(last_active_app: &LastActiveApp) {
 #[cfg(target_os = "windows")]
 fn activate_last_active_app(last_active_app: &LastActiveApp) {
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        IsWindow, SetForegroundWindow, ShowWindow, SW_RESTORE,
+        IsIconic, IsWindow, SetForegroundWindow, ShowWindow, SW_RESTORE,
     };
 
     let stored_hwnd = last_active_app.0.lock().ok().and_then(|hwnd| *hwnd);
@@ -334,13 +334,20 @@ fn activate_last_active_app(last_active_app: &LastActiveApp) {
     }
 
     unsafe {
-        ShowWindow(hwnd, SW_RESTORE);
+        if should_restore_windows_target(IsIconic(hwnd) != 0) {
+            ShowWindow(hwnd, SW_RESTORE);
+        }
         SetForegroundWindow(hwnd);
     }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 fn activate_last_active_app(_last_active_app: &LastActiveApp) {}
+
+#[cfg(any(target_os = "windows", test))]
+fn should_restore_windows_target(is_minimized: bool) -> bool {
+    is_minimized
+}
 
 #[cfg(target_os = "macos")]
 fn macos_frontmost_app_pid() -> Option<i32> {
@@ -489,5 +496,11 @@ mod tests {
     #[test]
     fn paste_hides_launcher_before_main_window() {
         assert_eq!(PASTE_WINDOW_LABELS, ["quick-launcher", "main"]);
+    }
+
+    #[test]
+    fn windows_paste_restores_only_minimized_targets() {
+        assert!(should_restore_windows_target(true));
+        assert!(!should_restore_windows_target(false));
     }
 }

@@ -56,12 +56,11 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const {
     canUseGlobalHotkeys,
-    density,
+    canUsePasteAction,
     handleDefaultActionChange,
     handleHotkeyChange,
     handleThemeChange,
     hotkeyError,
-    setDensity,
     settings,
     settingsError,
     visibleNavItems,
@@ -137,8 +136,6 @@ export function SettingsScreen({
                 <AppearanceSettingsCard
                   theme={settings.theme}
                   onThemeChange={handleThemeChange}
-                  density={density}
-                  onDensityChange={setDensity}
                 />
               </SettingsSection>
 
@@ -164,6 +161,7 @@ export function SettingsScreen({
                 setSectionRef={setSectionRef}
               >
                 <DefaultBehaviorSettingsCard
+                  canUsePasteAction={canUsePasteAction}
                   defaultAction={settings.defaultAction}
                   onDefaultActionChange={handleDefaultActionChange}
                 />

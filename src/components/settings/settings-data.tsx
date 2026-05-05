@@ -24,7 +24,6 @@ export interface SettingsNavItem {
 }
 
 export type ThemeOption = UserSettings['theme'];
-export type DensityOption = 'comfortable' | 'compact';
 export type DefaultAction = UserSettings['defaultAction'];
 
 export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [

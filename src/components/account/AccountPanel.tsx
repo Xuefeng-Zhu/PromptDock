@@ -30,6 +30,7 @@ export function AccountPanel({
   const {
     authError,
     authFormMode,
+    authServiceAvailable,
     authUser,
     email,
     handleEmailAuthSubmit,
@@ -86,7 +87,7 @@ export function AccountPanel({
       <AccountAuthForm
         authError={authError}
         authFormMode={authFormMode}
-        authServiceAvailable={Boolean(authService)}
+        authServiceAvailable={authServiceAvailable}
         compact={isPopover}
         email={email}
         isSubmitting={isSubmitting}

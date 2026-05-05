@@ -80,6 +80,7 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts[idx] = updated;
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -156,10 +157,18 @@ async function renderOnLibraryScreen(
   return { ...result, store, mockRepo };
 }
 
+function mockTauriRuntime() {
+  Object.defineProperty(window, '__TAURI_INTERNALS__', {
+    configurable: true,
+    value: {},
+  });
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('AppShell', () => {
   beforeEach(() => {
+    Reflect.deleteProperty(window, '__TAURI_INTERNALS__');
     vi.restoreAllMocks();
     mockCopyToClipboard.mockReset();
     mockCopyToClipboard.mockResolvedValue(undefined);
@@ -212,6 +221,7 @@ describe('AppShell', () => {
     });
 
     it('pastes a prompt from the command palette when default action is paste', async () => {
+      mockTauriRuntime();
       await renderOnLibraryScreen();
 
       fireEvent.keyDown(window, { key: 'k', metaKey: true });
@@ -241,6 +251,79 @@ describe('AppShell', () => {
         expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello world');
       });
       expect(mockPasteToActiveApp).not.toHaveBeenCalled();
+    });
+
+    it('uses copy as the browser variable-fill primary action when settings contain paste', async () => {
+      await renderOnLibraryScreen([
+        makePrompt({ id: 'prompt-variable', title: 'Greeting', body: 'Hello {{name}}' }),
+      ]);
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Greeting'));
+      });
+
+      const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
+      expect(within(modal).getByRole('button', { name: /Copy final prompt/i })).toBeDefined();
+      expect(within(modal).queryByRole('button', { name: /Paste into active app/i })).toBeNull();
+    });
+
+    it('closes the variable fill modal after a successful copy', async () => {
+      await renderOnLibraryScreen(
+        [makePrompt({ id: 'prompt-variable', title: 'Greeting', body: 'Hello {{name}}' })],
+        { ...DEFAULT_SETTINGS, defaultAction: 'copy' },
+      );
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Greeting'));
+      });
+
+      const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
+      fireEvent.change(within(modal).getByLabelText('Value for variable name'), {
+        target: { value: 'Ada' },
+      });
+
+      await act(async () => {
+        fireEvent.click(within(modal).getByRole('button', { name: /Copy final prompt/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: 'Fill variables for Greeting' })).toBeNull();
+      });
+      expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello Ada');
+    });
+
+    it('keeps the variable fill modal open when copy fails', async () => {
+      mockCopyToClipboard.mockRejectedValueOnce(new Error('copy failed'));
+      await renderOnLibraryScreen(
+        [makePrompt({ id: 'prompt-variable', title: 'Greeting', body: 'Hello {{name}}' })],
+        { ...DEFAULT_SETTINGS, defaultAction: 'copy' },
+      );
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Greeting'));
+      });
+
+      const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
+      fireEvent.change(within(modal).getByLabelText('Value for variable name'), {
+        target: { value: 'Ada' },
+      });
+
+      await act(async () => {
+        fireEvent.click(within(modal).getByRole('button', { name: /Copy final prompt/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog', { name: 'Fill variables for Greeting' })).toBeDefined();
+      });
     });
   });
 
@@ -802,7 +885,7 @@ describe('AppShell', () => {
     });
 
     it('clicking Archive in inspector dropdown calls archivePrompt on the store', async () => {
-      const { mockRepo } = await renderOnLibraryScreen();
+      const { mockRepo, store } = await renderOnLibraryScreen();
 
       await selectPromptCard('prompt-1');
 
@@ -821,6 +904,15 @@ describe('AppShell', () => {
       });
 
       expect(mockRepo.softDelete).toHaveBeenCalledWith('prompt-1');
+      await waitFor(() => {
+        expect(store.getState().prompts.find((p) => p.id === 'prompt-1')?.archived).toBe(true);
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /Archived/i }));
+      });
+
+      expect(screen.getByText('Summarize Text')).toBeDefined();
     });
 
     it('clicking Delete in inspector dropdown calls deletePrompt on the store', async () => {
@@ -842,7 +934,7 @@ describe('AppShell', () => {
         fireEvent.click(deleteItem);
       });
 
-      expect(mockRepo.softDelete).toHaveBeenCalledWith('prompt-1');
+      expect(mockRepo.delete).toHaveBeenCalledWith('prompt-1');
     });
 
     it('clicking Edit prompt in inspector dropdown navigates to editor', async () => {

@@ -83,6 +83,7 @@ function createMockPromptRepo(initialPrompts: PromptRecipe[] = []): IPromptRepos
       prompts[idx] = updated;
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -112,10 +113,10 @@ vi.mock('../../stores/settings-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/settings-store')>(
     '../../stores/settings-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useSettingsStore: (selector?: (state: SettingsStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testStore, selector) : useStore(testStore);
     },
   };
@@ -125,10 +126,10 @@ vi.mock('../../stores/app-mode-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/app-mode-store')>(
     '../../stores/app-mode-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },
   };
@@ -138,10 +139,10 @@ vi.mock('../../stores/prompt-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/prompt-store')>(
     '../../stores/prompt-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     usePromptStore: (selector?: (state: PromptStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testPromptStore, selector) : useStore(testPromptStore);
     },
   };
@@ -301,10 +302,11 @@ describe('SettingsScreen + SettingsStore integration', () => {
     expect(hotkeyRecorder.getAttribute('data-hotkey-value')).toBe('CommandOrControl+Shift+P');
   });
 
-  it('reads defaultAction from SettingsStore and displays the correct active option', () => {
+  it('uses copy as the browser default behavior option', () => {
     render(<SettingsScreen onBack={() => {}} />);
-    const pasteRadio = screen.getByRole('radio', { name: /Paste into Active App/i }) as HTMLInputElement;
-    expect(pasteRadio.checked).toBe(true);
+    const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i }) as HTMLInputElement;
+    expect(copyRadio.checked).toBe(true);
+    expect(screen.queryByRole('radio', { name: /Paste into Active App/i })).toBeNull();
   });
 
   it('calls updateSettings({ theme }) when theme is changed', async () => {
@@ -319,6 +321,7 @@ describe('SettingsScreen + SettingsStore integration', () => {
   });
 
   it('calls updateSettings({ defaultAction }) when default action is changed', async () => {
+    mockTauriRuntime();
     render(<SettingsScreen onBack={() => {}} />);
     const copyRadio = screen.getByRole('radio', { name: /Copy to Clipboard/i });
 
@@ -452,6 +455,93 @@ describe('SettingsScreen + hotkey registration', () => {
     });
   });
 
+  it('captures hotkeys from the document while recording', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(document, {
+        code: 'KeyP',
+        key: 'p',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRegisterHotkey).toHaveBeenCalledWith('CommandOrControl+Alt+P');
+    });
+    expect(mockRepo.update).toHaveBeenCalledWith({
+      hotkeyCombo: 'CommandOrControl+Alt+P',
+    });
+  });
+
+  it('stops document hotkey capture after clicking outside the recorder', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.pointerDown(document.body);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).not.toContain('Recording');
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(document, {
+        code: 'KeyP',
+        key: 'p',
+        metaKey: true,
+        altKey: true,
+      });
+    });
+
+    expect(mockRegisterHotkey).not.toHaveBeenCalledWith('CommandOrControl+Alt+P');
+  });
+
+  it('lets Tab leave recording without being swallowed', async () => {
+    render(<SettingsScreen onBack={() => {}} />);
+    const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
+    let tabWasAllowed = false;
+
+    await act(async () => {
+      fireEvent.click(hotkeyRecorder);
+    });
+
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).toContain('Recording');
+    });
+
+    await act(async () => {
+      tabWasAllowed = fireEvent.keyDown(document, {
+        key: 'Tab',
+        shiftKey: true,
+      });
+    });
+
+    expect(tabWasAllowed).toBe(true);
+    await waitFor(() => {
+      expect(hotkeyRecorder.textContent).not.toContain('Recording');
+    });
+  });
+
   it('rejects incomplete hotkeys before registering them', async () => {
     render(<SettingsScreen onBack={() => {}} />);
     const hotkeyRecorder = screen.getByLabelText('Global hotkey combination');
@@ -573,6 +663,45 @@ describe('SettingsScreen + AuthService integration', () => {
     const submitBtn = form!.querySelector('button[type="submit"]');
     expect(submitBtn).not.toBeNull();
     expect(submitBtn!.textContent).toContain('Sign In');
+  });
+
+  it('disables account auth before submit when Firebase is not configured', async () => {
+    const authService = createMockAuthService({
+      isConfigured: vi.fn(() => false),
+    });
+    render(<SettingsScreen onBack={() => {}} authService={authService} />);
+
+    const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
+    const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
+    const submitButton = screen.getByRole('button', { name: 'Sign in to account' });
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' });
+
+    expect(emailInput.disabled).toBe(true);
+    expect(passwordInput.disabled).toBe(true);
+    expect(submitButton).toHaveProperty('disabled', true);
+    expect(googleButton).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Firebase is not configured/)).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(authService.signIn).not.toHaveBeenCalled();
+  });
+
+  it('disables account auth when no auth service is provided', () => {
+    render(<SettingsScreen onBack={() => {}} />);
+
+    const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
+    const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
+    const submitButton = screen.getByRole('button', { name: 'Sign in to account' });
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' });
+
+    expect(emailInput.disabled).toBe(true);
+    expect(passwordInput.disabled).toBe(true);
+    expect(submitButton).toHaveProperty('disabled', true);
+    expect(googleButton).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Firebase is not configured/)).toBeDefined();
   });
 
   it('shows Sign In and Sign Up tab toggles', () => {

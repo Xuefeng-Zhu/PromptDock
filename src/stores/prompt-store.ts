@@ -84,7 +84,7 @@ export function createPromptStore(repo: IPromptRepository) {
     },
 
     async deletePrompt(id: string) {
-      await repo.softDelete(id);
+      await repo.delete(id);
       set((state) => ({
         prompts: state.prompts.filter((p) => p.id !== id),
         selectedPromptId:
@@ -113,8 +113,11 @@ export function createPromptStore(repo: IPromptRepository) {
 
     async archivePrompt(id: string) {
       await repo.softDelete(id);
+      const archivedAt = new Date();
       set((state) => ({
-        prompts: state.prompts.filter((p) => p.id !== id),
+        prompts: state.prompts.map((p) =>
+          p.id === id ? { ...p, archived: true, archivedAt, updatedAt: archivedAt } : p,
+        ),
         selectedPromptId:
           state.selectedPromptId === id ? null : state.selectedPromptId,
       }));

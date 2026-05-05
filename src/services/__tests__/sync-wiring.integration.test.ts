@@ -96,6 +96,7 @@ function createMockFirestoreDelegate(): IPromptRepository {
       prompts[idx] = { ...prompts[idx], ...changes, updatedAt: new Date() };
       return prompts[idx];
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -345,7 +346,7 @@ describe('SyncService ↔ PromptStore wiring', () => {
       const firestoreDelegate = createMockFirestoreDelegate();
 
       // Create a prompt first via the delegate
-      await (firestoreDelegate.create as ReturnType<typeof vi.fn>)({
+      await firestoreDelegate.create({
         workspaceId: 'ws-1',
         title: 'Original',
         description: '',
@@ -379,11 +380,20 @@ describe('SyncService ↔ PromptStore wiring', () => {
       expect(firestoreDelegate.softDelete).toHaveBeenCalledWith('some-id');
     });
 
+    it('should delegate delete to Firestore when delegate is set', async () => {
+      const firestoreDelegate = createMockFirestoreDelegate();
+      promptRepo.setFirestoreDelegate(firestoreDelegate);
+
+      await promptRepo.delete('some-id');
+
+      expect(firestoreDelegate.delete).toHaveBeenCalledWith('some-id');
+    });
+
     it('should delegate toggleFavorite to Firestore when delegate is set', async () => {
       const firestoreDelegate = createMockFirestoreDelegate();
 
       // Create a prompt first
-      await (firestoreDelegate.create as ReturnType<typeof vi.fn>)({
+      await firestoreDelegate.create({
         workspaceId: 'ws-1',
         title: 'Fav Test',
         description: '',
@@ -442,7 +452,7 @@ describe('SyncService ↔ PromptStore wiring', () => {
       const firestoreDelegate = createMockFirestoreDelegate();
 
       // Create a prompt first
-      const created = await (firestoreDelegate.create as ReturnType<typeof vi.fn>)({
+      const created = await firestoreDelegate.create({
         workspaceId: 'ws-1',
         title: 'Dup Test',
         description: '',

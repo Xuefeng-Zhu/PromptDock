@@ -28,6 +28,8 @@ export interface OnboardingScreenProps {
 export function OnboardingScreen({ onComplete, authService }: OnboardingScreenProps) {
   const {
     authError,
+    authFormMode,
+    authServiceAvailable,
     email,
     handleCancelSignIn,
     handleEmailAuthSubmit,
@@ -35,6 +37,7 @@ export function OnboardingScreen({ onComplete, authService }: OnboardingScreenPr
     handleOptionClick,
     isSubmitting,
     password,
+    selectAuthFormMode,
     setEmail,
     setPassword,
     showSignInForm,
@@ -87,13 +90,15 @@ export function OnboardingScreen({ onComplete, authService }: OnboardingScreenPr
           {showSignInForm && (
             <OnboardingSignInCard
               authError={authError}
-              authServiceAvailable={Boolean(authService)}
+              authFormMode={authFormMode}
+              authServiceAvailable={authServiceAvailable}
               email={email}
               isSubmitting={isSubmitting}
               onCancel={handleCancelSignIn}
               onEmailChange={setEmail}
               onGoogleSignIn={handleGoogleSignIn}
               onPasswordChange={setPassword}
+              onSelectMode={selectAuthFormMode}
               onSubmit={handleEmailAuthSubmit}
               password={password}
             />

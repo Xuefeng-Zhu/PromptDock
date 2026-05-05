@@ -47,9 +47,18 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('AuthService', () => {
+  it('reports whether Firebase auth is configured', () => {
+    vi.stubEnv('VITE_FIREBASE_API_KEY', '');
+    vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', '');
+    vi.stubEnv('VITE_FIREBASE_PROJECT_ID', '');
+
+    expect(new AuthService().isConfigured()).toBe(false);
+  });
+
   it('returns a network error and signs out if sign-in workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});

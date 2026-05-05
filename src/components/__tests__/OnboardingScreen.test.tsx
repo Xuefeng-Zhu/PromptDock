@@ -21,10 +21,10 @@ vi.mock('../../stores/app-mode-store', async () => {
   const actual = await vi.importActual<typeof import('../../stores/app-mode-store')>(
     '../../stores/app-mode-store',
   );
+  const { useStore } = await vi.importActual<typeof import('zustand')>('zustand');
   return {
     ...actual,
     useAppModeStore: (selector?: (state: AppModeStore) => unknown) => {
-      const { useStore } = require('zustand');
       return selector ? useStore(testAppModeStore, selector) : useStore(testAppModeStore);
     },
   };
@@ -81,7 +81,7 @@ describe('OnboardingScreen', () => {
     expect(root?.className).toContain('overflow-y-auto');
   });
 
-  it('renders local and sign-in option cards with titles and CTA buttons', () => {
+  it('renders local and sign-in option cards with CTA buttons', () => {
     render(<OnboardingScreen onComplete={() => {}} />);
     expect(screen.getByText('Get started')).toBeDefined();
     expect(screen.getAllByText('Start locally').length).toBeGreaterThanOrEqual(1);
@@ -137,6 +137,51 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
     // Form should now be visible
     expect(screen.getByLabelText('Email')).toBeDefined();
     expect(screen.getByLabelText('Password')).toBeDefined();
+    expect(screen.getAllByRole('button', { name: 'Sign In' }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeDefined();
+  });
+
+  it('disables onboarding auth before submit when Firebase is not configured', async () => {
+    const authService = createMockAuthService({
+      isConfigured: vi.fn(() => false),
+    });
+    render(<OnboardingScreen onComplete={() => {}} authService={authService} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
+    const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
+    const submitButton = screen.getByRole('button', { name: 'Sign in to account' });
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' });
+
+    expect(emailInput.disabled).toBe(true);
+    expect(passwordInput.disabled).toBe(true);
+    expect(submitButton).toHaveProperty('disabled', true);
+    expect(googleButton).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Firebase is not configured/)).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    expect(authService.signIn).not.toHaveBeenCalled();
+  });
+
+  it('disables onboarding auth when no auth service is provided', () => {
+    render(<OnboardingScreen onComplete={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
+    const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
+    const submitButton = screen.getByRole('button', { name: 'Sign in to account' });
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' });
+
+    expect(emailInput.disabled).toBe(true);
+    expect(passwordInput.disabled).toBe(true);
+    expect(submitButton).toHaveProperty('disabled', true);
+    expect(googleButton).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Firebase is not configured/)).toBeDefined();
   });
 
   it('calls AuthService.signIn on form submission and updates AppModeStore', async () => {
@@ -167,6 +212,34 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
     expect(authService.signIn).toHaveBeenCalledWith('test@example.com', 'password123');
     expect(testAppModeStore.getState().mode).toBe('synced');
     expect(testAppModeStore.getState().userId).toBe('user-123');
+    expect(handleComplete).toHaveBeenCalledWith('signin');
+    expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
+  });
+
+  it('calls AuthService.signUp from the sign-up tab', async () => {
+    const authService = createMockAuthService();
+    const handleComplete = vi.fn();
+    render(
+      <OnboardingScreen onComplete={handleComplete} authService={authService} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'new@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'strong-password' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    });
+
+    expect(authService.signUp).toHaveBeenCalledWith('new@example.com', 'strong-password');
+    expect(testAppModeStore.getState().mode).toBe('synced');
+    expect(testAppModeStore.getState().userId).toBe('user-456');
     expect(handleComplete).toHaveBeenCalledWith('signin');
     expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
   });
@@ -274,7 +347,7 @@ describe('Onboarding flag persistence (Task 6.4)', () => {
     // "Sign in" (with authService)
     localStorage.clear();
     const authService = createMockAuthService();
-    const { unmount: u3 } = render(
+    const { unmount: u2 } = render(
       <OnboardingScreen onComplete={() => {}} authService={authService} />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -290,7 +363,7 @@ describe('Onboarding flag persistence (Task 6.4)', () => {
       fireEvent.click(submitButton);
     });
     expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
-    u3();
+    u2();
   });
 });
 

@@ -12,6 +12,7 @@ import type { FirebaseApp } from 'firebase/app';
 import type { Analytics } from 'firebase/analytics';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
+import { isFirebaseCoreConfigured } from './env';
 
 // ─── Cached instances ──────────────────────────────────────────────────────────
 
@@ -82,6 +83,13 @@ export function shouldEnableFirebaseAnalytics(): boolean {
 export function isFirebaseAnalyticsConfigured(): boolean {
   const config = getFirebaseConfig();
   return Boolean(config?.appId && config.measurementId);
+}
+
+/**
+ * Check whether Firebase Auth can be initialized for this build.
+ */
+export function isFirebaseAuthConfigured(): boolean {
+  return isFirebaseCoreConfigured();
 }
 
 /**

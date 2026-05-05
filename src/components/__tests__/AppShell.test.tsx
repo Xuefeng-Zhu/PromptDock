@@ -266,7 +266,7 @@ describe('AppShell', () => {
       });
 
       const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
-      expect(within(modal).getByRole('button', { name: /Copy final prompt/i })).toBeDefined();
+      expect(within(modal).getByRole('button', { name: /Copy to Clipboard/i })).toBeDefined();
       expect(within(modal).queryByRole('button', { name: /Paste into active app/i })).toBeNull();
     });
 
@@ -289,7 +289,7 @@ describe('AppShell', () => {
       });
 
       await act(async () => {
-        fireEvent.click(within(modal).getByRole('button', { name: /Copy final prompt/i }));
+        fireEvent.click(within(modal).getByRole('button', { name: /Copy to Clipboard/i }));
       });
 
       await waitFor(() => {
@@ -318,7 +318,7 @@ describe('AppShell', () => {
       });
 
       await act(async () => {
-        fireEvent.click(within(modal).getByRole('button', { name: /Copy final prompt/i }));
+        fireEvent.click(within(modal).getByRole('button', { name: /Copy to Clipboard/i }));
       });
 
       await waitFor(() => {

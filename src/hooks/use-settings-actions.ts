@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
-import { canPasteToActiveApp, resolveDefaultAction } from '../utils/default-action';
 import { registerHotkey } from '../utils/hotkey';
 import { isTauriRuntime } from '../utils/runtime';
 import {
@@ -18,12 +17,12 @@ export function useSettingsActions() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const canUseGlobalHotkeys = isTauriRuntime();
-  const canUsePasteAction = canPasteToActiveApp();
+  const canUsePasteAction = isTauriRuntime();
   const settings = useMemo(
-    () => ({
-      ...storedSettings,
-      defaultAction: resolveDefaultAction(storedSettings.defaultAction, canUsePasteAction),
-    }),
+    () =>
+      canUsePasteAction || storedSettings.defaultAction === 'copy'
+        ? storedSettings
+        : { ...storedSettings, defaultAction: 'copy' as const },
     [canUsePasteAction, storedSettings],
   );
   const visibleNavItems = useMemo(

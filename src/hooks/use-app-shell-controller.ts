@@ -5,7 +5,7 @@ import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
-import { resolveDefaultAction } from '../utils/default-action';
+import { isTauriRuntime } from '../utils/runtime';
 import { hideMainWindow } from '../utils/window';
 import { useLibraryData } from './use-library-data';
 import { usePromptExecution } from './use-prompt-execution';
@@ -62,7 +62,7 @@ export function useAppShellController({
     userFolders,
     variableFillPromptId,
   } = navigation;
-  const defaultAction = resolveDefaultAction(storedDefaultAction);
+  const defaultAction = isTauriRuntime() ? storedDefaultAction : 'copy';
 
   const { copyText, pasteText, executePrompt } = usePromptExecution({
     defaultAction,

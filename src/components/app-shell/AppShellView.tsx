@@ -27,7 +27,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
     handleDuplicatePrompt,
     handleEditPrompt,
     handleOnboardingComplete,
-    handleSearchChange,
     handleSettingsOpen,
     handleSidebarItemSelect,
     handleSignOutSuccess,
@@ -38,7 +37,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
     libraryData,
     mode,
     screen,
-    searchQuery,
     syncService,
     syncStatus,
     theme,
@@ -65,8 +63,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
       style={{ backgroundColor: 'var(--color-background)' }}
     >
       <TopBar
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}
         authService={authService}
         mode={mode}

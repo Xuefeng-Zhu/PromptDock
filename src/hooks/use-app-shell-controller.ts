@@ -26,7 +26,6 @@ export function useAppShellController({
 
   const prompts = usePromptStore((s) => s.prompts);
   const searchQuery = usePromptStore((s) => s.searchQuery);
-  const setSearchQuery = usePromptStore((s) => s.setSearchQuery);
   const toggleFavorite = usePromptStore((s) => s.toggleFavorite);
   const updatePrompt = usePromptStore((s) => s.updatePrompt);
   const createPrompt = usePromptStore((s) => s.createPrompt);
@@ -134,13 +133,6 @@ export function useAppShellController({
     setUserId,
   });
 
-  const handleSearchChange = useCallback(
-    (query: string) => {
-      setSearchQuery(query);
-    },
-    [setSearchQuery],
-  );
-
   const handleToggleTheme = useCallback(() => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     updateSettings({ theme: nextTheme }).catch((err: unknown) => {
@@ -180,7 +172,6 @@ export function useAppShellController({
     handleFilterChange: navigation.handleFilterChange,
     handleNewPrompt: navigation.handleNewPrompt,
     handleOnboardingComplete: navigation.handleOnboardingComplete,
-    handleSearchChange,
     handleSelectPrompt: navigation.handleSelectPrompt,
     handleSettingsBack: navigation.handleSettingsBack,
     handleSettingsOpen: navigation.handleSettingsOpen,

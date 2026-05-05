@@ -7,8 +7,6 @@ import type { AppMode, AuthUser, SyncStatus } from '../../types/index';
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface TopBarProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   onCommandPaletteOpen: () => void;
   authService?: IAuthService;
   mode?: AppMode;
@@ -33,12 +31,10 @@ function toBadgeStatus(status: SyncStatus): 'local' | 'synced' | 'offline' {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 /**
- * Fixed top bar with macOS-style traffic lights, app title, centered search bar
+ * Fixed top bar with macOS-style traffic lights, app title, command palette trigger
  * with ⌘K shortcut hint, sync status badge, and account icon.
  */
 export function TopBar({
-  searchQuery,
-  onSearchChange,
   onCommandPaletteOpen,
   authService,
   mode = 'local',
@@ -63,11 +59,9 @@ export function TopBar({
         PromptDock
       </span>
 
-      {/* Centered search bar */}
+      {/* Centered command palette trigger */}
       <div className="flex flex-1 justify-center">
         <TopBarSearchTrigger
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
           onCommandPaletteOpen={onCommandPaletteOpen}
         />
       </div>

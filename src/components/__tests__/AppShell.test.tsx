@@ -437,17 +437,16 @@ describe('AppShell', () => {
     });
   });
 
-  describe('search delegates to PromptStore', () => {
-    it('updates search query through PromptStore.setSearchQuery', async () => {
-      const { store } = await renderOnLibraryScreen();
+  describe('top bar command palette trigger', () => {
+    it('opens the command palette from the top bar button', async () => {
+      await renderOnLibraryScreen();
+      expect(screen.queryByTestId('command-palette-backdrop')).toBeNull();
 
-      // Find the search input
-      const searchInput = screen.getByPlaceholderText(/search/i);
       await act(async () => {
-        fireEvent.change(searchInput, { target: { value: 'summarize' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Open command palette' }));
       });
 
-      expect(store.getState().searchQuery).toBe('summarize');
+      expect(screen.getByTestId('command-palette-backdrop')).toBeDefined();
     });
   });
 
@@ -608,7 +607,7 @@ describe('AppShell', () => {
 
   describe('selected prompt visibility', () => {
     it('clears the inspector when the selected prompt is no longer visible', async () => {
-      await renderOnLibraryScreen();
+      const { store } = await renderOnLibraryScreen();
 
       const selectedCard = screen.getByTestId('prompt-card-prompt-1');
       await act(async () => {
@@ -617,9 +616,8 @@ describe('AppShell', () => {
 
       expect(screen.getByRole('complementary', { name: 'Prompt details' })).toBeDefined();
 
-      const searchInput = screen.getByPlaceholderText(/search/i);
       await act(async () => {
-        fireEvent.change(searchInput, { target: { value: 'code' } });
+        store.getState().setSearchQuery('code');
       });
 
       await waitFor(() => {

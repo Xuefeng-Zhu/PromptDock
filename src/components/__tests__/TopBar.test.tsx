@@ -6,8 +6,6 @@ import type { IAuthService } from '../../services/interfaces';
 import type { AuthResult } from '../../types/index';
 
 const defaultProps = {
-  searchQuery: '',
-  onSearchChange: vi.fn(),
   onCommandPaletteOpen: vi.fn(),
 };
 
@@ -39,17 +37,16 @@ describe('TopBar', () => {
     expect(screen.getByText('PromptDock')).toBeDefined();
   });
 
-  it('renders search bar with placeholder', () => {
+  it('renders command palette trigger with search text', () => {
     render(<TopBar {...defaultProps} />);
-    const input = screen.getByPlaceholderText('Search…');
-    expect(input).toBeDefined();
-    expect(input.getAttribute('type')).toBe('search');
+    expect(screen.getByRole('button', { name: 'Open command palette' })).toBeDefined();
+    expect(screen.getByText('Search prompts')).toBeDefined();
   });
 
-  it('renders search bar with aria-label', () => {
+  it('renders command palette keyboard shortcut metadata', () => {
     render(<TopBar {...defaultProps} />);
-    const input = screen.getByLabelText('Search prompts');
-    expect(input).toBeDefined();
+    const trigger = screen.getByRole('button', { name: 'Open command palette' });
+    expect(trigger.getAttribute('aria-keyshortcuts')).toBe('Meta+K Control+K');
   });
 
   it('renders ⌘K shortcut hint', () => {
@@ -151,26 +148,12 @@ describe('TopBar', () => {
     expect(screen.queryByRole('dialog', { name: 'Account' })).toBeNull();
   });
 
-  it('calls onSearchChange when typing in the search bar', () => {
-    const onSearchChange = vi.fn();
-    render(<TopBar {...defaultProps} onSearchChange={onSearchChange} />);
-    const input = screen.getByPlaceholderText('Search…');
-    fireEvent.change(input, { target: { value: 'hello' } });
-    expect(onSearchChange).toHaveBeenCalledWith('hello');
-  });
-
-  it('calls onCommandPaletteOpen when clicking the search bar', () => {
+  it('calls onCommandPaletteOpen when clicking the command palette trigger', () => {
     const onCommandPaletteOpen = vi.fn();
     render(<TopBar {...defaultProps} onCommandPaletteOpen={onCommandPaletteOpen} />);
-    const input = screen.getByPlaceholderText('Search…');
-    fireEvent.click(input);
+    const trigger = screen.getByRole('button', { name: 'Open command palette' });
+    fireEvent.click(trigger);
     expect(onCommandPaletteOpen).toHaveBeenCalledTimes(1);
-  });
-
-  it('displays the current search query value', () => {
-    render(<TopBar {...defaultProps} searchQuery="test query" />);
-    const input = screen.getByPlaceholderText('Search…') as HTMLInputElement;
-    expect(input.value).toBe('test query');
   });
 
   it('renders as a header element', () => {

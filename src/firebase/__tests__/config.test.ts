@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getFirebaseConfig,
   isFirebaseAnalyticsConfigured,
+  isFirebaseAuthConfigured,
   resetFirebaseInstances,
   shouldEnableFirebaseAnalytics,
 } from '../config';
@@ -24,6 +25,7 @@ describe('Firebase config', () => {
     vi.stubEnv('VITE_FIREBASE_PROJECT_ID', '');
 
     expect(getFirebaseConfig()).toBeNull();
+    expect(isFirebaseAuthConfigured()).toBe(false);
     expect(isFirebaseAnalyticsConfigured()).toBe(false);
   });
 
@@ -43,6 +45,7 @@ describe('Firebase config', () => {
       messagingSenderId: '123',
       storageBucket: 'test-project.firebasestorage.app',
     });
+    expect(isFirebaseAuthConfigured()).toBe(true);
     expect(isFirebaseAnalyticsConfigured()).toBe(true);
   });
 

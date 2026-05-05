@@ -66,6 +66,7 @@ function createPromptRepo(initialPrompts: PromptRecipe[] = []): IPromptRepositor
       prompts = prompts.map((prompt) => (prompt.id === id ? updated : prompt));
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => makePrompt({ id: `copy-${id}` })),

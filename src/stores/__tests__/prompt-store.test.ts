@@ -49,6 +49,7 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts[idx] = updated;
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -226,7 +227,7 @@ describe('PromptStore', () => {
       await store.getState().deletePrompt('p1');
 
       expect(store.getState().prompts.find((p) => p.id === 'p1')).toBeUndefined();
-      expect(repo.softDelete).toHaveBeenCalledWith('p1');
+      expect(repo.delete).toHaveBeenCalledWith('p1');
     });
 
     it('should clear selectedPromptId if the deleted prompt was selected', async () => {

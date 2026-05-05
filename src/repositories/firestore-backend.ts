@@ -315,6 +315,15 @@ export class FirestoreBackend implements IPromptRepository {
     });
   }
 
+  async delete(id: string): Promise<void> {
+    const { doc, deleteDoc } = await import('firebase/firestore');
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const firestore = await getFirebaseFirestore();
+    const docRef = doc(firestore, 'workspaces', this.workspaceId, 'prompts', id);
+
+    await deleteDoc(docRef);
+  }
+
   async restore(id: string): Promise<void> {
     const { doc, updateDoc, serverTimestamp, increment } = await import('firebase/firestore');
     const { getFirebaseFirestore } = await import('../firebase/config');

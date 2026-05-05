@@ -85,6 +85,7 @@ function createMockPromptRepo(seedPrompts: PromptRecipe[] = []): MockPromptRepo 
     getAll: vi.fn(async () => prompts),
     getById: vi.fn(async (id: string) => prompts.find((prompt) => prompt.id === id) ?? null),
     restore: vi.fn(async () => {}),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     toggleFavorite: vi.fn(async (id: string) => {
       const prompt = prompts.find((item) => item.id === id);

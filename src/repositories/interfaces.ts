@@ -27,6 +27,7 @@ export interface IPromptRepository {
   getAll(workspaceId: string): Promise<PromptRecipe[]>;
   reloadAll?(workspaceId: string): Promise<PromptRecipe[]>;
   update(id: string, changes: Partial<PromptRecipe>): Promise<PromptRecipe>;
+  delete(id: string): Promise<void>;
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   duplicate(id: string): Promise<PromptRecipe>;

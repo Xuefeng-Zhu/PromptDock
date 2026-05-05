@@ -44,6 +44,7 @@ export interface IImportExportService {
 }
 
 export interface IAuthService {
+  isConfigured?(): boolean;
   signUp(email: string, password: string): Promise<AuthResult>;
   signIn(email: string, password: string): Promise<AuthResult>;
   signInWithGoogle(): Promise<AuthResult>;

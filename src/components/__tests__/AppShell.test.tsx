@@ -80,6 +80,7 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts[idx] = updated;
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -241,6 +242,62 @@ describe('AppShell', () => {
         expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello world');
       });
       expect(mockPasteToActiveApp).not.toHaveBeenCalled();
+    });
+
+    it('closes the variable fill modal after a successful copy', async () => {
+      await renderOnLibraryScreen(
+        [makePrompt({ id: 'prompt-variable', title: 'Greeting', body: 'Hello {{name}}' })],
+        { ...DEFAULT_SETTINGS, defaultAction: 'copy' },
+      );
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Greeting'));
+      });
+
+      const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
+      fireEvent.change(within(modal).getByLabelText('Value for variable name'), {
+        target: { value: 'Ada' },
+      });
+
+      await act(async () => {
+        fireEvent.click(within(modal).getByRole('button', { name: /Copy final prompt/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: 'Fill variables for Greeting' })).toBeNull();
+      });
+      expect(mockCopyToClipboard).toHaveBeenCalledWith('Hello Ada');
+    });
+
+    it('keeps the variable fill modal open when copy fails', async () => {
+      mockCopyToClipboard.mockRejectedValueOnce(new Error('copy failed'));
+      await renderOnLibraryScreen(
+        [makePrompt({ id: 'prompt-variable', title: 'Greeting', body: 'Hello {{name}}' })],
+        { ...DEFAULT_SETTINGS, defaultAction: 'copy' },
+      );
+
+      fireEvent.keyDown(window, { key: 'k', metaKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+
+      await act(async () => {
+        fireEvent.click(within(palette).getByText('Greeting'));
+      });
+
+      const modal = screen.getByRole('dialog', { name: 'Fill variables for Greeting' });
+      fireEvent.change(within(modal).getByLabelText('Value for variable name'), {
+        target: { value: 'Ada' },
+      });
+
+      await act(async () => {
+        fireEvent.click(within(modal).getByRole('button', { name: /Copy final prompt/i }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog', { name: 'Fill variables for Greeting' })).toBeDefined();
+      });
     });
   });
 
@@ -851,7 +908,7 @@ describe('AppShell', () => {
         fireEvent.click(deleteItem);
       });
 
-      expect(mockRepo.softDelete).toHaveBeenCalledWith('prompt-1');
+      expect(mockRepo.delete).toHaveBeenCalledWith('prompt-1');
     });
 
     it('clicking Edit prompt in inspector dropdown navigates to editor', async () => {

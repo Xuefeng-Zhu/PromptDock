@@ -255,6 +255,27 @@ describe('PromptRepository', () => {
     });
   });
 
+  describe('delete', () => {
+    it('should permanently remove the prompt from storage', async () => {
+      const removed = makePromptRecipe({ id: 'delete-me' });
+      const kept = makePromptRecipe({ id: 'keep-me' });
+      (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([removed, kept]);
+
+      await repo.delete('delete-me');
+
+      const written = (backend.writePrompts as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(written.map((p: PromptRecipe) => p.id)).toEqual(['keep-me']);
+    });
+
+    it('should throw when prompt not found', async () => {
+      (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
+
+      await expect(repo.delete('nonexistent')).rejects.toThrow(
+        'Prompt not found: nonexistent',
+      );
+    });
+  });
+
   describe('restore', () => {
     it('should set archived to false and archivedAt to null', async () => {
       const original = makePromptRecipe({

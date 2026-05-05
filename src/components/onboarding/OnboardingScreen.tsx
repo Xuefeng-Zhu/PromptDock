@@ -33,6 +33,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
   const {
     authError,
     authFormMode,
+    authServiceAvailable,
     email,
     handleCancelSignIn,
     handleEmailAuthSubmit,
@@ -66,7 +67,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
           <OnboardingSignInCard
             authError={authError}
             authFormMode={authFormMode}
-            authServiceAvailable={Boolean(authService)}
+            authServiceAvailable={authServiceAvailable}
             email={email}
             isSubmitting={isSubmitting}
             onCancel={handleCancelSignIn}

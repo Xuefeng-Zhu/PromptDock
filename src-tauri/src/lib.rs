@@ -1,7 +1,6 @@
 mod commands;
 
 use tauri::Manager;
-use tauri_plugin_global_shortcut::ShortcutState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -66,32 +65,6 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
-
-            // ---------------------------------------------------------------
-            // Register the default global hotkey (Cmd+Shift+P / Ctrl+Shift+P)
-            // on app startup so the quick launcher is immediately accessible.
-            // ---------------------------------------------------------------
-            use tauri_plugin_global_shortcut::GlobalShortcutExt;
-
-            let handle = app.handle().clone();
-            let gs = app.handle().global_shortcut();
-            let default_shortcut = "CommandOrControl+Shift+P";
-
-            if let Err(e) = gs.on_shortcut(default_shortcut, move |_app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    let _ = commands::toggle_quick_launcher_from_hotkey(handle.clone());
-                }
-            }) {
-                eprintln!("Failed to register default hotkey: {e}");
-            } else {
-                {
-                    let current_hotkey = app.state::<commands::CurrentHotkey>();
-                    let lock_result = current_hotkey.0.lock();
-                    if let Ok(mut hotkey) = lock_result {
-                        *hotkey = Some(default_shortcut.to_string());
-                    }
-                }
-            }
 
             Ok(())
         })

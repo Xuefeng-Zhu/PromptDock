@@ -56,12 +56,10 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const {
     canUseGlobalHotkeys,
-    density,
     handleDefaultActionChange,
     handleHotkeyChange,
     handleThemeChange,
     hotkeyError,
-    setDensity,
     settings,
     settingsError,
     visibleNavItems,
@@ -137,8 +135,6 @@ export function SettingsScreen({
                 <AppearanceSettingsCard
                   theme={settings.theme}
                   onThemeChange={handleThemeChange}
-                  density={density}
-                  onDensityChange={setDensity}
                 />
               </SettingsSection>
 

@@ -84,7 +84,7 @@ export function createPromptStore(repo: IPromptRepository) {
     },
 
     async deletePrompt(id: string) {
-      await repo.softDelete(id);
+      await repo.delete(id);
       set((state) => ({
         prompts: state.prompts.filter((p) => p.id !== id),
         selectedPromptId:

@@ -1,7 +1,6 @@
 import {
   Braces,
   ClipboardCopy,
-  Cloud,
   FileText,
   Monitor,
   UserCircle,
@@ -33,14 +32,6 @@ export const ONBOARDING_OPTIONS: OnboardingOptionItem[] = [
     description:
       'Keep everything on this device. Your prompts stay private and never leave your computer.',
     buttonLabel: 'Start locally',
-  },
-  {
-    key: 'sync',
-    icon: <Cloud size={28} />,
-    title: 'Enable sync',
-    description:
-      'Use a guest cloud account to sync your prompts. Add email later, anytime.',
-    buttonLabel: 'Enable sync',
   },
   {
     key: 'signin',

@@ -15,6 +15,7 @@ export function useSettingsActions() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
   const canUseGlobalHotkeys = isTauriRuntime();
+  const canUsePasteAction = canUseGlobalHotkeys;
   const visibleNavItems = useMemo(
     () =>
       canUseGlobalHotkeys
@@ -56,6 +57,7 @@ export function useSettingsActions() {
 
   const handleDefaultActionChange = useCallback(
     async (defaultAction: DefaultAction) => {
+      if (defaultAction === 'paste' && !canUsePasteAction) return;
       setSettingsError(null);
       try {
         await updateSettings({ defaultAction });
@@ -65,11 +67,12 @@ export function useSettingsActions() {
         );
       }
     },
-    [updateSettings],
+    [canUsePasteAction, updateSettings],
   );
 
   return {
     canUseGlobalHotkeys,
+    canUsePasteAction,
     handleDefaultActionChange,
     handleHotkeyChange,
     handleThemeChange,

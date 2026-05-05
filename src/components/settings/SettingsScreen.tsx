@@ -56,6 +56,7 @@ export function SettingsScreen({
 }: SettingsScreenProps) {
   const {
     canUseGlobalHotkeys,
+    canUsePasteAction,
     handleDefaultActionChange,
     handleHotkeyChange,
     handleThemeChange,
@@ -160,6 +161,7 @@ export function SettingsScreen({
                 setSectionRef={setSectionRef}
               >
                 <DefaultBehaviorSettingsCard
+                  canUsePasteAction={canUsePasteAction}
                   defaultAction={settings.defaultAction}
                   onDefaultActionChange={handleDefaultActionChange}
                 />

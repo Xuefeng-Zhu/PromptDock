@@ -144,6 +144,8 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
     // Form should now be visible
     expect(screen.getByLabelText('Email')).toBeDefined();
     expect(screen.getByLabelText('Password')).toBeDefined();
+    expect(screen.getAllByRole('button', { name: 'Sign In' }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeDefined();
   });
 
   it('calls AuthService.signIn on form submission and updates AppModeStore', async () => {
@@ -174,6 +176,34 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
     expect(authService.signIn).toHaveBeenCalledWith('test@example.com', 'password123');
     expect(testAppModeStore.getState().mode).toBe('synced');
     expect(testAppModeStore.getState().userId).toBe('user-123');
+    expect(handleComplete).toHaveBeenCalledWith('signin');
+    expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
+  });
+
+  it('calls AuthService.signUp from the sign-up tab', async () => {
+    const authService = createMockAuthService();
+    const handleComplete = vi.fn();
+    render(
+      <OnboardingScreen onComplete={handleComplete} authService={authService} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'new@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'strong-password' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
+    });
+
+    expect(authService.signUp).toHaveBeenCalledWith('new@example.com', 'strong-password');
+    expect(testAppModeStore.getState().mode).toBe('synced');
+    expect(testAppModeStore.getState().userId).toBe('user-456');
     expect(handleComplete).toHaveBeenCalledWith('signin');
     expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
   });

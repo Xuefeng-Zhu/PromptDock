@@ -32,6 +32,7 @@ export interface OnboardingScreenProps {
 export function OnboardingScreen({ onComplete, authService, syncService }: OnboardingScreenProps) {
   const {
     authError,
+    authFormMode,
     email,
     handleCancelSignIn,
     handleEmailAuthSubmit,
@@ -39,6 +40,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
     handleOptionClick,
     isSubmitting,
     password,
+    selectAuthFormMode,
     setEmail,
     setPassword,
     showSignInForm,
@@ -63,6 +65,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
         {showSignInForm && (
           <OnboardingSignInCard
             authError={authError}
+            authFormMode={authFormMode}
             authServiceAvailable={Boolean(authService)}
             email={email}
             isSubmitting={isSubmitting}
@@ -70,6 +73,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
             onEmailChange={setEmail}
             onGoogleSignIn={handleGoogleSignIn}
             onPasswordChange={setPassword}
+            onSelectMode={selectAuthFormMode}
             onSubmit={handleEmailAuthSubmit}
             password={password}
           />

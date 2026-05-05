@@ -1,15 +1,12 @@
 import type { ReactNode } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { Card } from '../../ui/Card';
-import { Toggle } from '../../ui/Toggle';
-import type { DensityOption, ThemeOption } from '../settings-data';
+import type { ThemeOption } from '../settings-data';
 import { SettingsCardTitle } from './SettingsCardTitle';
 
 interface AppearanceSettingsCardProps {
   theme: ThemeOption;
   onThemeChange: (theme: ThemeOption) => void | Promise<void>;
-  density: DensityOption;
-  onDensityChange: (density: DensityOption) => void;
 }
 
 interface ThemeItem {
@@ -27,8 +24,6 @@ const THEME_OPTIONS: ThemeItem[] = [
 export function AppearanceSettingsCard({
   theme,
   onThemeChange,
-  density,
-  onDensityChange,
 }: AppearanceSettingsCardProps) {
   return (
     <Card padding="lg">
@@ -85,18 +80,6 @@ export function AppearanceSettingsCard({
         </div>
       </fieldset>
 
-      <div className="mt-5">
-        <p className="mb-3 text-sm font-medium text-[var(--color-text-main)]">
-          Density
-        </p>
-        <Toggle
-          checked={density === 'compact'}
-          onChange={(checked) =>
-            onDensityChange(checked ? 'compact' : 'comfortable')
-          }
-          label="Compact mode"
-        />
-      </div>
     </Card>
   );
 }

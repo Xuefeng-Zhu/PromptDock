@@ -5,6 +5,7 @@ import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
 import { extractVariables } from '../utils/prompt-template';
 import { filterPrompts } from '../utils/library-filtering';
 import { deriveTagFilterOptions } from '../utils/library-filter-options';
+import { formatFolderLabel } from '../utils/folder-label';
 import type { FilterType } from '../utils/prompt-filters';
 
 interface UseLibraryDataOptions {
@@ -28,7 +29,7 @@ function deriveFolders(prompts: PromptRecipe[], userFolders: Folder[]): Folder[]
     if (prompt.folderId && !folderMap.has(prompt.folderId)) {
       folderMap.set(prompt.folderId, {
         id: prompt.folderId,
-        name: prompt.folderId.replace('folder-', '').replace(/^\w/, (character) => character.toUpperCase()),
+        name: formatFolderLabel(prompt.folderId),
         createdAt: new Date(),
         updatedAt: new Date(),
       });

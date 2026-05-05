@@ -74,7 +74,16 @@ Use `npm run lint` for static TypeScript/React guardrails, `npm run build` for T
 
 ## Branching and PR Expectations
 
-The repository CI workflow runs lint, frontend build, frontend tests, and Rust tests on pull requests and `main` pushes. Contributors should run the same verification locally before opening a PR when practical.
+Use `develop` as the integration branch for day-to-day work. Open regular
+feature, fix, and documentation pull requests against `develop`; keep `main`
+release-only and merge `develop` into `main` when cutting a release.
+
+The repository CI workflow runs lint, frontend build, frontend tests, and Rust tests on pull requests and pushes to `develop` or `main`. Contributors should run the same verification locally before opening a PR when practical.
+
+Use Conventional Commit-style titles for commit messages and PR titles when it
+fits the change, such as `feat: add prompt folders`, `fix: preserve clipboard
+fallback`, `docs: clarify release flow`, or `chore: update dependencies`.
+Release notes are generated from merged PRs using `.github/release.yml`.
 
 Recommended PR checklist:
 
@@ -85,6 +94,12 @@ Recommended PR checklist:
 - For UI changes, include screenshots or a short screen recording.
 - For Tauri changes, smoke-test `npm run tauri dev`.
 - For sync changes, test against Firebase emulators when possible.
+
+Useful PR labels:
+
+- `type:feature`, `type:fix`, `type:docs`, `type:chore`
+- `area:browser`, `area:tauri`, `area:sync`, `area:docs`
+- `risk:release`, `risk:security`, `dependencies`, `breaking-change`
 
 Suggested branch names:
 

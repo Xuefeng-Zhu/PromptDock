@@ -4,7 +4,7 @@ import { QuickLauncherError } from './QuickLauncherError';
 interface QuickLauncherSearchInputProps {
   actionError: string | null;
   query: string;
-  searchInputRef: RefObject<HTMLInputElement>;
+  searchInputRef: RefObject<HTMLInputElement | null>;
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onQueryChange: (query: string) => void;
 }

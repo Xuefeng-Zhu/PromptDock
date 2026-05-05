@@ -1,4 +1,4 @@
-import { Chrome } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface GoogleAuthButtonProps {
@@ -17,7 +17,7 @@ export function GoogleAuthButton({ disabled, onClick }: GoogleAuthButtonProps) {
       className="w-full"
       aria-label="Continue with Google"
     >
-      <Chrome size={16} className="mr-2" />
+      <LogIn size={16} className="mr-2" />
       Continue with Google
     </Button>
   );

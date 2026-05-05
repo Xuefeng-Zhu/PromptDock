@@ -3,7 +3,7 @@ import { useEffect, type RefObject } from 'react';
 interface UseDismissablePopoverOptions<T extends HTMLElement> {
   closeOnEscape?: boolean;
   closeOnOutsideClick?: boolean;
-  containerRef: RefObject<T>;
+  containerRef: RefObject<T | null>;
   onDismiss: () => void;
   open: boolean;
 }

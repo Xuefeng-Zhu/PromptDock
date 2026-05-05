@@ -8,6 +8,7 @@ interface PromptCardTagsProps {
 
 export function PromptCardTags({ tags, limit, className }: PromptCardTagsProps) {
   const visibleTags = limit ? tags.slice(0, limit) : tags;
+  const remainingCount = limit ? Math.max(0, tags.length - limit) : 0;
   if (visibleTags.length === 0) return null;
 
   return (
@@ -15,6 +16,7 @@ export function PromptCardTags({ tags, limit, className }: PromptCardTagsProps) 
       {visibleTags.map((tag) => (
         <TagPill key={tag} tag={tag} />
       ))}
+      {remainingCount > 0 && <TagPill tag={`+${remainingCount}`} />}
     </div>
   );
 }

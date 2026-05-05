@@ -47,8 +47,8 @@ export function PromptEditor({
 
   return (
     <div className="flex h-full overflow-hidden bg-[var(--color-background)]">
-      <div className="flex-1 overflow-y-auto">
-        <div className={form.isEditorExpanded ? 'mx-auto w-full px-8 py-6' : 'mx-auto w-full max-w-4xl px-8 py-6'}>
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <div className={form.isEditorExpanded ? 'mx-auto w-full px-4 py-6 sm:px-8' : 'mx-auto w-full max-w-4xl px-4 py-6 sm:px-8'}>
           <PromptEditorHeader
             currentFolderName={form.currentFolder?.name}
             isEditing={form.isEditing}
@@ -96,7 +96,6 @@ export function PromptEditor({
             body={form.body}
             charCount={form.charCount}
             isExpanded={form.isEditorExpanded}
-            lineCount={form.lineCount}
             showFormattingHelp={form.showFormattingHelp}
             wordCount={form.wordCount}
             onBodyChange={form.setBody}
@@ -111,14 +110,16 @@ export function PromptEditor({
       </div>
 
       {!form.isEditorExpanded && (
-        <LivePreviewPanel
-          body={form.body}
-          renderedPreview={form.renderedPreview}
-          variableValues={form.variableValues}
-          variables={form.variables}
-          onResetPreview={form.handleResetPreview}
-          onVariableValueChange={form.handleVariableValueChange}
-        />
+        <div className="hidden shrink-0 lg:block">
+          <LivePreviewPanel
+            body={form.body}
+            renderedPreview={form.renderedPreview}
+            variableValues={form.variableValues}
+            variables={form.variables}
+            onResetPreview={form.handleResetPreview}
+            onVariableValueChange={form.handleVariableValueChange}
+          />
+        </div>
       )}
     </div>
   );

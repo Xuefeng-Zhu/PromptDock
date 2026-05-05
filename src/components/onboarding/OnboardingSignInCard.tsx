@@ -31,44 +31,56 @@ export function OnboardingSignInCard({
   password,
 }: OnboardingSignInCardProps) {
   return (
-    <Card padding="lg" className="mx-auto max-w-sm">
-      <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-main)]">
-        Sign in to your account
-      </h3>
+    <Card
+      padding="lg"
+      className="mx-auto w-full max-w-xl border-blue-100 shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-blue-900/50 dark:bg-gray-900"
+    >
+      <div className="mb-5">
+        <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+          Sign in to your account
+        </h3>
+        <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">
+          Restore synced recipes from your existing PromptDock account.
+        </p>
+      </div>
+
       <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <label
-            htmlFor="onboarding-email"
-            className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
-          >
-            Email
-          </label>
-          <Input
-            id="onboarding-email"
-            type="email"
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            placeholder="you@example.com"
-            required
-            aria-label="Email"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="onboarding-password"
-            className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
-          >
-            Password
-          </label>
-          <Input
-            id="onboarding-password"
-            type="password"
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="********"
-            required
-            aria-label="Password"
-          />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="onboarding-email"
+              className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
+            >
+              Email
+            </label>
+            <Input
+              id="onboarding-email"
+              type="email"
+              value={email}
+              onChange={(event) => onEmailChange(event.target.value)}
+              placeholder="you@example.com"
+              required
+              aria-label="Email"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="onboarding-password"
+              className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
+            >
+              Password
+            </label>
+            <Input
+              id="onboarding-password"
+              type="password"
+              value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              placeholder="********"
+              required
+              aria-label="Password"
+            />
+          </div>
         </div>
 
         {authError && (
@@ -77,13 +89,13 @@ export function OnboardingSignInCard({
           </p>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button
             type="submit"
             variant="primary"
             size="sm"
             disabled={isSubmitting}
-            className="flex-1"
+            className="h-10 flex-1"
           >
             {isSubmitting ? 'Signing in...' : 'Sign In'}
           </Button>
@@ -92,6 +104,7 @@ export function OnboardingSignInCard({
             variant="secondary"
             size="sm"
             onClick={onCancel}
+            className="h-10 sm:w-28"
           >
             Cancel
           </Button>

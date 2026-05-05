@@ -1,4 +1,3 @@
-import { Card } from '../ui/Card';
 import type { OnboardingBenefitItem } from './onboarding-data';
 
 interface OnboardingBenefitsProps {
@@ -7,17 +6,26 @@ interface OnboardingBenefitsProps {
 
 export function OnboardingBenefits({ benefits }: OnboardingBenefitsProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
       {benefits.map((benefit) => (
-        <Card key={benefit.title} padding="md" className="flex flex-col items-start">
-          <span className={`mb-3 ${benefit.iconColor}`}>{benefit.icon}</span>
-          <h4 className="text-xs font-semibold text-[var(--color-text-main)]">
-            {benefit.title}
-          </h4>
-          <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-            {benefit.description}
-          </p>
-        </Card>
+        <div
+          key={benefit.title}
+          className="flex min-w-0 items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-3 shadow-sm"
+        >
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-gray-800 ${benefit.iconColor}`}
+          >
+            {benefit.icon}
+          </span>
+          <div className="min-w-0 text-left">
+            <h4 className="text-xs font-semibold text-[var(--color-text-main)]">
+              {benefit.title}
+            </h4>
+            <p className="mt-1 break-words text-[11px] leading-5 text-[var(--color-text-muted)]">
+              {benefit.description}
+            </p>
+          </div>
+        </div>
       ))}
     </div>
   );

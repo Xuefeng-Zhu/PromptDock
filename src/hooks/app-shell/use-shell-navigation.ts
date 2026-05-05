@@ -83,7 +83,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     return folder;
   }, []);
 
-  const handleOnboardingComplete = useCallback((_choice: 'local' | 'sync' | 'signin') => {
+  const handleOnboardingComplete = useCallback((_choice: 'local' | 'signin') => {
     setScreen({ name: 'library' });
   }, []);
 

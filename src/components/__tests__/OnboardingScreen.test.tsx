@@ -54,12 +54,6 @@ function createMockAuthService(overrides: Partial<IAuthService> = {}): IAuthServ
   };
 }
 
-function createMockSyncService() {
-  return {
-    transitionToSynced: vi.fn(async () => {}),
-  };
-}
-
 beforeEach(() => {
   testAppModeStore = createAppModeStore();
   localStorage.clear();
@@ -87,13 +81,12 @@ describe('OnboardingScreen', () => {
     expect(root?.className).toContain('overflow-y-auto');
   });
 
-  it('renders 3 option cards with titles and CTA buttons', () => {
+  it('renders local and sign-in option cards with titles and CTA buttons', () => {
     render(<OnboardingScreen onComplete={() => {}} />);
     expect(screen.getByText('Get started')).toBeDefined();
-    // Each option has a heading and a button
     expect(screen.getAllByText('Start locally').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Enable sync').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Sign in').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('Enable sync')).toBeNull();
   });
 
   it('renders 4 benefit cards with descriptions', () => {
@@ -247,90 +240,6 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
   });
 });
 
-// ─── Task 6.3: "Enable sync" initiates SyncService.transitionToSynced ──────────
-
-describe('OnboardingScreen — Enable sync (Task 6.3)', () => {
-  it('calls SyncService.transitionToSynced with guest workspace on "Enable sync"', async () => {
-    const syncService = createMockSyncService();
-    const handleComplete = vi.fn();
-    render(
-      <OnboardingScreen
-        onComplete={handleComplete}
-        syncService={syncService}
-      />,
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enable sync' }));
-    });
-
-    expect(syncService.transitionToSynced).toHaveBeenCalledTimes(1);
-    // Verify it was called with a guest userId, workspaceId, empty prompts, and 'fresh'
-    const call = syncService.transitionToSynced.mock.calls[0] as unknown as [
-      string,
-      string,
-      never[],
-      'fresh',
-    ];
-    expect(call[0]).toMatch(/^guest-/); // guest userId
-    expect(call[1]).toMatch(/^workspace-guest-/); // guest workspaceId
-    expect(call[2]).toEqual([]); // empty local prompts
-    expect(call[3]).toBe('fresh'); // migration choice
-    expect(handleComplete).toHaveBeenCalledWith('sync');
-    expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
-  });
-
-  it('sets AppModeStore userId when "Enable sync" is clicked', async () => {
-    const syncService = createMockSyncService();
-    render(
-      <OnboardingScreen onComplete={() => {}} syncService={syncService} />,
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enable sync' }));
-    });
-
-    expect(testAppModeStore.getState().userId).toMatch(/^guest-/);
-  });
-
-  it('displays sync error when transitionToSynced fails', async () => {
-    const syncService = {
-      transitionToSynced: vi.fn(async () => {
-        throw new Error('Network error');
-      }),
-    };
-    render(
-      <OnboardingScreen onComplete={() => {}} syncService={syncService} />,
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enable sync' }));
-    });
-
-    await waitFor(() => {
-      const alert = screen.getByRole('alert');
-      expect(alert.textContent).toContain('Failed to enable sync');
-      expect(alert.textContent).toContain('Network error');
-    });
-
-    // Onboarding flag should NOT be set on failure
-    expect(localStorage.getItem(ONBOARDING_KEY)).toBeNull();
-  });
-
-  it('falls back to setting mode to synced when no syncService is provided', async () => {
-    const handleComplete = vi.fn();
-    render(<OnboardingScreen onComplete={handleComplete} />);
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enable sync' }));
-    });
-
-    expect(testAppModeStore.getState().mode).toBe('synced');
-    expect(handleComplete).toHaveBeenCalledWith('sync');
-    expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
-  });
-});
-
 // ─── Task 6.4: Persist onboarding-complete flag ────────────────────────────────
 
 describe('Onboarding flag persistence (Task 6.4)', () => {
@@ -361,15 +270,6 @@ describe('Onboarding flag persistence (Task 6.4)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start locally' }));
     expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
     u1();
-
-    // "Enable sync" (no syncService — fallback)
-    localStorage.clear();
-    const { unmount: u2 } = render(<OnboardingScreen onComplete={() => {}} />);
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enable sync' }));
-    });
-    expect(localStorage.getItem(ONBOARDING_KEY)).toBe('true');
-    u2();
 
     // "Sign in" (with authService)
     localStorage.clear();

@@ -1,11 +1,8 @@
 import type { FormEvent } from 'react';
 import type { AuthFormMode } from '../../hooks/use-auth-form';
-import { AuthDivider } from '../account/AuthDivider';
-import { AuthModeTabs } from '../account/AuthModeTabs';
-import { GoogleAuthButton } from '../account/GoogleAuthButton';
+import { AccountAuthForm } from '../account/AccountAuthForm';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { Input } from '../ui/Input';
 
 interface OnboardingSignInCardProps {
   authError: string | null;
@@ -41,86 +38,31 @@ export function OnboardingSignInCard({
       <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-main)]">
         Sign in or create account
       </h3>
-      <AuthModeTabs
-        activeMode={authFormMode}
+
+      <AccountAuthForm
+        authError={authError}
+        authFormMode={authFormMode}
+        authServiceAvailable={authServiceAvailable}
         compact={false}
+        email={email}
+        isSubmitting={isSubmitting}
+        onEmailChange={onEmailChange}
+        onGoogleSignIn={onGoogleSignIn}
+        onPasswordChange={onPasswordChange}
         onSelectMode={onSelectMode}
+        onSubmit={onSubmit}
+        password={password}
       />
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <label
-            htmlFor="onboarding-email"
-            className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
-          >
-            Email
-          </label>
-          <Input
-            id="onboarding-email"
-            type="email"
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            placeholder="you@example.com"
-            required
-            aria-label="Email"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="onboarding-password"
-            className="mb-1 block text-xs font-medium text-[var(--color-text-main)]"
-          >
-            Password
-          </label>
-          <Input
-            id="onboarding-password"
-            type="password"
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="********"
-            required
-            aria-label="Password"
-          />
-        </div>
 
-        {authError && (
-          <p role="alert" className="text-xs text-red-600">
-            {authError}
-          </p>
-        )}
-
-        <div className="flex gap-2">
-          <Button
-            type="submit"
-            variant="primary"
-            size="sm"
-            disabled={isSubmitting}
-            className="flex-1"
-          >
-            {isSubmitting
-              ? authFormMode === 'sign-in'
-                ? 'Signing in...'
-                : 'Creating account...'
-              : authFormMode === 'sign-in'
-                ? 'Sign In'
-                : 'Create Account'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-        </div>
-      </form>
-
-      <AuthDivider />
-
-      <GoogleAuthButton
-        onClick={onGoogleSignIn}
-        disabled={isSubmitting || !authServiceAvailable}
-      />
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={onCancel}
+        className="mt-3 w-full"
+      >
+        Cancel
+      </Button>
     </Card>
   );
 }

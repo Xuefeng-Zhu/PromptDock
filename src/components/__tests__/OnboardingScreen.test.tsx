@@ -198,7 +198,7 @@ describe('OnboardingScreen — Sign in (Task 6.2)', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
     });
 
     expect(authService.signUp).toHaveBeenCalledWith('new@example.com', 'strong-password');

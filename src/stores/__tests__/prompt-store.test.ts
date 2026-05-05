@@ -296,11 +296,14 @@ describe('PromptStore', () => {
   // ── archivePrompt ──────────────────────────────────────────────────────────
 
   describe('archivePrompt', () => {
-    it('should remove the prompt from the store and call softDelete', async () => {
+    it('should keep the prompt in the store as archived and call softDelete', async () => {
       await store.getState().loadPrompts();
       await store.getState().archivePrompt('p1');
 
-      expect(store.getState().prompts.find((p) => p.id === 'p1')).toBeUndefined();
+      const archived = store.getState().prompts.find((p) => p.id === 'p1');
+      expect(archived).toBeDefined();
+      expect(archived?.archived).toBe(true);
+      expect(archived?.archivedAt).toBeInstanceOf(Date);
       expect(repo.softDelete).toHaveBeenCalledWith('p1');
     });
 

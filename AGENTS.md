@@ -182,6 +182,12 @@ npm run tauri build      # Full Tauri production build (platform installer)
 firebase emulators:start # Auth (9099), Firestore (8080), UI (4000)
 ```
 
+## GitHub PR Workflow
+
+- When asked to open a PR, create a ready-for-review PR by default.
+- Open a draft PR only when the user explicitly asks for draft, or when there is a known blocker that should prevent review or merge.
+- If a PR is opened as draft because of a blocker, state the blocker clearly and mark it ready after the blocker is resolved.
+
 ## Testing Conventions
 
 - **Test location**: Co-located `__tests__/` directories next to source files

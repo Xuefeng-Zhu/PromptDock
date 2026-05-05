@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { ToastStore } from '../../stores/toast-store';
 import type { PromptRecipe, UserSettings } from '../../types/index';
 import { extractVariables } from '../../utils/prompt-template';
@@ -25,7 +25,7 @@ interface UsePromptLaunchFlowOptions {
   executePrompt: ExecutePrompt;
   pasteText: ExecuteText;
   setCommandPaletteOpen: (open: boolean) => void;
-  setVariableFillPromptId: (id: string | null) => void;
+  setVariableFillPromptId: Dispatch<SetStateAction<string | null>>;
   variableFillPromptId: string | null;
 }
 
@@ -71,14 +71,15 @@ export function usePromptLaunchFlow({
 
   const handleVariableFillCopy = useCallback(
     async (renderedText: string) => {
+      const promptId = variableFillPromptId;
       try {
         const result = await copyText({
           text: renderedText,
-          promptId: variableFillPromptId ?? undefined,
+          promptId: promptId ?? undefined,
           source: 'variable_fill',
         });
         addToast(result.message, 'success');
-        setVariableFillPromptId(null);
+        setVariableFillPromptId((currentId) => (currentId === promptId ? null : currentId));
       } catch (err) {
         addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
         throw err;
@@ -89,14 +90,15 @@ export function usePromptLaunchFlow({
 
   const handleVariableFillPaste = useCallback(
     async (renderedText: string) => {
+      const promptId = variableFillPromptId;
       try {
         const result = await pasteText({
           text: renderedText,
-          promptId: variableFillPromptId ?? undefined,
+          promptId: promptId ?? undefined,
           source: 'variable_fill',
         });
         addToast(result.message, 'success');
-        setVariableFillPromptId(null);
+        setVariableFillPromptId((currentId) => (currentId === promptId ? null : currentId));
       } catch (err) {
         addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
         throw err;

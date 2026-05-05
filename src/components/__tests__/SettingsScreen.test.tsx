@@ -590,13 +590,28 @@ describe('SettingsScreen + AuthService integration', () => {
     expect(passwordInput.disabled).toBe(true);
     expect(submitButton).toHaveProperty('disabled', true);
     expect(googleButton).toHaveProperty('disabled', true);
-    expect(screen.getByRole('alert').textContent).toContain('Firebase is not configured');
+    expect(screen.getByText(/Firebase is not configured/)).toBeDefined();
 
     await act(async () => {
       fireEvent.click(submitButton);
     });
 
     expect(authService.signIn).not.toHaveBeenCalled();
+  });
+
+  it('disables account auth when no auth service is provided', () => {
+    render(<SettingsScreen onBack={() => {}} />);
+
+    const emailInput = screen.getByLabelText('Email') as HTMLInputElement;
+    const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
+    const submitButton = screen.getByRole('button', { name: 'Sign in to account' });
+    const googleButton = screen.getByRole('button', { name: 'Continue with Google' });
+
+    expect(emailInput.disabled).toBe(true);
+    expect(passwordInput.disabled).toBe(true);
+    expect(submitButton).toHaveProperty('disabled', true);
+    expect(googleButton).toHaveProperty('disabled', true);
+    expect(screen.getByText(/Firebase is not configured/)).toBeDefined();
   });
 
   it('shows Sign In and Sign Up tab toggles', () => {

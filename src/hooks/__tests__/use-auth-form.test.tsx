@@ -105,6 +105,8 @@ describe('useAuthForm', () => {
   it('reports unavailable auth services and signs out through the service when present', async () => {
     const unavailable = renderHook(() => useAuthForm({ onAuthSuccess: vi.fn() }));
 
+    expect(unavailable.result.current.authServiceAvailable).toBe(false);
+
     await act(async () => {
       await unavailable.result.current.handleEmailAuthSubmit(formEvent());
     });

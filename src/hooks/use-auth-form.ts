@@ -30,9 +30,7 @@ export function useAuthForm({
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const authServiceAvailable = authService
-    ? isAuthServiceAvailable(authService)
-    : true;
+  const authServiceAvailable = isAuthServiceAvailable(authService);
   const canSubmitAuth = Boolean(authService) && authServiceAvailable;
 
   const clearAuthError = useCallback(() => {
@@ -81,7 +79,6 @@ export function useAuthForm({
     [
       authFormMode,
       authService,
-      authServiceAvailable,
       canSubmitAuth,
       completeAuth,
       email,

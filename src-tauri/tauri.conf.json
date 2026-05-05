@@ -1,6 +1,6 @@
 {
   "productName": "PromptDock",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.promptdock.app",
   "build": {
     "beforeDevCommand": "npm run dev",

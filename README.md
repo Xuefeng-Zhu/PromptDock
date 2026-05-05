@@ -14,7 +14,7 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | [Configuration](docs/CONFIGURATION.md) | Environment variables, config files, Firebase setup, and secrets handling. |
 | [Testing](docs/TESTING.md) | Test strategy, commands, current verification status, and missing tests. |
 | [API](docs/API.md) | Internal TypeScript interfaces, Tauri commands, Firestore collections, and import/export schema. |
-| [Deployment](docs/DEPLOYMENT.md) | Browser/Tauri builds, Firebase deployment, CI/CD notes, and rollback strategy. |
+| [Release](docs/RELEASE.md) | Release flow, browser/Tauri builds, Firebase deployment, CI/CD notes, and rollback strategy. |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common setup, runtime, sync, and build/test issues. |
 | [Architecture Decision Records](docs/adr) | Durable engineering decisions and their consequences. |
 | [Deferred Issues](docs/Issues.md) | Known implementation issues intentionally not fixed in the docs pass. |
@@ -136,7 +136,7 @@ npx vitest run src/components/__tests__/AppShell.test.tsx
 
 Current verification note: `npm run build`, `npm test`, and `cargo test` pass locally. Details are tracked in [Testing](docs/TESTING.md).
 
-## Deployment
+## Release
 
 Frontend-only build:
 
@@ -159,7 +159,7 @@ Firebase rules and indexes:
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-See [Deployment](docs/DEPLOYMENT.md) before publishing a release; desktop release builds run through `.github/workflows/release-macos.yml` and `.github/workflows/release-windows.yml`.
+See [Release](docs/RELEASE.md) before publishing; desktop release builds run through `.github/workflows/release-macos.yml` and `.github/workflows/release-windows.yml`.
 
 ## Troubleshooting
 

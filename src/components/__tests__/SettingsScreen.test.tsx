@@ -242,7 +242,7 @@ describe('SettingsScreen', () => {
     expect(screen.getByText('Dark')).toBeDefined();
     expect(screen.getByText('System')).toBeDefined();
     expect(screen.getByText('PromptDock')).toBeDefined();
-    expect(screen.getByText('v0.2.0')).toBeDefined();
+    expect(screen.getByText('v0.3.0')).toBeDefined();
   });
 
   it('calls onBack when the Back button is clicked', () => {

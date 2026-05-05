@@ -16,6 +16,8 @@ export function VariableFillActions({
   onCancel,
   onPrimaryAction,
 }: VariableFillActionsProps) {
+  const primaryActionLabel = isPasteAction ? 'Paste into Active App' : 'Copy to Clipboard';
+
   return (
     <div
       className="flex items-center justify-end border-t px-5 py-3"
@@ -55,7 +57,7 @@ export function VariableFillActions({
               ) : (
                 <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
               )}
-              {isPasteAction ? 'Paste into active app' : 'Copy final prompt'}
+              {primaryActionLabel}
               <kbd
                 className="ml-1.5 rounded border px-1 py-0.5 text-[10px] font-mono"
                 style={{

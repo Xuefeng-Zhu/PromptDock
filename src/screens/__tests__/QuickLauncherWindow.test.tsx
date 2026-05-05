@@ -268,7 +268,7 @@ describe('QuickLauncherWindow', () => {
       });
 
       // Click Copy
-      const copyButton = screen.getByRole('button', { name: /Copy final prompt/i });
+      const copyButton = screen.getByRole('button', { name: /Copy to Clipboard/i });
       await act(async () => {
         fireEvent.click(copyButton);
       });
@@ -298,7 +298,7 @@ describe('QuickLauncherWindow', () => {
       });
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Copy final prompt/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Copy to Clipboard/i }));
       });
 
       await waitFor(() => {
@@ -355,7 +355,7 @@ describe('QuickLauncherWindow', () => {
       });
 
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Paste into active app/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Paste into Active App/i }));
       });
 
       expect(mockPasteToActiveApp).toHaveBeenCalledWith(
@@ -406,7 +406,7 @@ describe('QuickLauncherWindow', () => {
 
       // Click Copy
       await act(async () => {
-        fireEvent.click(screen.getByRole('button', { name: /Copy final prompt/i }));
+        fireEvent.click(screen.getByRole('button', { name: /Copy to Clipboard/i }));
       });
 
       expect(mockInvoke).toHaveBeenCalledWith('toggle_quick_launcher');

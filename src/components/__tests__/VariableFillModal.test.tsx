@@ -64,7 +64,7 @@ describe('VariableFillModal', () => {
   it('disables Copy button when variables are not all filled', () => {
     render(<VariableFillModal {...defaultProps} />);
     const copyButton = screen.getByRole('button', {
-      name: /Copy final prompt/i,
+      name: /Copy to Clipboard/i,
     });
     expect(copyButton.hasAttribute('disabled')).toBe(true);
   });
@@ -74,13 +74,13 @@ describe('VariableFillModal', () => {
     expect(screen.queryByRole('button', { name: /Paste/i })).toBeNull();
   });
 
-  it('defaults the primary action to Paste into active app', () => {
+  it('defaults the primary action to Paste into Active App', () => {
     const { defaultAction, ...propsWithoutAction } = defaultProps;
     expect(defaultAction).toBe('copy');
     render(<VariableFillModal {...propsWithoutAction} />);
 
     expect(
-      screen.getByRole('button', { name: /Paste into active app/i }),
+      screen.getByRole('button', { name: /Paste into Active App/i }),
     ).toBeDefined();
   });
 
@@ -98,7 +98,7 @@ describe('VariableFillModal', () => {
     });
 
     const copyButton = screen.getByRole('button', {
-      name: /Copy final prompt/i,
+      name: /Copy to Clipboard/i,
     });
     expect(copyButton.hasAttribute('disabled')).toBe(false);
   });
@@ -118,7 +118,7 @@ describe('VariableFillModal', () => {
     });
 
     const copyButton = screen.getByRole('button', {
-      name: /Copy final prompt/i,
+      name: /Copy to Clipboard/i,
     });
     await act(async () => {
       fireEvent.click(copyButton);
@@ -130,7 +130,7 @@ describe('VariableFillModal', () => {
     expect(renderedText).toContain('markdown');
   });
 
-  it('uses Paste into active app as the primary action when configured', async () => {
+  it('uses Paste into Active App as the primary action when configured', async () => {
     const onCopy = vi.fn();
     const onPaste = vi.fn();
     render(
@@ -153,7 +153,7 @@ describe('VariableFillModal', () => {
     });
 
     const primaryButton = screen.getByRole('button', {
-      name: /Paste into active app/i,
+      name: /Paste into Active App/i,
     });
     await act(async () => {
       fireEvent.click(primaryButton);
@@ -217,7 +217,7 @@ describe('VariableFillModal', () => {
       });
 
       const copyButton = screen.getByRole('button', {
-        name: /Copy final prompt/i,
+        name: /Copy to Clipboard/i,
       });
       await act(async () => {
         fireEvent.click(copyButton);
@@ -231,10 +231,10 @@ describe('VariableFillModal', () => {
         vi.advanceTimersByTime(2000);
       });
 
-      // Should revert back to "Copy final prompt"
+      // Should revert back to "Copy to Clipboard"
       expect(screen.queryByText('Copied!')).toBeNull();
       expect(
-        screen.getByRole('button', { name: /Copy final prompt/i }),
+        screen.getByRole('button', { name: /Copy to Clipboard/i }),
       ).toBeDefined();
     });
 
@@ -256,7 +256,7 @@ describe('VariableFillModal', () => {
       });
 
       const copyButton = screen.getByRole('button', {
-        name: /Copy final prompt/i,
+        name: /Copy to Clipboard/i,
       });
 
       await act(async () => {

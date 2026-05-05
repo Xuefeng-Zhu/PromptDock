@@ -22,6 +22,7 @@ function createMockRepo(existingPrompts: PromptRecipe[] = []): IPromptRepository
     }),
     getById: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
     softDelete: vi.fn(),
     restore: vi.fn(),
     duplicate: vi.fn(),

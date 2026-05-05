@@ -153,6 +153,22 @@ export class PromptRepository implements IPromptRepository {
     await this.persist();
   }
 
+  async delete(id: string): Promise<void> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.delete(id);
+    }
+
+    await this.ensureLoaded();
+
+    const initialLength = this.prompts.length;
+    this.prompts = this.prompts.filter((p) => p.id !== id);
+    if (this.prompts.length === initialLength) {
+      throw new Error(`Prompt not found: ${id}`);
+    }
+
+    await this.persist();
+  }
+
   async restore(id: string): Promise<void> {
     if (this.firestoreDelegate) {
       return this.firestoreDelegate.restore(id);

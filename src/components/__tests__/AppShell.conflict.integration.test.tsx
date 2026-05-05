@@ -61,6 +61,7 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts[idx] = updated;
       return updated;
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {

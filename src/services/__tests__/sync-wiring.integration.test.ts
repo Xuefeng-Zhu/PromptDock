@@ -96,6 +96,7 @@ function createMockFirestoreDelegate(): IPromptRepository {
       prompts[idx] = { ...prompts[idx], ...changes, updatedAt: new Date() };
       return prompts[idx];
     }),
+    delete: vi.fn(async () => {}),
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => {
@@ -377,6 +378,15 @@ describe('SyncService ↔ PromptStore wiring', () => {
       await promptRepo.softDelete('some-id');
 
       expect(firestoreDelegate.softDelete).toHaveBeenCalledWith('some-id');
+    });
+
+    it('should delegate delete to Firestore when delegate is set', async () => {
+      const firestoreDelegate = createMockFirestoreDelegate();
+      promptRepo.setFirestoreDelegate(firestoreDelegate);
+
+      await promptRepo.delete('some-id');
+
+      expect(firestoreDelegate.delete).toHaveBeenCalledWith('some-id');
     });
 
     it('should delegate toggleFavorite to Firestore when delegate is set', async () => {

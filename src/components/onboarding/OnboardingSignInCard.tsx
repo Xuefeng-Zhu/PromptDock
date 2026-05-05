@@ -4,6 +4,7 @@ import { GoogleAuthButton } from '../account/GoogleAuthButton';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
+import { AUTH_UNCONFIGURED_MESSAGE } from '../../utils/auth-service-availability';
 
 interface OnboardingSignInCardProps {
   authError: string | null;
@@ -30,6 +31,10 @@ export function OnboardingSignInCard({
   onSubmit,
   password,
 }: OnboardingSignInCardProps) {
+  const unavailableMessage = authServiceAvailable
+    ? null
+    : AUTH_UNCONFIGURED_MESSAGE;
+
   return (
     <Card padding="lg" className="mx-auto max-w-sm">
       <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-main)]">
@@ -49,6 +54,7 @@ export function OnboardingSignInCard({
             value={email}
             onChange={(event) => onEmailChange(event.target.value)}
             placeholder="you@example.com"
+            disabled={isSubmitting || !authServiceAvailable}
             required
             aria-label="Email"
           />
@@ -66,12 +72,17 @@ export function OnboardingSignInCard({
             value={password}
             onChange={(event) => onPasswordChange(event.target.value)}
             placeholder="********"
+            disabled={isSubmitting || !authServiceAvailable}
             required
             aria-label="Password"
           />
         </div>
 
-        {authError && (
+        {unavailableMessage ? (
+          <p className="text-xs text-red-600">
+            {unavailableMessage}
+          </p>
+        ) : authError && (
           <p role="alert" className="text-xs text-red-600">
             {authError}
           </p>
@@ -82,7 +93,7 @@ export function OnboardingSignInCard({
             type="submit"
             variant="primary"
             size="sm"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !authServiceAvailable}
             className="flex-1"
           >
             {isSubmitting ? 'Signing in...' : 'Sign In'}

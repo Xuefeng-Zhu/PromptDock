@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { AuthDivider } from './AuthDivider';
 import { AuthModeTabs } from './AuthModeTabs';
 import { GoogleAuthButton } from './GoogleAuthButton';
+import { AUTH_UNCONFIGURED_MESSAGE } from '../../utils/auth-service-availability';
 
 interface AccountAuthFormProps {
   authError: string | null;
@@ -35,6 +36,10 @@ export function AccountAuthForm({
   onSubmit,
   password,
 }: AccountAuthFormProps) {
+  const unavailableMessage = authServiceAvailable
+    ? null
+    : AUTH_UNCONFIGURED_MESSAGE;
+
   return (
     <div>
       <AuthModeTabs
@@ -51,6 +56,7 @@ export function AccountAuthForm({
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
           placeholder="you@example.com"
+          disabled={isSubmitting || !authServiceAvailable}
           required
         />
         <Input
@@ -60,10 +66,15 @@ export function AccountAuthForm({
           value={password}
           onChange={(event) => onPasswordChange(event.target.value)}
           placeholder="********"
+          disabled={isSubmitting || !authServiceAvailable}
           required
         />
 
-        {authError && (
+        {unavailableMessage ? (
+          <p className="text-xs text-red-600">
+            {unavailableMessage}
+          </p>
+        ) : authError && (
           <p role="alert" className="text-xs text-red-600">
             {authError}
           </p>

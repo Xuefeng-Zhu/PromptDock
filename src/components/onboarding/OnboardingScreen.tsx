@@ -32,6 +32,7 @@ export interface OnboardingScreenProps {
 export function OnboardingScreen({ onComplete, authService, syncService }: OnboardingScreenProps) {
   const {
     authError,
+    authServiceAvailable,
     email,
     handleCancelSignIn,
     handleEmailAuthSubmit,
@@ -63,7 +64,7 @@ export function OnboardingScreen({ onComplete, authService, syncService }: Onboa
         {showSignInForm && (
           <OnboardingSignInCard
             authError={authError}
-            authServiceAvailable={Boolean(authService)}
+            authServiceAvailable={authServiceAvailable}
             email={email}
             isSubmitting={isSubmitting}
             onCancel={handleCancelSignIn}

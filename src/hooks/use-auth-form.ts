@@ -2,6 +2,10 @@ import { useCallback, useState, type FormEvent } from 'react';
 import type { AuthResult, AuthUser } from '../types/index';
 import type { IAuthService } from '../services/interfaces';
 import { authErrorMessage } from '../utils/auth-error-message';
+import {
+  AUTH_UNCONFIGURED_MESSAGE,
+  isAuthServiceAvailable,
+} from '../utils/auth-service-availability';
 
 export type AuthFormMode = 'sign-in' | 'sign-up';
 
@@ -18,7 +22,7 @@ export function useAuthForm({
   initialMode = 'sign-in',
   onAuthSuccess,
   onSignOutSuccess,
-  unavailableMessage = 'Cloud sign-in is unavailable in this build.',
+  unavailableMessage = AUTH_UNCONFIGURED_MESSAGE,
 }: UseAuthFormOptions) {
   const [authFormMode, setAuthFormMode] = useState<AuthFormMode>(initialMode);
   const [email, setEmail] = useState('');
@@ -26,6 +30,8 @@ export function useAuthForm({
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const authServiceAvailable = isAuthServiceAvailable(authService);
+  const canSubmitAuth = Boolean(authService) && authServiceAvailable;
 
   const clearAuthError = useCallback(() => {
     setAuthError(null);
@@ -54,7 +60,7 @@ export function useAuthForm({
   const handleEmailAuthSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (!authService) {
+      if (!canSubmitAuth || !authService) {
         setAuthError(unavailableMessage);
         return;
       }
@@ -70,11 +76,19 @@ export function useAuthForm({
         setIsSubmitting(false);
       }
     },
-    [authFormMode, authService, completeAuth, email, password, unavailableMessage],
+    [
+      authFormMode,
+      authService,
+      canSubmitAuth,
+      completeAuth,
+      email,
+      password,
+      unavailableMessage,
+    ],
   );
 
   const handleGoogleSignIn = useCallback(async () => {
-    if (!authService) {
+    if (!canSubmitAuth || !authService) {
       setAuthError(unavailableMessage);
       return;
     }
@@ -87,7 +101,7 @@ export function useAuthForm({
     } finally {
       setIsSubmitting(false);
     }
-  }, [authService, completeAuth, unavailableMessage]);
+  }, [authService, canSubmitAuth, completeAuth, unavailableMessage]);
 
   const handleSignOut = useCallback(async () => {
     if (!authService) {
@@ -111,6 +125,7 @@ export function useAuthForm({
   return {
     authError,
     authFormMode,
+    authServiceAvailable,
     authUser,
     clearAuthError,
     email,

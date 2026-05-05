@@ -20,7 +20,6 @@ import {
 
 export function useAppShellController({
   authService,
-  syncService,
   conflictService: conflictServiceProp,
 }: AppShellProps) {
   const conflictService = conflictServiceProp ?? getConflictService();
@@ -203,7 +202,6 @@ export function useAppShellController({
     selectedPromptId,
     setEditorHasUnsavedChanges,
     showInspector,
-    syncService,
     syncStatus,
     theme,
     unresolvedConflictCount: conflict.unresolvedConflictCount,

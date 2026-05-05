@@ -39,7 +39,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
     mode,
     screen,
     searchQuery,
-    syncService,
     syncStatus,
     theme,
     unresolvedConflictCount,
@@ -53,7 +52,6 @@ export function AppShellView({ controller }: AppShellViewProps) {
         <OnboardingScreen
           onComplete={handleOnboardingComplete}
           authService={authService}
-          syncService={syncService}
         />
       </div>
     );

@@ -34,10 +34,18 @@ export function OnboardingSignInCard({
   password,
 }: OnboardingSignInCardProps) {
   return (
-    <Card padding="lg" className="mx-auto max-w-sm">
-      <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-main)]">
-        Sign in or create account
-      </h3>
+    <Card
+      padding="lg"
+      className="mx-auto w-full max-w-xl border-blue-100 shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-blue-900/50 dark:bg-gray-900"
+    >
+      <div className="mb-5">
+        <h3 className="text-sm font-semibold text-[var(--color-text-main)]">
+          Sign in or create account
+        </h3>
+        <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">
+          Restore synced recipes or create a PromptDock account.
+        </p>
+      </div>
 
       <AccountAuthForm
         authError={authError}
@@ -59,7 +67,7 @@ export function OnboardingSignInCard({
         variant="secondary"
         size="sm"
         onClick={onCancel}
-        className="mt-3 w-full"
+        className="mt-3 h-10 w-full"
       >
         Cancel
       </Button>

@@ -84,7 +84,6 @@ describe('OnboardingScreen', () => {
   it('renders local and sign-in option cards with CTA buttons', () => {
     render(<OnboardingScreen onComplete={() => {}} />);
     expect(screen.getByText('Get started')).toBeDefined();
-    // Each option has a heading and a button
     expect(screen.getAllByText('Start locally').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Sign in').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Enable sync')).toBeNull();

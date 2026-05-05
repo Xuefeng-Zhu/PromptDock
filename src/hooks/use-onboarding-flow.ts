@@ -5,34 +5,21 @@ import { markOnboardingComplete } from '../utils/onboarding';
 import type { IAuthService } from '../services/interfaces';
 import type { AuthUser } from '../types/index';
 
-export type OnboardingChoice = 'local' | 'sync' | 'signin';
-
-export interface OnboardingSyncService {
-  transitionToSynced: (
-    userId: string,
-    workspaceId: string,
-    localPrompts: never[],
-    migrationChoice: 'fresh',
-  ) => Promise<void>;
-}
+export type OnboardingChoice = 'local' | 'signin';
 
 interface UseOnboardingFlowOptions {
   authService?: IAuthService;
   onComplete: (choice: OnboardingChoice) => void;
-  syncService?: OnboardingSyncService;
 }
 
 export function useOnboardingFlow({
   authService,
   onComplete,
-  syncService,
 }: UseOnboardingFlowOptions) {
   const setMode = useAppModeStore((s) => s.setMode);
   const setUserId = useAppModeStore((s) => s.setUserId);
 
   const [showSignInForm, setShowSignInForm] = useState(false);
-  const [isSyncSubmitting, setIsSyncSubmitting] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
 
   const handleAuthSuccess = useCallback(
     (user: AuthUser) => {
@@ -66,29 +53,6 @@ export function useOnboardingFlow({
     clearAuthError();
   }, [clearAuthError]);
 
-  const handleEnableSync = useCallback(async () => {
-    setSyncError(null);
-    setIsSyncSubmitting(true);
-    try {
-      if (syncService) {
-        const guestUserId = `guest-${Date.now()}`;
-        const guestWorkspaceId = `workspace-${guestUserId}`;
-        setUserId(guestUserId);
-        await syncService.transitionToSynced(guestUserId, guestWorkspaceId, [], 'fresh');
-      } else {
-        setMode('synced');
-      }
-      markOnboardingComplete();
-      onComplete('sync');
-    } catch (err) {
-      setSyncError(
-        `Failed to enable sync: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    } finally {
-      setIsSyncSubmitting(false);
-    }
-  }, [syncService, setMode, setUserId, onComplete]);
-
   const handleOptionClick = useCallback(
     (key: OnboardingChoice) => {
       switch (key) {
@@ -98,20 +62,16 @@ export function useOnboardingFlow({
         case 'signin':
           handleSignInClick();
           break;
-        case 'sync':
-          void handleEnableSync();
-          break;
       }
     },
-    [handleStartLocally, handleSignInClick, handleEnableSync],
+    [handleStartLocally, handleSignInClick],
   );
 
   return {
     ...authForm,
     handleCancelSignIn,
     handleOptionClick,
-    isSubmitting: authForm.isSubmitting || isSyncSubmitting,
+    isSubmitting: authForm.isSubmitting,
     showSignInForm,
-    syncError,
   };
 }

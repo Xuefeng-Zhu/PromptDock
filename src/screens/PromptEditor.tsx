@@ -3,9 +3,9 @@ import {
   PromptEditor as PromptEditorForm,
   type PromptEditorProps as PromptEditorFormProps,
 } from '../components/prompt-editor';
+import { useFolderStore } from '../stores/folder-store';
 import { usePromptStore, type CreatePromptData } from '../stores/prompt-store';
 import type { Folder, PromptRecipe } from '../types/index';
-import { createFolder as createStoredFolder } from '../utils/folder-storage';
 import { deriveTagFilterOptions } from '../utils/library-filter-options';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -55,6 +55,7 @@ export function PromptEditor({
   const prompts = usePromptStore((s) => s.prompts);
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const updatePrompt = usePromptStore((s) => s.updatePrompt);
+  const createFolder = useFolderStore((s) => s.createFolder);
 
   const prompt = useMemo(
     () => prompts.find((item) => item.id === promptId),
@@ -83,7 +84,7 @@ export function PromptEditor({
       prompt={prompt}
       availableTags={availableTags}
       folders={folders}
-      onCreateFolder={createStoredFolder}
+      onCreateFolder={createFolder}
       onSave={handleSave}
       onCancel={onCancel ?? (() => undefined)}
     />

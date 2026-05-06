@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
-export function useInlineFolderCreate(onCreateFolder?: (name: string) => void) {
+export type InlineFolderCreateHandler = (name: string) => void | Promise<unknown>;
+
+export function useInlineFolderCreate(onCreateFolder?: InlineFolderCreateHandler) {
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [folderInputValue, setFolderInputValue] = useState('');
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (showFolderInput && folderInputRef.current) {
@@ -17,9 +20,16 @@ export function useInlineFolderCreate(onCreateFolder?: (name: string) => void) {
   }, []);
 
   const submitFolderInput = useCallback(() => {
+    if (submittingRef.current) return;
+
     const trimmed = folderInputValue.trim();
     if (trimmed && onCreateFolder) {
-      onCreateFolder(trimmed);
+      submittingRef.current = true;
+      void Promise.resolve(onCreateFolder(trimmed))
+        .catch(() => undefined)
+        .finally(() => {
+          submittingRef.current = false;
+        });
     }
     closeFolderInput();
   }, [closeFolderInput, folderInputValue, onCreateFolder]);

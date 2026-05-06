@@ -5,15 +5,16 @@
  * - Start/stop Firestore onSnapshot listeners when transitioning to/from Synced Mode
  * - Update AppModeStore sync status
  * - Handle offline detection and reconnection
- * - Offer migration of local prompts when signing in for the first time
- * - Wire PromptRepository to delegate to FirestoreBackend in Synced Mode
+ * - Offer migration of local prompts and folders when signing in for the first time
+ * - Wire repositories to delegate to FirestoreBackend in Synced Mode
  *
  * Requirements: 5.3, 5.4, 5.5, 2.3, 2.4
  */
 
-import type { PromptRecipe } from '../types/index';
+import type { Folder, PromptRecipe } from '../types/index';
 import type { AppModeStore } from '../stores/app-mode-store';
 import type { FirestoreBackend } from '../repositories/firestore-backend';
+import { normalizeFolderName } from '../utils/folder-names';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,8 @@ export interface SyncServiceOptions {
   appModeStore: AppModeStore;
   /** Callback invoked when remote prompts change via onSnapshot. */
   onRemotePromptsChanged?: (prompts: PromptRecipe[]) => void;
+  /** Callback invoked when remote folders change via onSnapshot. */
+  onRemoteFoldersChanged?: (folders: Folder[]) => void;
   /** Callback invoked when a conflict is detected between local and remote. */
   onConflictDetected?: (local: PromptRecipe, remote: PromptRecipe) => void;
 }
@@ -33,10 +36,12 @@ export type MigrationChoice = 'migrate' | 'fresh';
 export class SyncService {
   private appModeStore: AppModeStore;
   private onRemotePromptsChanged?: (prompts: PromptRecipe[]) => void;
+  private onRemoteFoldersChanged?: (folders: Folder[]) => void;
   private onConflictDetected?: (local: PromptRecipe, remote: PromptRecipe) => void;
 
   private firestoreBackend: FirestoreBackend | null = null;
-  private unsubscribeSnapshot: (() => void) | null = null;
+  private unsubscribePromptSnapshot: (() => void) | null = null;
+  private unsubscribeFolderSnapshot: (() => void) | null = null;
   private unsubscribeOnline: (() => void) | null = null;
   private currentWorkspaceId: string | null = null;
   private currentUserId: string | null = null;
@@ -45,6 +50,7 @@ export class SyncService {
   constructor(options: SyncServiceOptions) {
     this.appModeStore = options.appModeStore;
     this.onRemotePromptsChanged = options.onRemotePromptsChanged;
+    this.onRemoteFoldersChanged = options.onRemoteFoldersChanged;
     this.onConflictDetected = options.onConflictDetected;
   }
 
@@ -54,7 +60,7 @@ export class SyncService {
    * Transition from Local Mode to Synced Mode.
    *
    * 1. Creates a FirestoreBackend for the user's workspace
-   * 2. Optionally migrates local prompts to Firestore
+   * 2. Optionally migrates local prompts and folders to Firestore
    * 3. Starts real-time onSnapshot listeners
    * 4. Sets up online/offline detection
    *
@@ -65,6 +71,7 @@ export class SyncService {
     workspaceId: string,
     localPrompts: PromptRecipe[],
     migrationChoice: MigrationChoice,
+    localFolders: Folder[] = [],
   ): Promise<void> {
     this.stopSnapshotListener();
     this.teardownConnectivityListeners();
@@ -86,9 +93,12 @@ export class SyncService {
       if (migrationChoice === 'migrate' && localPrompts.length > 0) {
         await this.migrateLocalPrompts(localPrompts);
       }
+      if (migrationChoice === 'migrate' && localFolders.length > 0) {
+        await this.migrateLocalFolders(localFolders);
+      }
 
       // Start real-time listeners
-      await this.startSnapshotListener(workspaceId);
+      await this.startSnapshotListeners(workspaceId);
 
       // Set up online/offline detection
       this.setupConnectivityListeners();
@@ -165,11 +175,18 @@ export class SyncService {
   // ─── Firestore Snapshot Listener ───────────────────────────────────────────
 
   /**
-   * Start a real-time onSnapshot listener on the prompts collection.
+   * Start real-time onSnapshot listeners on the prompts and folders collections.
    *
    * Requirement: 5.3
    */
-  private async startSnapshotListener(workspaceId: string): Promise<void> {
+  private async startSnapshotListeners(workspaceId: string): Promise<void> {
+    await Promise.all([
+      this.startPromptSnapshotListener(workspaceId),
+      this.startFolderSnapshotListener(workspaceId),
+    ]);
+  }
+
+  private async startPromptSnapshotListener(workspaceId: string): Promise<void> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, query, where, onSnapshot } = await import('firebase/firestore');
     const { firestoreDocToPromptRecipe } = await import('../repositories/firestore-backend');
@@ -179,7 +196,7 @@ export class SyncService {
     const promptsCol = collection(firestore, 'workspaces', workspaceId, 'prompts');
     const q = query(promptsCol, where('workspaceId', '==', workspaceId));
 
-    this.unsubscribeSnapshot = onSnapshot(
+    this.unsubscribePromptSnapshot = onSnapshot(
       q,
       (snapshot) => {
         const remotePrompts: PromptRecipe[] = snapshot.docs.map((docSnap) =>
@@ -215,13 +232,47 @@ export class SyncService {
     );
   }
 
+  private async startFolderSnapshotListener(workspaceId: string): Promise<void> {
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { collection, onSnapshot } = await import('firebase/firestore');
+    const { firestoreDocToFolder } = await import('../repositories/firestore-backend');
+    type FirestoreFolderDoc = import('../repositories/firestore-backend').FirestoreFolderDoc;
+
+    const firestore = await getFirebaseFirestore();
+    const foldersCol = collection(firestore, 'workspaces', workspaceId, 'folders');
+
+    this.unsubscribeFolderSnapshot = onSnapshot(
+      foldersCol,
+      (snapshot) => {
+        const remoteFolders: Folder[] = snapshot.docs.map((docSnap) =>
+          firestoreDocToFolder(
+            docSnap.id,
+            docSnap.data({ serverTimestamps: 'estimate' }) as FirestoreFolderDoc,
+          ),
+        );
+
+        this.onRemoteFoldersChanged?.(remoteFolders);
+      },
+      (error) => {
+        console.error('Firestore folder snapshot listener error:', error);
+        if (error.code === 'unavailable' || error.code === 'permission-denied') {
+          this.handleOffline();
+        }
+      },
+    );
+  }
+
   /**
    * Stop the active onSnapshot listener.
    */
   private stopSnapshotListener(): void {
-    if (this.unsubscribeSnapshot) {
-      this.unsubscribeSnapshot();
-      this.unsubscribeSnapshot = null;
+    if (this.unsubscribePromptSnapshot) {
+      this.unsubscribePromptSnapshot();
+      this.unsubscribePromptSnapshot = null;
+    }
+    if (this.unsubscribeFolderSnapshot) {
+      this.unsubscribeFolderSnapshot();
+      this.unsubscribeFolderSnapshot = null;
     }
   }
 
@@ -306,6 +357,39 @@ export class SyncService {
     }
   }
 
+  private async migrateLocalFolders(localFolders: Folder[]): Promise<void> {
+    if (!this.firestoreBackend || !this.currentWorkspaceId) return;
+
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { doc, getDoc, setDoc, Timestamp } = await import('firebase/firestore');
+    const firestore = await getFirebaseFirestore();
+
+    for (const folder of localFolders) {
+      try {
+        const folderRef = doc(
+          firestore,
+          'workspaces',
+          this.currentWorkspaceId,
+          'folders',
+          folder.id,
+        );
+        const existing = await getDoc(folderRef);
+        if (existing.exists()) {
+          continue;
+        }
+
+        await setDoc(folderRef, {
+          name: folder.name,
+          normalizedName: normalizeFolderName(folder.name),
+          createdAt: Timestamp.fromDate(folder.createdAt),
+          updatedAt: Timestamp.fromDate(folder.updatedAt),
+        });
+      } catch (error) {
+        console.error(`Failed to migrate folder "${folder.name}":`, error);
+      }
+    }
+  }
+
   // ─── Conflict Detection ────────────────────────────────────────────────────
 
   /**
@@ -357,7 +441,7 @@ export class SyncService {
    * Check if the service is currently in synced mode with an active listener.
    */
   isActive(): boolean {
-    return this.unsubscribeSnapshot !== null;
+    return this.unsubscribePromptSnapshot !== null || this.unsubscribeFolderSnapshot !== null;
   }
 
   /**

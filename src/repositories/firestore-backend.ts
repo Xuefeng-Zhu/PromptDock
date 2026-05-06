@@ -8,8 +8,9 @@
  * Requirements: 7.2, 7.7, 8.1, 8.2, 8.3
  */
 
-import type { PromptRecipe, Workspace, UserSettings } from '../types/index';
-import type { IPromptRepository } from './interfaces';
+import type { Folder, PromptRecipe, Workspace, UserSettings } from '../types/index';
+import { cleanFolderName, normalizeFolderName } from '../utils/folder-names';
+import type { IFolderRepository, IPromptRepository } from './interfaces';
 
 // ─── Firestore Document Types ──────────────────────────────────────────────────
 // These represent the shape of documents stored in Firestore, where Date fields
@@ -43,6 +44,13 @@ export interface FirestorePromptDoc {
 export interface FirestoreWorkspaceDoc {
   name: string;
   ownerId: string;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
+}
+
+export interface FirestoreFolderDoc {
+  name: string;
+  normalizedName?: string;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
 }
@@ -166,6 +174,24 @@ export function firestoreDocToWorkspace(id: string, doc: FirestoreWorkspaceDoc):
   };
 }
 
+export function folderToFirestoreDoc(folder: Folder): FirestoreFolderDoc {
+  return {
+    name: folder.name,
+    normalizedName: normalizeFolderName(folder.name),
+    createdAt: dateToTimestamp(folder.createdAt),
+    updatedAt: dateToTimestamp(folder.updatedAt),
+  };
+}
+
+export function firestoreDocToFolder(id: string, doc: FirestoreFolderDoc): Folder {
+  return {
+    id,
+    name: doc.name,
+    createdAt: timestampToDate(doc.createdAt),
+    updatedAt: timestampToDate(doc.updatedAt),
+  };
+}
+
 /**
  * Convert a UserSettings TypeScript object to a Firestore document.
  */
@@ -192,7 +218,7 @@ export function firestoreDocToUserSettings(doc: FirestoreUserSettingsDoc): UserS
 
 // ─── FirestoreBackend ──────────────────────────────────────────────────────────
 
-export class FirestoreBackend implements IPromptRepository {
+export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   constructor(private workspaceId: string) {}
 
   private async getPromptsCollection() {
@@ -200,6 +226,13 @@ export class FirestoreBackend implements IPromptRepository {
     const { collection } = await import('firebase/firestore');
     const firestore = await getFirebaseFirestore();
     return collection(firestore, 'workspaces', this.workspaceId, 'prompts');
+  }
+
+  private async getFoldersCollection() {
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { collection } = await import('firebase/firestore');
+    const firestore = await getFirebaseFirestore();
+    return collection(firestore, 'workspaces', this.workspaceId, 'folders');
   }
 
   async create(
@@ -363,5 +396,51 @@ export class FirestoreBackend implements IPromptRepository {
     if (!current) throw new Error(`Prompt not found: ${id}`);
 
     return this.update(id, { favorite: !current.favorite });
+  }
+
+  async createFolder(name: string, workspaceId: string): Promise<Folder> {
+    const cleanedName = cleanFolderName(name);
+    if (!cleanedName) {
+      throw new Error('Folder name is required.');
+    }
+
+    const existing = (await this.getAllFolders(workspaceId)).find(
+      (folder) => normalizeFolderName(folder.name) === normalizeFolderName(cleanedName),
+    );
+    if (existing) return existing;
+
+    const { addDoc, serverTimestamp } = await import('firebase/firestore');
+    const foldersCol = await this.getFoldersCollection();
+    const now = new Date();
+    const docRef = await addDoc(foldersCol, {
+      name: cleanedName,
+      normalizedName: normalizeFolderName(cleanedName),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return {
+      id: docRef.id,
+      name: cleanedName,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  async getAllFolders(_workspaceId: string): Promise<Folder[]> {
+    const { getDocs } = await import('firebase/firestore');
+    const foldersCol = await this.getFoldersCollection();
+    const snapshot = await getDocs(foldersCol);
+
+    return snapshot.docs.map((docSnap) =>
+      firestoreDocToFolder(
+        docSnap.id,
+        docSnap.data({ serverTimestamps: 'estimate' }) as FirestoreFolderDoc,
+      ),
+    );
+  }
+
+  async reloadAllFolders(workspaceId: string): Promise<Folder[]> {
+    return this.getAllFolders(workspaceId);
   }
 }

@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { getConflictService } from '../App';
 import type { AppShellProps } from '../components/app-shell/types';
 import { useAppModeStore } from '../stores/app-mode-store';
+import { useFolderStore } from '../stores/folder-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
@@ -35,6 +36,8 @@ export function useAppShellController({
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
   const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
+  const userFolders = useFolderStore((s) => s.folders);
+  const createFolder = useFolderStore((s) => s.createFolder);
 
   const theme = useSettingsStore((s) => s.settings.theme);
   const storedDefaultAction = useSettingsStore((s) => s.settings.defaultAction);
@@ -58,7 +61,6 @@ export function useAppShellController({
     setScreen,
     setSelectedPromptId,
     setVariableFillPromptId,
-    userFolders,
     variableFillPromptId,
   } = navigation;
   const defaultAction = isTauriRuntime() ? storedDefaultAction : 'copy';
@@ -149,6 +151,18 @@ export function useAppShellController({
     });
   }, [addToast, theme, updateSettings]);
 
+  const handleCreateFolder = useCallback(
+    async (name: string) => {
+      try {
+        return await createFolder(name);
+      } catch (err) {
+        addToast(`Failed to create folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        return undefined;
+      }
+    },
+    [addToast, createFolder],
+  );
+
   const showInspector = screen.name === 'library' && libraryData.selectedPrompt !== null;
 
   return {
@@ -169,7 +183,7 @@ export function useAppShellController({
     handleConflictBadgeClick: navigation.handleConflictBadgeClick,
     handleConflictResolve: conflict.handleConflictResolve,
     handleCopyPromptBody: promptCrud.handleCopyPromptBody,
-    handleCreateFolder: navigation.handleCreateFolder,
+    handleCreateFolder,
     handleDeletePrompt: promptCrud.handleDeletePrompt,
     handleDuplicatePrompt: promptCrud.handleDuplicatePrompt,
     handleEditPrompt: promptCrud.handleEditPrompt,

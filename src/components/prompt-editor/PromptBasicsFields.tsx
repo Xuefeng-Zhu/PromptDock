@@ -19,7 +19,7 @@ interface PromptBasicsFieldsProps {
   onAddTag: () => void;
   onDescriptionChange: (description: string) => void;
   onFavoriteChange: (favorite: boolean) => void;
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onFolderChange: (folderId: string | null) => void;
   onRemoveTag: (tag: string) => void;
   onSelectTag: (tag: string) => void;

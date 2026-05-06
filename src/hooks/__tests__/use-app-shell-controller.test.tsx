@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
+import type { IFolderRepository, IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
 import { initAppModeStore } from '../../stores/app-mode-store';
+import { initFolderStore } from '../../stores/folder-store';
 import { initPromptStore } from '../../stores/prompt-store';
 import { DEFAULT_SETTINGS, initSettingsStore } from '../../stores/settings-store';
 import { useToastStore } from '../../stores/toast-store';
-import type { PromptRecipe } from '../../types/index';
+import type { Folder, PromptRecipe } from '../../types/index';
 import { useAppShellController } from '../use-app-shell-controller';
 
 vi.mock('../../App', () => ({
@@ -81,10 +82,36 @@ function createSettingsRepo(): ISettingsRepository {
   };
 }
 
+function createFolderRepo(initialFolders: Folder[] = []): IFolderRepository {
+  const folders = [...initialFolders];
+
+  return {
+    getAllFolders: vi.fn(async () => folders.map((folder) => ({ ...folder }))),
+    reloadAllFolders: vi.fn(async () => folders.map((folder) => ({ ...folder }))),
+    createFolder: vi.fn(async (name) => {
+      const existing = folders.find((folder) => folder.name.toLowerCase() === name.trim().toLowerCase());
+      if (existing) return { ...existing };
+
+      const folder: Folder = {
+        id: `folder-${name.trim().toLowerCase().replace(/\s+/g, '-')}`,
+        name: name.trim(),
+        createdAt: new Date('2024-01-04T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+      };
+      folders.push(folder);
+      return folder;
+    }),
+  };
+}
+
 async function setupStores(initialPrompts: PromptRecipe[] = [makePrompt()]) {
   const promptRepo = createPromptRepo(initialPrompts);
   const promptStore = initPromptStore(promptRepo);
   await promptStore.getState().loadPrompts();
+
+  const folderRepo = createFolderRepo();
+  const folderStore = initFolderStore(folderRepo);
+  await folderStore.getState().loadFolders();
 
   const settingsRepo = createSettingsRepo();
   const settingsStore = initSettingsStore(settingsRepo);
@@ -93,7 +120,7 @@ async function setupStores(initialPrompts: PromptRecipe[] = [makePrompt()]) {
   initAppModeStore();
   useToastStore.setState({ toasts: [] });
 
-  return { promptRepo };
+  return { folderRepo, promptRepo };
 }
 
 describe('useAppShellController', () => {
@@ -171,6 +198,23 @@ describe('useAppShellController', () => {
     );
     expect(result.current.screen.name).toBe('library');
     expect(result.current.prompts.map((prompt) => prompt.id)).toContain('created-prompt');
+    unmount();
+  });
+
+  it('creates folders through the folder repository-backed store', async () => {
+    const { folderRepo } = await setupStores([]);
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    await act(async () => {
+      const folder = await result.current.handleCreateFolder('Client Work');
+      expect(folder?.name).toBe('Client Work');
+    });
+
+    expect(folderRepo.createFolder).toHaveBeenCalledWith('Client Work', 'local');
+    expect(result.current.libraryData.derivedFolders.map((folder) => folder.name)).toContain(
+      'Client Work',
+    );
+    expect(localStorage.getItem('promptdock_folders')).toBeNull();
     unmount();
   });
 });

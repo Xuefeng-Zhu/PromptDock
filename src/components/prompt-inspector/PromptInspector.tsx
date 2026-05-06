@@ -17,7 +17,7 @@ export interface PromptInspectorProps {
   onEdit?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onDelete?: (id: string) => void;
   onCopyBody?: (body: string, promptId?: string) => void;
   onUpdateFolder?: (id: string, folderId: string | null) => void;

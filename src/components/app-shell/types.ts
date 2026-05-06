@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ConflictService } from '../../services/conflict-service';
 import type { IAuthService } from '../../services/interfaces';
+import type { Folder, PromptRecipe } from '../../types/index';
 
 export type Screen =
   | { name: 'onboarding' }
@@ -13,8 +14,9 @@ export interface AppShellSyncService {
   transitionToSynced: (
     userId: string,
     workspaceId: string,
-    localPrompts: never[],
+    localPrompts: PromptRecipe[],
     migrationChoice: 'fresh',
+    localFolders?: Folder[],
   ) => Promise<void>;
 }
 

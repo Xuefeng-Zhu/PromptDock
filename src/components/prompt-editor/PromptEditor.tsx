@@ -14,7 +14,7 @@ export interface PromptEditorProps {
   prompt?: PromptRecipe;
   availableTags?: string[];
   folders: Folder[];
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onSave: (data: Partial<PromptRecipe>) => void | Promise<void>;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;

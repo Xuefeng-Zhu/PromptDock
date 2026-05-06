@@ -7,7 +7,7 @@ import { useInlineFolderCreate } from './use-inline-folder-create';
 interface SidebarFolderSectionProps {
   activeItem: string;
   folders: Folder[];
-  onCreateFolder?: (name: string) => void;
+  onCreateFolder?: (name: string) => void | Promise<unknown>;
   onItemSelect: (item: string) => void;
   promptCountByFolder: Record<string, number>;
 }

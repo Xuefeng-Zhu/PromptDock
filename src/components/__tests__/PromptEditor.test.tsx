@@ -126,8 +126,10 @@ describe('PromptEditor', () => {
     });
     fireEvent.click(screen.getByRole('option', { name: 'Create "Client Work"' }));
 
-    expect(onCreateFolder).toHaveBeenCalledWith('Client Work');
-    expect(screen.getByRole('combobox', { name: 'Folder' }).textContent).toContain('Client Work');
+    await waitFor(() => {
+      expect(onCreateFolder).toHaveBeenCalledWith('Client Work');
+      expect(screen.getByRole('combobox', { name: 'Folder' }).textContent).toContain('Client Work');
+    });
 
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Ready' } });
     fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Prompt body' } });
@@ -138,6 +140,24 @@ describe('PromptEditor', () => {
         folderId: 'folder-client-work',
       }));
     });
+  });
+
+  it('does not offer folder creation for duplicate normalized names', () => {
+    const onCreateFolder = vi.fn();
+    render(
+      <PromptEditor
+        {...defaultProps}
+        onCreateFolder={onCreateFolder}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Folder' }), {
+      target: { value: ' engineering ' },
+    });
+
+    expect(screen.queryByRole('option', { name: 'Create "engineering"' })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Engineering' })).toBeDefined();
   });
 
   it('opens formatting help when Formatting help is clicked', () => {

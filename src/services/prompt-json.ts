@@ -33,10 +33,6 @@ function resolveFolderId(
   const trimmed = value.trim();
   if (!trimmed) return { folderId: null };
 
-  if (fieldName === 'folderId') {
-    return { folderId: trimmed };
-  }
-
   const normalized = trimmed.toLowerCase();
   const matchedFolder = folders.find(
     (folder) =>
@@ -47,7 +43,7 @@ function resolveFolderId(
   if (!matchedFolder) {
     return {
       folderId: null,
-      error: 'folder must match an existing folder name or id.',
+      error: `${fieldName} must match an existing folder name or id.`,
     };
   }
 

@@ -25,6 +25,23 @@ function areTagsEqual(left: string[], right: string[]): boolean {
   return left.every((tag, index) => tag === right[index]);
 }
 
+function resolveTagList(availableTags: string[], tagValues: string[]): string[] {
+  const seen = new Set<string>();
+  const resolvedTags: string[] = [];
+
+  for (const tag of tagValues) {
+    const resolvedTag = resolveExistingTagName(availableTags, tag);
+    const key = normalizeTag(resolvedTag);
+
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      resolvedTags.push(resolvedTag);
+    }
+  }
+
+  return resolvedTags;
+}
+
 export function usePromptEditorForm({
   availableTags = [],
   folders,
@@ -143,14 +160,14 @@ export function usePromptEditorForm({
     setTitle(data.title);
     setDescription(data.description);
     setBody(data.body);
-    setTags([...data.tags]);
+    setTags(resolveTagList(availableTags, data.tags));
     setFolderId(data.folderId);
     setFavorite(data.favorite);
     setTagInput('');
     setShowTagInput(false);
     setValidationError(null);
     setVariableValues({});
-  }, []);
+  }, [availableTags]);
 
   const savePrompt = useCallback(async () => {
     const trimmedTitle = title.trim();

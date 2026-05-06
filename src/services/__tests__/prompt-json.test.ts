@@ -60,6 +60,22 @@ describe('parsePromptJson', () => {
     });
   });
 
+  it('accepts folderId only when it matches an existing folder', () => {
+    const result = parsePromptJson(
+      JSON.stringify({
+        title: 'Folder id prompt',
+        body: 'Body',
+        folderId: 'folder-writing',
+      }),
+      { folders },
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.folderId).toBe('folder-writing');
+    }
+  });
+
   it('returns a parse error for invalid JSON', () => {
     const result = parsePromptJson('{nope');
 
@@ -95,6 +111,19 @@ describe('parsePromptJson', () => {
       expect(result.errors).toContain('tags must be an array of strings.');
       expect(result.errors).toContain('favorite must be a boolean.');
       expect(result.errors).toContain('folder must match an existing folder name or id.');
+    }
+  });
+
+  it('rejects unknown folderId values', () => {
+    const result = parsePromptJson(JSON.stringify({
+      title: 'Bad folder id',
+      body: 'Body',
+      folderId: 'missing-folder',
+    }), { folders });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors).toContain('folderId must match an existing folder name or id.');
     }
   });
 });

@@ -91,8 +91,11 @@ export function PromptGrid({
     overscan: OVERSCAN_ROWS,
   });
 
-  const gridClassName = viewMode === 'grid'
+  const virtualRowClassName = viewMode === 'grid'
     ? 'grid grid-cols-1 gap-4 md:grid-cols-2'
+    : 'flex flex-col gap-2';
+  const promptListClassName = viewMode === 'grid'
+    ? 'grid auto-rows-max grid-cols-1 content-start items-start gap-4 md:grid-cols-2'
     : 'flex flex-col gap-2';
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -129,7 +132,7 @@ export function PromptGrid({
           {virtualizedPromptRows.map((row) => (
             <div
               key={row.key}
-              className={gridClassName}
+              className={virtualRowClassName}
               data-index={row.index}
               ref={rowVirtualizer.measureElement}
               style={{
@@ -163,7 +166,7 @@ export function PromptGrid({
   return (
     <div
       ref={scrollContainerRef}
-      className={`min-h-0 flex-1 overflow-y-auto ${gridClassName}`}
+      className={`min-h-0 flex-1 overflow-y-auto ${promptListClassName}`}
       role="listbox"
       aria-label="Prompt list"
       data-view-mode={viewMode}

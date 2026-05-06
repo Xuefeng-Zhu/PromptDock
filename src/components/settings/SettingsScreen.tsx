@@ -80,7 +80,7 @@ export function SettingsScreen({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)]">
-      <header className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-panel)] px-6 py-4">
+      <header className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-panel)] px-4 py-3 md:px-6 md:py-4">
         <Button
           variant="ghost"
           size="sm"
@@ -95,7 +95,7 @@ export function SettingsScreen({
         </h1>
       </header>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <SettingsNav
           activeSection={activeSection}
           items={visibleNavItems}
@@ -104,7 +104,7 @@ export function SettingsScreen({
 
         <div
           ref={contentScrollRef}
-          className="min-h-0 flex-1 overflow-y-scroll p-6"
+          className="min-h-0 flex-1 overflow-y-scroll p-4 md:p-6"
           data-testid="settings-scroll-pane"
         >
           {loading ? (

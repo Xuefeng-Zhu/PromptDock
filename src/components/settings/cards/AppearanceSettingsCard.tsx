@@ -33,7 +33,7 @@ export function AppearanceSettingsCard({
         <legend className="mb-3 text-sm font-medium text-[var(--color-text-main)]">
           Theme
         </legend>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {THEME_OPTIONS.map((option) => {
             const isActive = theme === option.key;
             return (

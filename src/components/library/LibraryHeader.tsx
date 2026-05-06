@@ -16,8 +16,8 @@ export function LibraryHeader({
   viewMode,
 }: LibraryHeaderProps) {
   return (
-    <div className="mb-5 flex items-center justify-between">
-      <div className="flex items-baseline gap-3">
+    <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="text-xl font-bold text-[var(--color-text-main)]">
           All Prompts
         </h1>
@@ -26,7 +26,7 @@ export function LibraryHeader({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center gap-2 sm:w-auto">
         <ViewModeToggle
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
@@ -36,6 +36,7 @@ export function LibraryHeader({
           variant="primary"
           size="sm"
           onClick={onNewPrompt}
+          className="h-10 flex-1 whitespace-nowrap sm:flex-none"
         >
           <Plus className="mr-1.5 h-4 w-4" />
           New Prompt
@@ -60,7 +61,7 @@ function ViewModeToggle({ onViewModeChange, viewMode }: ViewModeToggleProps) {
       <button
         onClick={() => onViewModeChange('grid')}
         className={[
-          'flex items-center justify-center rounded-l-lg p-2 transition-colors',
+          'flex h-10 w-10 items-center justify-center rounded-l-lg transition-colors sm:h-auto sm:w-auto sm:p-2',
           viewMode === 'grid'
             ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
             : 'bg-[var(--color-panel)] text-[var(--color-text-muted)] hover:bg-gray-50',
@@ -73,7 +74,7 @@ function ViewModeToggle({ onViewModeChange, viewMode }: ViewModeToggleProps) {
       <button
         onClick={() => onViewModeChange('list')}
         className={[
-          'flex items-center justify-center rounded-r-lg border-l border-[var(--color-border)] p-2 transition-colors',
+          'flex h-10 w-10 items-center justify-center rounded-r-lg border-l border-[var(--color-border)] transition-colors sm:h-auto sm:w-auto sm:p-2',
           viewMode === 'list'
             ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
             : 'bg-[var(--color-panel)] text-[var(--color-text-muted)] hover:bg-gray-50',

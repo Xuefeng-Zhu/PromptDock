@@ -108,6 +108,49 @@ describe('ImportExportService — Unit Tests', () => {
     expect(parsed.prompts[1].title).toBe('Beta');
   });
 
+  it('should export variable metadata when configured', () => {
+    const prompts = [
+      makePrompt({
+        body: 'Write in a {{tone}} tone about {{context}}',
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: 'Friendly',
+            description: 'Voice for the response',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+          {
+            name: 'context',
+            defaultValue: '',
+            description: 'Background details',
+            inputType: 'textarea',
+            options: [],
+          },
+        ],
+      }),
+    ];
+
+    const parsed = JSON.parse(service.exportToJSON(prompts));
+
+    expect(parsed.prompts[0].variables).toEqual([
+      {
+        name: 'tone',
+        defaultValue: 'Friendly',
+        description: 'Voice for the response',
+        inputType: 'dropdown',
+        options: ['Friendly', 'Professional'],
+      },
+      {
+        name: 'context',
+        defaultValue: '',
+        description: 'Background details',
+        inputType: 'textarea',
+        options: [],
+      },
+    ]);
+  });
+
   it('should import valid JSON and produce PromptRecipe objects', () => {
     const json = JSON.stringify({
       version: '1.0',
@@ -124,6 +167,54 @@ describe('ImportExportService — Unit Tests', () => {
       expect(result.prompts[0].title).toBe('Imported Prompt');
       expect(result.prompts[0].body).toBe('Some body text');
       expect(result.prompts[0].id).toBeDefined();
+    }
+  });
+
+  it('should import variable metadata for matching placeholders', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        {
+          title: 'Imported Prompt',
+          body: 'Use {{tone}} tone for {{context}}',
+          variables: [
+            {
+              name: 'tone',
+              defaultValue: 'Professional',
+              description: 'Tone choice',
+              inputType: 'dropdown',
+              options: ['Friendly', 'Professional'],
+            },
+            {
+              name: 'context',
+              description: 'Long-form context',
+              inputType: 'textarea',
+            },
+          ],
+        },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.prompts[0].variables).toEqual([
+        {
+          name: 'tone',
+          defaultValue: 'Professional',
+          description: 'Tone choice',
+          inputType: 'dropdown',
+          options: ['Friendly', 'Professional'],
+        },
+        {
+          name: 'context',
+          defaultValue: '',
+          description: 'Long-form context',
+          inputType: 'textarea',
+          options: [],
+        },
+      ]);
     }
   });
 
@@ -236,6 +327,38 @@ describe('ImportExportService — Unit Tests', () => {
       expect(result.errors.some((e) => e.includes('favorite'))).toBe(true);
       expect(result.errors.some((e) => e.includes('createdAt'))).toBe(true);
       expect(result.errors.some((e) => e.includes('updatedAt'))).toBe(true);
+    }
+  });
+
+  it('should reject invalid variable metadata', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        {
+          title: 'Invalid variables',
+          body: 'Hello {{tone}}',
+          variables: [
+            { name: 'tone', inputType: 'dropdown', options: [] },
+            {
+              name: 'audience',
+              inputType: 'dropdown',
+              defaultValue: 'Developers',
+              options: ['Managers'],
+            },
+            { name: '', inputType: 'slider' },
+          ],
+        },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.some((e) => e.includes('dropdown variables require'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('dropdown defaultValue'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('inputType'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('name'))).toBe(true);
     }
   });
 

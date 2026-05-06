@@ -1,10 +1,11 @@
 import { Lightbulb, X } from 'lucide-react';
+import type { PromptVariable } from '../../types/index';
 
 interface LivePreviewPanelProps {
   body: string;
+  promptVariables: PromptVariable[];
   renderedPreview: string;
   variableValues: Record<string, string>;
-  variables: string[];
   onResetPreview: () => void;
   onVariableValueChange: (name: string, value: string) => void;
 }
@@ -15,9 +16,9 @@ function formatVariableLabel(variableName: string): string {
 
 export function LivePreviewPanel({
   body,
+  promptVariables,
   renderedPreview,
   variableValues,
-  variables,
   onResetPreview,
   onVariableValueChange,
 }: LivePreviewPanelProps) {
@@ -36,29 +37,54 @@ export function LivePreviewPanel({
 
       <div className="px-5 py-4 space-y-3">
         <p className="text-xs text-[var(--color-text-muted)]">Preview with example values</p>
-        {variables.map((variableName) => (
+        {promptVariables.map((variable) => (
           <div
-            key={variableName}
+            key={variable.name}
             className="relative rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
           >
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5">
-              {formatVariableLabel(variableName)}
+              {formatVariableLabel(variable.name)}
             </label>
             <div className="flex items-start justify-between gap-2">
-              <input
-                type="text"
-                value={variableValues[variableName] ?? ''}
-                onChange={(event) => onVariableValueChange(variableName, event.target.value)}
-                placeholder={`Enter ${variableName}…`}
-                className="flex-1 bg-transparent text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none"
-                aria-label={`Preview value for ${variableName}`}
-              />
-              {variableValues[variableName] && (
+              {variable.inputType === 'textarea' ? (
+                <textarea
+                  value={variableValues[variable.name] ?? variable.defaultValue}
+                  onChange={(event) => onVariableValueChange(variable.name, event.target.value)}
+                  placeholder={`Enter ${variable.name}…`}
+                  rows={3}
+                  className="min-h-16 flex-1 resize-none bg-transparent text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none"
+                  aria-label={`Preview value for ${variable.name}`}
+                />
+              ) : variable.inputType === 'dropdown' ? (
+                <select
+                  value={variableValues[variable.name] ?? variable.defaultValue}
+                  onChange={(event) => onVariableValueChange(variable.name, event.target.value)}
+                  className="flex-1 bg-transparent text-sm text-[var(--color-text-main)] outline-none"
+                  aria-label={`Preview value for ${variable.name}`}
+                >
+                  <option value="">Select {variable.name}…</option>
+                  {variable.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={variableValues[variable.name] ?? variable.defaultValue}
+                  onChange={(event) => onVariableValueChange(variable.name, event.target.value)}
+                  placeholder={`Enter ${variable.name}…`}
+                  className="flex-1 bg-transparent text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none"
+                  aria-label={`Preview value for ${variable.name}`}
+                />
+              )}
+              {(variableValues[variable.name] ?? variable.defaultValue) && (
                 <button
                   type="button"
-                  onClick={() => onVariableValueChange(variableName, '')}
+                  onClick={() => onVariableValueChange(variable.name, '')}
                   className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors"
-                  aria-label={`Clear ${variableName}`}
+                  aria-label={`Clear ${variable.name}`}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -66,7 +92,7 @@ export function LivePreviewPanel({
             </div>
           </div>
         ))}
-        {variables.length === 0 && (
+        {promptVariables.length === 0 && (
           <p className="text-xs text-[var(--color-text-placeholder)] italic">
             No variables detected yet
           </p>

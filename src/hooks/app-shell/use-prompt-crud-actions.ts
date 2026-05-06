@@ -39,6 +39,7 @@ function toCreatePromptInput(
     title: data.title ?? 'Untitled',
     description: data.description ?? '',
     body: data.body ?? '',
+    variables: data.variables,
     tags: data.tags ?? [],
     folderId: data.folderId ?? null,
     favorite: data.favorite ?? false,

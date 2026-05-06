@@ -3,7 +3,7 @@ import {
   areAllPromptVariablesFilled,
   renderPromptTemplate,
 } from '../utils/prompt-template';
-import type { PromptRecipe, UserSettings } from '../types/index';
+import type { PromptRecipe, PromptVariable, UserSettings } from '../types/index';
 
 interface UseVariableFillOptions {
   defaultAction: UserSettings['defaultAction'];
@@ -11,7 +11,7 @@ interface UseVariableFillOptions {
   onCopy: (renderedText: string) => void | Promise<void>;
   onPaste: (renderedText: string) => void | Promise<void>;
   prompt: PromptRecipe;
-  variables: string[];
+  variables: PromptVariable[];
 }
 
 export function useVariableFill({
@@ -25,17 +25,23 @@ export function useVariableFill({
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const variable of variables) {
-      initial[variable] = '';
+      initial[variable.name] = variable.defaultValue;
     }
     return initial;
   });
   const [copied, setCopied] = useState(false);
-  const firstInputRef = useRef<HTMLInputElement>(null);
+  const firstInputRef = useRef<
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+  >(null);
   const mountedRef = useRef(true);
+  const variableNames = useMemo(
+    () => variables.map((variable) => variable.name),
+    [variables],
+  );
 
   const isComplete = useMemo(
-    () => areAllPromptVariablesFilled(variables, values),
-    [variables, values],
+    () => areAllPromptVariablesFilled(variableNames, values),
+    [variableNames, values],
   );
 
   const renderedText = useMemo(

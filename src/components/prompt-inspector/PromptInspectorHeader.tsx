@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, Files, Pencil, Star, Trash2 } from 'lucide-react';
+import { Archive, Files, Pencil, Star, Trash2, X } from 'lucide-react';
 import {
   PromptActionsMenu,
   type PromptActionMenuItem,
@@ -13,6 +13,7 @@ interface PromptInspectorHeaderProps {
   onRestore?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onEdit?: (id: string) => void;
+  onClose?: () => void;
   onToggleFavorite?: (id: string) => void;
   prompt: PromptRecipe;
 }
@@ -23,6 +24,7 @@ export function PromptInspectorHeader({
   onRestore,
   onDuplicate,
   onEdit,
+  onClose,
   onToggleFavorite,
   prompt,
 }: PromptInspectorHeaderProps) {
@@ -88,7 +90,7 @@ export function PromptInspectorHeader({
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-gray-100 md:h-auto md:w-auto md:p-1"
             aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
             onClick={() => onToggleFavorite?.(prompt.id)}
           >
@@ -103,6 +105,17 @@ export function PromptInspectorHeader({
           </button>
 
           <PromptActionsMenu items={actionItems} />
+
+          {onClose && (
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)] md:hidden"
+              aria-label="Close prompt details"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
       {prompt.description && (

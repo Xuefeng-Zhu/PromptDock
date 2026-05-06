@@ -83,6 +83,21 @@ describe('PromptInspector', () => {
     expect(screen.getByRole('button', { name: 'More options' })).toBeDefined();
   });
 
+  it('renders a close control when onClose is provided', () => {
+    const onClose = vi.fn();
+    render(
+      <PromptInspector
+        prompt={mockPrompt}
+        folder={mockFolder}
+        variables={[]}
+        onClose={onClose}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close prompt details' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   describe('action callbacks', () => {
     it('calls onToggleFavorite with prompt id when star button is clicked', () => {
       const onToggleFavorite = vi.fn();

@@ -25,7 +25,7 @@ export function SidebarItem({
       aria-selected={isActive}
       onClick={() => onSelect(itemKey)}
       className={[
-        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors duration-150',
+        'flex min-h-10 w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors duration-150 md:min-h-0 md:py-1.5',
         isActive
           ? 'bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]'
           : 'text-[var(--color-text-main)] hover:bg-gray-100',

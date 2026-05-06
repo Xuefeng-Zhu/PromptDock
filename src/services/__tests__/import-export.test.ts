@@ -127,7 +127,7 @@ describe('ImportExportService — Unit Tests', () => {
     }
   });
 
-  it('should trim imported prompt title and body', () => {
+  it('should trim imported prompt title while preserving body formatting', () => {
     const json = JSON.stringify({
       version: '1.0',
       exportedAt: new Date().toISOString(),
@@ -140,7 +140,7 @@ describe('ImportExportService — Unit Tests', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.prompts[0].title).toBe('Imported Prompt');
-      expect(result.prompts[0].body).toBe('Some body text');
+      expect(result.prompts[0].body).toBe('  Some body text  ');
     }
   });
 
@@ -311,13 +311,13 @@ describe('Feature: prompt-dock, Property 17: Import/Export Round-Trip', () => {
           expect(result.prompts).toHaveLength(prompts.length);
 
           // Sort both by title+body for stable comparison
-          const sortKey = (p: { title: string; body: string }) => `${p.title.trim()}|||${p.body.trim()}`;
+          const sortKey = (p: { title: string; body: string }) => `${p.title.trim()}|||${p.body}`;
           const originalSorted = [...prompts].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
           const importedSorted = [...result.prompts].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
           for (let i = 0; i < originalSorted.length; i++) {
             expect(importedSorted[i].title).toBe(originalSorted[i].title.trim());
-            expect(importedSorted[i].body).toBe(originalSorted[i].body.trim());
+            expect(importedSorted[i].body).toBe(originalSorted[i].body);
 
             // Description: export only includes non-empty descriptions
             const expectedDesc = originalSorted[i].description || '';

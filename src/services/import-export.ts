@@ -247,7 +247,7 @@ export class ImportExportService implements IImportExportService {
       workspaceId: '',
       title: (data.title as string).trim(),
       description: typeof data.description === 'string' ? data.description : '',
-      body: (data.body as string).trim(),
+      body: data.body as string,
       tags: isStringArray(data.tags) ? data.tags : [],
       folderId: typeof data.folderId === 'string' ? data.folderId : null,
       favorite: typeof data.favorite === 'boolean' ? data.favorite : false,

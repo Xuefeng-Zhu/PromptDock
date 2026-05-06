@@ -37,14 +37,14 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | Layer | Technology |
 |---|---|
 | Desktop shell | Tauri 2, Rust 2021 |
-| Frontend | React 18, TypeScript 5.8, Vite 6 |
+| Frontend | React 19.2.5, TypeScript 6.0.3, Vite 8.0.10 |
 | Styling | Tailwind CSS v4 via `@tailwindcss/vite`, CSS custom properties |
 | State | Zustand 5 |
 | Desktop persistence | `@tauri-apps/plugin-store` JSON store files |
 | Browser persistence | `window.localStorage` via `BrowserStorageBackend` |
 | Optional sync | Firebase Auth, Cloud Firestore |
 | Native integration | Tauri invoke commands, global shortcut, clipboard manager, `enigo` for paste simulation |
-| Tests | Vitest 3, Testing Library, jsdom, fast-check |
+| Tests | Vitest 4.1.5, Testing Library, jsdom, fast-check |
 | Icons | `lucide-react` |
 
 ## Prerequisites

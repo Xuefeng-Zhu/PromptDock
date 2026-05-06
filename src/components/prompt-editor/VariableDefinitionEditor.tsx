@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { AlignLeft, List, Type } from 'lucide-react';
 import type {
   PromptVariable,
@@ -21,6 +22,8 @@ interface VariableDefinitionEditorProps {
   ) => void;
 }
 
+type VariableDefinitionChange = VariableDefinitionEditorProps['onVariableChange'];
+
 const VARIABLE_TYPE_OPTIONS: Array<{
   value: PromptVariableInputType;
   label: string;
@@ -30,6 +33,53 @@ const VARIABLE_TYPE_OPTIONS: Array<{
   { value: 'textarea', label: 'Textarea', icon: AlignLeft },
   { value: 'dropdown', label: 'Dropdown', icon: List },
 ];
+
+interface DropdownOptionsFieldProps {
+  variable: PromptVariable;
+  onVariableChange: VariableDefinitionChange;
+}
+
+function DropdownOptionsField({
+  variable,
+  onVariableChange,
+}: DropdownOptionsFieldProps) {
+  const optionsText = formatPromptVariableOptions(variable.options);
+  const [draft, setDraft] = useState(optionsText);
+  const previousNameRef = useRef(variable.name);
+  const lastAppliedOptionsTextRef = useRef(optionsText);
+
+  useEffect(() => {
+    const nextOptionsText = formatPromptVariableOptions(variable.options);
+
+    if (previousNameRef.current !== variable.name) {
+      previousNameRef.current = variable.name;
+      lastAppliedOptionsTextRef.current = nextOptionsText;
+      setDraft(nextOptionsText);
+      return;
+    }
+
+    if (nextOptionsText !== lastAppliedOptionsTextRef.current) {
+      lastAppliedOptionsTextRef.current = nextOptionsText;
+      setDraft(nextOptionsText);
+    }
+  }, [variable.name, variable.options]);
+
+  return (
+    <Textarea
+      label={`Options for ${variable.name}`}
+      value={draft}
+      rows={3}
+      onChange={(event) => {
+        const nextDraft = event.target.value;
+        const nextOptions = parsePromptVariableOptions(nextDraft);
+        setDraft(nextDraft);
+        lastAppliedOptionsTextRef.current = formatPromptVariableOptions(nextOptions);
+        onVariableChange(variable.name, { options: nextOptions });
+      }}
+      placeholder={'Friendly\nProfessional\nConcise'}
+    />
+  );
+}
 
 export function VariableDefinitionEditor({
   variables,
@@ -120,16 +170,9 @@ export function VariableDefinitionEditor({
 
             {variable.inputType === 'dropdown' && (
               <div className="mt-3">
-                <Textarea
-                  label={`Options for ${variable.name}`}
-                  value={formatPromptVariableOptions(variable.options)}
-                  rows={3}
-                  onChange={(event) =>
-                    onVariableChange(variable.name, {
-                      options: parsePromptVariableOptions(event.target.value),
-                    })
-                  }
-                  placeholder={'Friendly\nProfessional\nConcise'}
+                <DropdownOptionsField
+                  variable={variable}
+                  onVariableChange={onVariableChange}
                 />
               </div>
             )}

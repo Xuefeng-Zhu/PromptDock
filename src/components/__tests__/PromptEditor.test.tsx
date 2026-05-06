@@ -162,7 +162,13 @@ describe('PromptEditor', () => {
     fireEvent.click(screen.getByRole('button', {
       name: 'Use dropdown input for tone',
     }));
-    fireEvent.change(screen.getByLabelText('Options for tone'), {
+    const toneOptions = screen.getByLabelText('Options for tone') as HTMLTextAreaElement;
+    fireEvent.change(toneOptions, {
+      target: { value: 'Friendly\n' },
+    });
+    expect(toneOptions.value).toBe('Friendly\n');
+
+    fireEvent.change(toneOptions, {
       target: { value: 'Friendly\nProfessional' },
     });
     fireEvent.click(screen.getByRole('button', {

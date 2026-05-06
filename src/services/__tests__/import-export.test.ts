@@ -32,10 +32,10 @@ function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
 // ─── Generators ────────────────────────────────────────────────────────────────
 
 /** Non-empty string for title (import requires non-empty title) */
-const titleArb = fc.stringMatching(/^[a-zA-Z0-9 ]{1,40}$/);
+const titleArb = fc.stringMatching(/^[a-zA-Z0-9 ]{1,40}$/).filter((value) => value.trim().length > 0);
 
-/** String for body */
-const bodyArb = fc.stringMatching(/^[a-zA-Z0-9 {}]{0,80}$/);
+/** Non-empty string for body (import requires non-empty trimmed body) */
+const bodyArb = fc.stringMatching(/^[a-zA-Z0-9 {}]{1,80}$/).filter((value) => value.trim().length > 0);
 
 /** String for description */
 const descriptionArb = fc.stringMatching(/^[a-zA-Z0-9 ]{0,40}$/);
@@ -124,6 +124,42 @@ describe('ImportExportService — Unit Tests', () => {
       expect(result.prompts[0].title).toBe('Imported Prompt');
       expect(result.prompts[0].body).toBe('Some body text');
       expect(result.prompts[0].id).toBeDefined();
+    }
+  });
+
+  it('should trim imported prompt title and body', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        { title: '  Imported Prompt  ', body: '  Some body text  ' },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.prompts[0].title).toBe('Imported Prompt');
+      expect(result.prompts[0].body).toBe('Some body text');
+    }
+  });
+
+  it('should reject prompts with blank titles or bodies', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        { title: '   ', body: 'Body' },
+        { title: 'Title', body: '' },
+        { title: 'Another title', body: '   ' },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.some((e) => e.includes('title'))).toBe(true);
+      expect(result.errors.filter((e) => e.includes('body'))).toHaveLength(2);
     }
   });
 
@@ -275,13 +311,13 @@ describe('Feature: prompt-dock, Property 17: Import/Export Round-Trip', () => {
           expect(result.prompts).toHaveLength(prompts.length);
 
           // Sort both by title+body for stable comparison
-          const sortKey = (p: { title: string; body: string }) => `${p.title}|||${p.body}`;
+          const sortKey = (p: { title: string; body: string }) => `${p.title.trim()}|||${p.body.trim()}`;
           const originalSorted = [...prompts].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
           const importedSorted = [...result.prompts].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
           for (let i = 0; i < originalSorted.length; i++) {
-            expect(importedSorted[i].title).toBe(originalSorted[i].title);
-            expect(importedSorted[i].body).toBe(originalSorted[i].body);
+            expect(importedSorted[i].title).toBe(originalSorted[i].title.trim());
+            expect(importedSorted[i].body).toBe(originalSorted[i].body.trim());
 
             // Description: export only includes non-empty descriptions
             const expectedDesc = originalSorted[i].description || '';

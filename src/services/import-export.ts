@@ -124,11 +124,11 @@ export class ImportExportService implements IImportExportService {
       const prompt = item;
       const promptErrors: string[] = [];
 
-      if (typeof prompt.title !== 'string' || prompt.title.length === 0) {
+      if (typeof prompt.title !== 'string' || prompt.title.trim().length === 0) {
         promptErrors.push(`Prompt at index ${i}: missing or invalid required field "title"`);
       }
 
-      if (typeof prompt.body !== 'string') {
+      if (typeof prompt.body !== 'string' || prompt.body.trim().length === 0) {
         promptErrors.push(`Prompt at index ${i}: missing or invalid required field "body"`);
       }
 
@@ -245,9 +245,9 @@ export class ImportExportService implements IImportExportService {
     return {
       id: crypto.randomUUID(),
       workspaceId: '',
-      title: data.title as string,
+      title: (data.title as string).trim(),
       description: typeof data.description === 'string' ? data.description : '',
-      body: data.body as string,
+      body: (data.body as string).trim(),
       tags: isStringArray(data.tags) ? data.tags : [],
       folderId: typeof data.folderId === 'string' ? data.folderId : null,
       favorite: typeof data.favorite === 'boolean' ? data.favorite : false,

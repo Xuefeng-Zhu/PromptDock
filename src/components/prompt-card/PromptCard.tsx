@@ -54,10 +54,10 @@ export function PromptCard({
       aria-selected={isSelected}
       tabIndex={0}
       className={[
-        'relative rounded-xl border bg-[var(--color-panel)] p-4 cursor-pointer',
+        'relative cursor-pointer rounded-lg border bg-[var(--color-panel)] p-3 sm:p-4',
         'transition-all duration-200 ease-in-out',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]',
-        isList ? 'flex items-center gap-4 shadow-sm hover:shadow' : 'shadow-sm hover:shadow-md',
+        isList ? 'flex flex-col gap-3 shadow-sm hover:shadow sm:flex-row sm:items-center sm:gap-4' : 'shadow-sm hover:shadow-md',
         isSelected
           ? 'border-[#2563EB] ring-1 ring-[#2563EB]'
           : 'border-[var(--color-border)]',

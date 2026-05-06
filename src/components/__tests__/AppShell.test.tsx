@@ -181,6 +181,11 @@ describe('AppShell', () => {
     );
     mockHideMainWindow.mockReset();
     mockHideMainWindow.mockResolvedValue(undefined);
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1024,
+      writable: true,
+    });
     localStorage.clear();
   });
 
@@ -193,6 +198,38 @@ describe('AppShell', () => {
     it('renders the Sidebar after completing onboarding', async () => {
       await renderOnLibraryScreen();
       expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeDefined();
+    });
+
+    it('opens and closes the mobile navigation drawer from the top bar', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeDefined();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close navigation' }));
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
+    });
+
+    it('closes the mobile navigation drawer from backdrop and Escape', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Close navigation backdrop' }));
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
+    });
+
+    it('closes the mobile navigation drawer after selecting a navigation item', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      const mobileNav = screen.getByRole('navigation', { name: 'Mobile navigation' });
+      fireEvent.click(within(mobileNav).getByText('Favorites'));
+
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
     });
 
     it('renders prompts from PromptStore on library screen', async () => {

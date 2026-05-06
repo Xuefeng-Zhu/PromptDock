@@ -361,11 +361,27 @@ export class SyncService {
     if (!this.firestoreBackend || !this.currentWorkspaceId) return;
 
     const { getFirebaseFirestore } = await import('../firebase/config');
-    const { doc, getDoc, setDoc, Timestamp } = await import('firebase/firestore');
+    const { collection, doc, getDoc, getDocs, setDoc, Timestamp } = await import('firebase/firestore');
     const firestore = await getFirebaseFirestore();
+    const foldersCol = collection(firestore, 'workspaces', this.currentWorkspaceId, 'folders');
+    const remoteFolders = await getDocs(foldersCol);
+    const remoteFolderNames = new Set(
+      remoteFolders.docs
+        .map((docSnap) => {
+          const data = docSnap.data() as { name?: unknown; normalizedName?: unknown };
+          if (typeof data.normalizedName === 'string') return data.normalizedName;
+          return typeof data.name === 'string' ? normalizeFolderName(data.name) : '';
+        })
+        .filter(Boolean),
+    );
 
     for (const folder of localFolders) {
       try {
+        const normalizedName = normalizeFolderName(folder.name);
+        if (!normalizedName || remoteFolderNames.has(normalizedName)) {
+          continue;
+        }
+
         const folderRef = doc(
           firestore,
           'workspaces',
@@ -375,15 +391,17 @@ export class SyncService {
         );
         const existing = await getDoc(folderRef);
         if (existing.exists()) {
+          remoteFolderNames.add(normalizedName);
           continue;
         }
 
         await setDoc(folderRef, {
           name: folder.name,
-          normalizedName: normalizeFolderName(folder.name),
+          normalizedName,
           createdAt: Timestamp.fromDate(folder.createdAt),
           updatedAt: Timestamp.fromDate(folder.updatedAt),
         });
+        remoteFolderNames.add(normalizedName);
       } catch (error) {
         console.error(`Failed to migrate folder "${folder.name}":`, error);
       }

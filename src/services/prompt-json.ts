@@ -57,19 +57,17 @@ function parseTags(value: unknown): { tags: string[]; error?: string } {
     return { tags: [], error: 'tags must be an array of strings.' };
   }
 
-  const seen = new Set<string>();
-  const tags: string[] = [];
+  const tagsByKey = new Map<string, string>();
 
   for (const item of value) {
     const tag = item.trim();
     const key = tag.toLowerCase();
-    if (tag && !seen.has(key)) {
-      seen.add(key);
-      tags.push(tag);
+    if (tag && !tagsByKey.has(key)) {
+      tagsByKey.set(key, tag);
     }
   }
 
-  return { tags };
+  return { tags: Array.from(tagsByKey.values()) };
 }
 
 export function parsePromptJson(

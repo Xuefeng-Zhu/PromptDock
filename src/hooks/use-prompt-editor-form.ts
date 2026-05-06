@@ -26,20 +26,18 @@ function areTagsEqual(left: string[], right: string[]): boolean {
 }
 
 function resolveTagList(availableTags: string[], tagValues: string[]): string[] {
-  const seen = new Set<string>();
-  const resolvedTags: string[] = [];
+  const tagsByKey = new Map<string, string>();
 
   for (const tag of tagValues) {
     const resolvedTag = resolveExistingTagName(availableTags, tag);
     const key = normalizeTag(resolvedTag);
 
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      resolvedTags.push(resolvedTag);
+    if (key && !tagsByKey.has(key)) {
+      tagsByKey.set(key, resolvedTag);
     }
   }
 
-  return resolvedTags;
+  return Array.from(tagsByKey.values());
 }
 
 export function usePromptEditorForm({

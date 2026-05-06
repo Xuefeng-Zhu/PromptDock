@@ -17,6 +17,7 @@ export interface PromptInspectorProps {
   onEdit?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
+  onRestore?: (id: string) => void;
   onCreateFolder?: (name: string) => Folder | void;
   onDelete?: (id: string) => void;
   onCopyBody?: (body: string, promptId?: string) => void;
@@ -36,6 +37,7 @@ export function PromptInspector({
   onEdit,
   onDuplicate,
   onArchive,
+  onRestore,
   onCreateFolder,
   onDelete,
   onCopyBody,
@@ -52,6 +54,7 @@ export function PromptInspector({
           prompt={prompt}
           onArchive={onArchive}
           onDelete={onDelete}
+          onRestore={onRestore}
           onDuplicate={onDuplicate}
           onEdit={onEdit}
           onToggleFavorite={onToggleFavorite}

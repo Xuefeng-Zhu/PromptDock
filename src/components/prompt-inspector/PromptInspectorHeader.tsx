@@ -8,6 +8,7 @@ import type { PromptRecipe } from '../../types/index';
 interface PromptInspectorHeaderProps {
   onArchive?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onRestore?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onEdit?: (id: string) => void;
   onToggleFavorite?: (id: string) => void;
@@ -17,11 +18,26 @@ interface PromptInspectorHeaderProps {
 export function PromptInspectorHeader({
   onArchive,
   onDelete,
+  onRestore,
   onDuplicate,
   onEdit,
   onToggleFavorite,
   prompt,
 }: PromptInspectorHeaderProps) {
+  const archiveAction: PromptActionMenuItem = prompt.archived
+    ? {
+        type: 'item',
+        icon: <Archive className="h-4 w-4" />,
+        label: 'Restore',
+        onSelect: () => onRestore?.(prompt.id),
+      }
+    : {
+        type: 'item',
+        icon: <Archive className="h-4 w-4" />,
+        label: 'Archive',
+        onSelect: () => onArchive?.(prompt.id),
+      };
+
   const actionItems: PromptActionMenuItem[] = [
     {
       type: 'item',
@@ -35,12 +51,7 @@ export function PromptInspectorHeader({
       label: 'Duplicate',
       onSelect: () => onDuplicate?.(prompt.id),
     },
-    {
-      type: 'item',
-      icon: <Archive className="h-4 w-4" />,
-      label: 'Archive',
-      onSelect: () => onArchive?.(prompt.id),
-    },
+    archiveAction,
     { type: 'separator' },
     {
       type: 'item',

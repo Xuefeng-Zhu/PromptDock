@@ -51,7 +51,7 @@ export function trackScreenView(screenName: string, screenClass = 'PromptDock'):
 }
 
 export function trackPromptAction(
-  action: 'archived' | 'copied' | 'created' | 'deleted' | 'duplicated' | 'pasted' | 'updated',
+  action: 'archived' | 'copied' | 'created' | 'deleted' | 'duplicated' | 'pasted' | 'restored' | 'updated',
   params?: AnalyticsEventParams,
 ): void {
   void trackAnalyticsEvent(`prompt_${action}`, params);

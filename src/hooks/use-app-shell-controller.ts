@@ -31,6 +31,7 @@ export function useAppShellController({
   const updatePrompt = usePromptStore((s) => s.updatePrompt);
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const archivePrompt = usePromptStore((s) => s.archivePrompt);
+  const restorePrompt = usePromptStore((s) => s.restorePrompt);
   const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
@@ -97,6 +98,7 @@ export function useAppShellController({
     activeWorkspaceId,
     addToast,
     archivePrompt,
+    restorePrompt,
     copyText,
     createPrompt,
     deletePrompt,
@@ -181,6 +183,7 @@ export function useAppShellController({
     handleFilterChange: navigation.handleFilterChange,
     handleNewPrompt: navigation.handleNewPrompt,
     handleOnboardingComplete: navigation.handleOnboardingComplete,
+    handleRestorePrompt: promptCrud.handleRestorePrompt,
     handleSearchChange,
     handleSelectPrompt: navigation.handleSelectPrompt,
     handleSettingsBack: navigation.handleSettingsBack,

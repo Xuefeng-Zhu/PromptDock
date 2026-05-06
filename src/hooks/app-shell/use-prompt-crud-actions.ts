@@ -22,6 +22,7 @@ interface UsePromptCrudActionsOptions {
   activeWorkspaceId: string;
   addToast: ToastStore['addToast'];
   archivePrompt: PromptStore['archivePrompt'];
+  restorePrompt: PromptStore['restorePrompt'];
   copyText: ExecuteText;
   createPrompt: PromptStore['createPrompt'];
   deletePrompt: PromptStore['deletePrompt'];
@@ -42,6 +43,7 @@ export function usePromptCrudActions({
   activeWorkspaceId,
   addToast,
   archivePrompt,
+  restorePrompt,
   copyText,
   createPrompt,
   deletePrompt,
@@ -126,6 +128,20 @@ export function usePromptCrudActions({
       }
     },
     [addToast, archivePrompt, selectedPromptId, setSelectedPromptId],
+  );
+
+  const handleRestorePrompt = useCallback(
+    (id: string) => {
+      restorePrompt(id)
+        .then(() => trackPromptAction('restored'))
+        .catch((err: unknown) => {
+          addToast(`Failed to restore prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        });
+      if (selectedPromptId === id) {
+        setSelectedPromptId(null);
+      }
+    },
+    [addToast, restorePrompt, selectedPromptId, setSelectedPromptId],
   );
 
   const handleDuplicatePrompt = useCallback(
@@ -244,6 +260,7 @@ export function usePromptCrudActions({
     handleCopyPromptBody,
     handleDeletePrompt,
     handleDuplicatePrompt,
+    handleRestorePrompt,
     handleEditPrompt,
     handleEditorArchive,
     handleEditorCopy,

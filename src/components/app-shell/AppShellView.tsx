@@ -27,6 +27,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     handleDuplicatePrompt,
     handleEditPrompt,
     handleOnboardingComplete,
+    handleRestorePrompt,
     handleSearchChange,
     handleSettingsOpen,
     handleSidebarItemSelect,
@@ -115,6 +116,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
               onDuplicate={handleDuplicatePrompt}
               onArchive={handleArchivePrompt}
               onDelete={handleDeletePrompt}
+              onRestore={handleRestorePrompt}
               onCopyBody={handleCopyPromptBody}
               onCreateFolder={handleCreateFolder}
               onUpdateFolder={handleUpdatePromptFolder}

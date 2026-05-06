@@ -24,6 +24,18 @@ export function PromptInspectorHeader({
   onToggleFavorite,
   prompt,
 }: PromptInspectorHeaderProps) {
+  const handleDelete = () => {
+    const confirmed = window.confirm(
+      `Delete "${prompt.title}" permanently?
+
+This cannot be undone. Archive the prompt instead if you might need it later.`,
+    );
+
+    if (confirmed) {
+      onDelete?.(prompt.id);
+    }
+  };
+
   const archiveAction: PromptActionMenuItem = prompt.archived
     ? {
         type: 'item',
@@ -58,7 +70,7 @@ export function PromptInspectorHeader({
       danger: true,
       icon: <Trash2 className="h-4 w-4" />,
       label: 'Delete',
-      onSelect: () => onDelete?.(prompt.id),
+      onSelect: handleDelete,
     },
   ];
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PromptInspectorHeader } from '../PromptInspectorHeader';
 import type { PromptRecipe } from '../../../types/index';
 
@@ -26,6 +26,10 @@ function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
 }
 
 describe('PromptInspectorHeader', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('shows archive for active prompts', () => {
     render(<PromptInspectorHeader prompt={makePrompt()} onArchive={vi.fn()} />);
 
@@ -50,5 +54,28 @@ describe('PromptInspectorHeader', () => {
 
     expect(onRestore).toHaveBeenCalledWith('prompt-1');
     expect(screen.queryByRole('menuitem', { name: 'Archive' })).toBeNull();
+  });
+
+  it('does not delete when confirmation is cancelled', () => {
+    const onDelete = vi.fn();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<PromptInspectorHeader prompt={makePrompt()} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Test Prompt'));
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes after confirmation', () => {
+    const onDelete = vi.fn();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<PromptInspectorHeader prompt={makePrompt()} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+
+    expect(onDelete).toHaveBeenCalledWith('prompt-1');
   });
 });

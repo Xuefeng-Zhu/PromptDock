@@ -5,6 +5,7 @@ import { LivePreviewPanel } from './LivePreviewPanel';
 import { PromptBasicsFields } from './PromptBasicsFields';
 import { PromptEditorHeader } from './PromptEditorHeader';
 import { PromptMetadataFooter } from './PromptMetadataFooter';
+import { VariableDefinitionEditor } from './VariableDefinitionEditor';
 
 export { extractVariables } from '../../utils/prompt-template';
 export { countChars, countWords } from '../../utils/text-counts';
@@ -105,6 +106,11 @@ export function PromptEditor({
             onToggleFormattingHelp={() => form.setShowFormattingHelp((prev) => !prev)}
           />
 
+          <VariableDefinitionEditor
+            variables={form.promptVariables}
+            onVariableChange={form.handleVariableDefinitionChange}
+          />
+
           {form.isEditing && prompt && <PromptMetadataFooter prompt={prompt} />}
         </div>
       </div>
@@ -113,9 +119,9 @@ export function PromptEditor({
         <div className="hidden shrink-0 lg:block">
           <LivePreviewPanel
             body={form.body}
+            promptVariables={form.promptVariables}
             renderedPreview={form.renderedPreview}
             variableValues={form.variableValues}
-            variables={form.variables}
             onResetPreview={form.handleResetPreview}
             onVariableValueChange={form.handleVariableValueChange}
           />

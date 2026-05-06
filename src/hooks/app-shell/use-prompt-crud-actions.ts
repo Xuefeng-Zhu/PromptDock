@@ -85,6 +85,7 @@ export function usePromptCrudActions({
             title: (data.title as string) ?? 'Untitled',
             description: (data.description as string) ?? '',
             body: (data.body as string) ?? '',
+            variables: data.variables,
             tags: (data.tags as string[]) ?? [],
             folderId: (data.folderId as string | null) ?? null,
             favorite: (data.favorite as boolean) ?? false,

@@ -81,6 +81,7 @@ function assertPromptRecipeEqual(original: PromptRecipe, roundTripped: PromptRec
   expect(roundTripped.title).toBe(original.title);
   expect(roundTripped.description).toBe(original.description);
   expect(roundTripped.body).toBe(original.body);
+  expect(roundTripped.variables).toEqual(original.variables);
   expect(roundTripped.tags).toEqual(original.tags);
   expect(roundTripped.folderId).toBe(original.folderId);
   expect(roundTripped.favorite).toBe(original.favorite);
@@ -154,6 +155,22 @@ describe('PromptRecipe Firestore converter', () => {
     title: 'Test Recipe',
     description: 'A test prompt recipe',
     body: 'Hello {{name}}, welcome to {{place}}!',
+    variables: [
+      {
+        name: 'name',
+        defaultValue: '',
+        description: 'Person to greet',
+        inputType: 'text',
+        options: [],
+      },
+      {
+        name: 'place',
+        defaultValue: 'PromptDock',
+        description: 'Destination',
+        inputType: 'dropdown',
+        options: ['PromptDock', 'Earth'],
+      },
+    ],
     tags: ['greeting', 'test'],
     folderId: 'folder-1',
     favorite: true,

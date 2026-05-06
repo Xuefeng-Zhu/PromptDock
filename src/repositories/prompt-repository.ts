@@ -1,5 +1,6 @@
 import type { PromptRecipe } from '../types/index';
 import type { IPromptRepository, IStorageBackend } from './interfaces';
+import { resolvePromptVariables } from '../utils/prompt-variables';
 
 // ─── PromptRepository ──────────────────────────────────────────────────────────
 // Implements IPromptRepository by delegating to an IStorageBackend in Local Mode.
@@ -208,6 +209,9 @@ export class PromptRepository implements IPromptRepository {
       ...original,
       id: crypto.randomUUID(),
       title: `Copy of ${original.title}`,
+      variables: original.variables
+        ? resolvePromptVariables(original.body, original.variables)
+        : undefined,
       createdAt: now,
       updatedAt: now,
       createdBy: 'local',

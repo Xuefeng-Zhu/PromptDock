@@ -3,10 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { VariableFillModal } from '../variable-fill';
 import { MOCK_PROMPTS } from '../../data/mock-data';
+import { resolvePromptVariables } from '../../utils/prompt-variables';
 
 // Use MOCK_PROMPTS[0] — "Summarize Text" with variables: audience, text, format
 const testPrompt = MOCK_PROMPTS[0];
-const testVariables = ['audience', 'text', 'format'];
+const testVariables = resolvePromptVariables(testPrompt.body);
 
 const defaultProps = {
   prompt: testPrompt,
@@ -25,7 +26,7 @@ describe('VariableFillModal', () => {
 
   it('renders input fields for each variable', () => {
     render(<VariableFillModal {...defaultProps} />);
-    for (const varName of testVariables) {
+    for (const { name: varName } of testVariables) {
       const input = screen.getByLabelText(`Value for variable ${varName}`);
       expect(input).toBeDefined();
     }
@@ -33,7 +34,7 @@ describe('VariableFillModal', () => {
 
   it('renders placeholder text for each variable input', () => {
     render(<VariableFillModal {...defaultProps} />);
-    for (const varName of testVariables) {
+    for (const { name: varName } of testVariables) {
       expect(
         screen.getByPlaceholderText(`Enter value for ${varName}`),
       ).toBeDefined();
@@ -59,6 +60,50 @@ describe('VariableFillModal', () => {
     const preview = screen.getByLabelText('Rendered prompt preview');
     expect(preview.textContent).toContain('developers');
     expect(preview.textContent).not.toContain('{{audience}}');
+  });
+
+  it('renders configured textarea and dropdown controls', () => {
+    const typedVariables = resolvePromptVariables(testPrompt.body, [
+      {
+        name: 'audience',
+        defaultValue: '',
+        description: 'Choose the audience',
+        inputType: 'dropdown',
+        options: ['developers', 'managers'],
+      },
+      {
+        name: 'text',
+        defaultValue: '',
+        description: 'Long source material',
+        inputType: 'textarea',
+        options: [],
+      },
+      {
+        name: 'format',
+        defaultValue: 'markdown',
+        description: '',
+        inputType: 'text',
+        options: [],
+      },
+    ]);
+
+    render(
+      <VariableFillModal
+        {...defaultProps}
+        prompt={{ ...testPrompt, variables: typedVariables }}
+        variables={typedVariables}
+      />,
+    );
+
+    const audienceSelect = screen.getByRole('combobox', {
+      name: 'Value for variable audience',
+    });
+    const textInput = screen.getByLabelText('Value for variable text');
+    const formatInput = screen.getByLabelText('Value for variable format');
+
+    expect(audienceSelect).toBeDefined();
+    expect(textInput.tagName).toBe('TEXTAREA');
+    expect((formatInput as HTMLInputElement).value).toBe('markdown');
   });
 
   it('disables Copy button when variables are not all filled', () => {

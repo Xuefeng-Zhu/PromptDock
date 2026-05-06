@@ -126,6 +126,15 @@ describe('usePromptEditorForm', () => {
       title: 'New title',
       description: 'New description',
       body: 'Hello {{name}}',
+      variables: [
+        {
+          name: 'name',
+          defaultValue: '',
+          description: '',
+          inputType: 'text',
+          options: [],
+        },
+      ],
       tags: ['alpha', 'beta'],
       folderId: null,
       favorite: true,
@@ -192,5 +201,69 @@ describe('usePromptEditorForm', () => {
     });
 
     expect(result.current.renderedPreview).toBe('Hello {{name}}');
+  });
+
+  it('saves variable input metadata and validates dropdown options', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      usePromptEditorForm({
+        folders,
+        onSave,
+      }),
+    );
+
+    act(() => {
+      result.current.setTitle('Variable prompt');
+      result.current.setBody('Write in {{tone}} about {{context}}');
+    });
+
+    act(() => {
+      result.current.handleVariableDefinitionChange('tone', {
+        inputType: 'dropdown',
+      });
+    });
+
+    await act(async () => {
+      await result.current.savePrompt();
+    });
+
+    expect(result.current.validationError).toBe(
+      'Add at least one dropdown option for tone.',
+    );
+    expect(onSave).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.handleVariableDefinitionChange('tone', {
+        options: ['Friendly', 'Professional'],
+        defaultValue: 'Friendly',
+      });
+      result.current.handleVariableDefinitionChange('context', {
+        inputType: 'textarea',
+        description: 'Background',
+      });
+    });
+
+    await act(async () => {
+      await result.current.savePrompt();
+    });
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      variables: [
+        {
+          name: 'tone',
+          defaultValue: 'Friendly',
+          description: '',
+          inputType: 'dropdown',
+          options: ['Friendly', 'Professional'],
+        },
+        {
+          name: 'context',
+          defaultValue: '',
+          description: 'Background',
+          inputType: 'textarea',
+          options: [],
+        },
+      ],
+    }));
   });
 });

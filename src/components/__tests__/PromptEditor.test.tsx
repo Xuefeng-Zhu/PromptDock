@@ -147,6 +147,54 @@ describe('PromptEditor', () => {
     expect(screen.getByText('Template formatting')).toBeDefined();
   });
 
+  it('configures variable input controls and saves their metadata', async () => {
+    const onSave = vi.fn();
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'Typed variables' },
+    });
+    fireEvent.change(screen.getByLabelText('Body'), {
+      target: { value: 'Write in {{tone}} about {{context}}' },
+    });
+
+    expect(screen.getByText('Variable controls')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Use dropdown input for tone',
+    }));
+    fireEvent.change(screen.getByLabelText('Options for tone'), {
+      target: { value: 'Friendly\nProfessional' },
+    });
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Use textarea input for context',
+    }));
+    fireEvent.change(screen.getByLabelText('Description for context'), {
+      target: { value: 'Background material' },
+    });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: '',
+            description: '',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+          {
+            name: 'context',
+            defaultValue: '',
+            description: 'Background material',
+            inputType: 'textarea',
+            options: [],
+          },
+        ],
+      }));
+    });
+  });
+
   it('expands the editor and restores the preview rail', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Live Preview')).toBeDefined();

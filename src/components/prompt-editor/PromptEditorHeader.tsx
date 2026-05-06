@@ -1,6 +1,7 @@
 import {
   Archive,
   ChevronRight,
+  FileJson,
   Files,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -12,6 +13,7 @@ interface PromptEditorHeaderProps {
   onArchive?: () => void;
   onCancel: () => void;
   onDuplicate?: () => void;
+  onFillFromJson?: () => void;
   onSave: () => void;
   promptTitle?: string;
 }
@@ -23,6 +25,7 @@ export function PromptEditorHeader({
   onArchive,
   onCancel,
   onDuplicate,
+  onFillFromJson,
   onSave,
   promptTitle,
 }: PromptEditorHeaderProps) {
@@ -46,7 +49,7 @@ export function PromptEditorHeader({
         <h1 className="text-xl font-bold text-[var(--color-text-main)]">
           {isEditing ? 'Edit Prompt' : 'New Prompt'}
         </h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {isEditing && (onDuplicate || onArchive) && (
             <>
               {onDuplicate && (
@@ -62,6 +65,12 @@ export function PromptEditorHeader({
                 </Button>
               )}
             </>
+          )}
+          {!isEditing && onFillFromJson && (
+            <Button variant="secondary" size="sm" onClick={onFillFromJson} className="h-10 sm:h-auto">
+              <FileJson className="mr-1.5 h-4 w-4" />
+              From JSON
+            </Button>
           )}
           <Button
             variant="primary"

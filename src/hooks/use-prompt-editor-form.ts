@@ -11,6 +11,7 @@ import { extractVariables } from '../utils/prompt-template';
 import {
   arePromptVariablesEqual,
   createDefaultPromptVariable,
+  findDropdownWithInvalidDefault,
   resolvePromptVariables,
 } from '../utils/prompt-variables';
 import { normalizeTag, resolveExistingTagName } from '../utils/tag-options';
@@ -231,6 +232,8 @@ export function usePromptEditorForm({
       (variable) =>
         variable.inputType === 'dropdown' && variable.options.length === 0,
     );
+    const dropdownWithInvalidDefault =
+      findDropdownWithInvalidDefault(promptVariables);
 
     if (!trimmedTitle) {
       setValidationError('Title is required.');
@@ -243,6 +246,12 @@ export function usePromptEditorForm({
     if (dropdownWithoutOptions) {
       setValidationError(
         `Add at least one dropdown option for ${dropdownWithoutOptions.name}.`,
+      );
+      return;
+    }
+    if (dropdownWithInvalidDefault) {
+      setValidationError(
+        `Default value for ${dropdownWithInvalidDefault.name} must match one of its dropdown options.`,
       );
       return;
     }

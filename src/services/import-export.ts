@@ -325,11 +325,22 @@ function validatePromptVariables(
       errors.push(`${prefix}: optional field "options" must be an array of strings`);
     }
 
+    const options = normalizePromptVariableOptions(item.options);
+
     if (
       item.inputType === 'dropdown'
-      && normalizePromptVariableOptions(item.options).length === 0
+      && options.length === 0
     ) {
       errors.push(`${prefix}: dropdown variables require at least one option`);
+    }
+
+    if (
+      item.inputType === 'dropdown'
+      && typeof item.defaultValue === 'string'
+      && item.defaultValue.length > 0
+      && !options.includes(item.defaultValue)
+    ) {
+      errors.push(`${prefix}: dropdown defaultValue must match one of its options`);
     }
   });
 }

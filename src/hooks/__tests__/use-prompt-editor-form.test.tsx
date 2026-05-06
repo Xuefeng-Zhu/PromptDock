@@ -259,6 +259,21 @@ describe('usePromptEditorForm', () => {
     act(() => {
       result.current.handleVariableDefinitionChange('tone', {
         options: ['Friendly', 'Professional'],
+        defaultValue: 'Concise',
+      });
+    });
+
+    await act(async () => {
+      await result.current.savePrompt();
+    });
+
+    expect(result.current.validationError).toBe(
+      'Default value for tone must match one of its dropdown options.',
+    );
+    expect(onSave).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.handleVariableDefinitionChange('tone', {
         defaultValue: 'Friendly',
       });
       result.current.handleVariableDefinitionChange('context', {

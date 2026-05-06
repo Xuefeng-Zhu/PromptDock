@@ -134,7 +134,7 @@ export function promptRecipeToFirestoreDoc(recipe: PromptRecipe): FirestorePromp
  * Convert a Firestore document back to a PromptRecipe TypeScript object.
  */
 export function firestoreDocToPromptRecipe(id: string, doc: FirestorePromptDoc): PromptRecipe {
-  const variables = doc.variables
+  const variables = Array.isArray(doc.variables)
     ? resolvePromptVariables(doc.body, doc.variables)
     : undefined;
 

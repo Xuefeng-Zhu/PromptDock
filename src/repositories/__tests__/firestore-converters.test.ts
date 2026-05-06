@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import type { PromptRecipe, Workspace, UserSettings } from '../../types/index';
 import {
+  type FirestorePromptDoc,
   promptRecipeToFirestoreDoc,
   firestoreDocToPromptRecipe,
   workspaceToFirestoreDoc,
@@ -230,6 +231,17 @@ describe('PromptRecipe Firestore converter', () => {
     firestoreDocToPromptRecipe(recipe.id, doc);
     // The original recipe tags should be unchanged after conversion
     expect(originalTags).toEqual(['a', 'b', 'c']);
+  });
+
+  it('should ignore malformed variable metadata from schemaless documents', () => {
+    const doc = {
+      ...promptRecipeToFirestoreDoc(sampleRecipe),
+      variables: 'not-an-array',
+    } as unknown as FirestorePromptDoc;
+
+    const result = firestoreDocToPromptRecipe(sampleRecipe.id, doc);
+
+    expect(result.variables).toBeUndefined();
   });
 });
 

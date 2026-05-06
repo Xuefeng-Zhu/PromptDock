@@ -340,6 +340,12 @@ describe('ImportExportService — Unit Tests', () => {
           body: 'Hello {{tone}}',
           variables: [
             { name: 'tone', inputType: 'dropdown', options: [] },
+            {
+              name: 'audience',
+              inputType: 'dropdown',
+              defaultValue: 'Developers',
+              options: ['Managers'],
+            },
             { name: '', inputType: 'slider' },
           ],
         },
@@ -350,6 +356,7 @@ describe('ImportExportService — Unit Tests', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.errors.some((e) => e.includes('dropdown variables require'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('dropdown defaultValue'))).toBe(true);
       expect(result.errors.some((e) => e.includes('inputType'))).toBe(true);
       expect(result.errors.some((e) => e.includes('name'))).toBe(true);
     }

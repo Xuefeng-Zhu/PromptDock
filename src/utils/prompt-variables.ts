@@ -75,17 +75,28 @@ export function normalizePromptVariableDefinition(
   };
 }
 
+function isPartialPromptVariable(value: unknown): value is Partial<PromptVariable> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export function resolvePromptVariables(
   body: string,
-  variableDefinitions: PromptVariable[] | undefined = [],
+  variableDefinitions: unknown = [],
 ): PromptVariable[] {
   const definitionsByName = new Map<string, PromptVariable>();
+  const definitions = Array.isArray(variableDefinitions)
+    ? variableDefinitions
+    : [];
 
-  for (const definition of variableDefinitions) {
+  for (const definition of definitions) {
+    if (!isPartialPromptVariable(definition)) continue;
+
     const normalized = normalizePromptVariableDefinition(
       definition,
-      definition.name,
+      typeof definition.name === 'string' ? definition.name : '',
     );
+    if (!normalized.name) continue;
+
     definitionsByName.set(normalized.name, normalized);
   }
 
@@ -96,6 +107,17 @@ export function resolvePromptVariables(
 
 export function resolvePromptRecipeVariables(prompt: PromptRecipe): PromptVariable[] {
   return resolvePromptVariables(prompt.body, prompt.variables);
+}
+
+export function findDropdownWithInvalidDefault(
+  variables: PromptVariable[],
+): PromptVariable | undefined {
+  return variables.find(
+    (variable) =>
+      variable.inputType === 'dropdown'
+      && variable.defaultValue.length > 0
+      && !variable.options.includes(variable.defaultValue),
+  );
 }
 
 export function arePromptVariablesEqual(

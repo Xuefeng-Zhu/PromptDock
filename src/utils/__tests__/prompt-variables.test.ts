@@ -52,6 +52,15 @@ describe('prompt variable metadata helpers', () => {
     expect(resolved).toEqual([createDefaultPromptVariable('name')]);
   });
 
+  it('ignores malformed metadata and falls back to placeholder defaults', () => {
+    expect(resolvePromptVariables('Hello {{name}}', 'not an array')).toEqual([
+      createDefaultPromptVariable('name'),
+    ]);
+    expect(resolvePromptVariables('Hello {{name}}', [42, null])).toEqual([
+      createDefaultPromptVariable('name'),
+    ]);
+  });
+
   it('parses comma and newline separated dropdown options', () => {
     expect(parsePromptVariableOptions('Friendly, Professional\nConcise\nFriendly')).toEqual([
       'Friendly',

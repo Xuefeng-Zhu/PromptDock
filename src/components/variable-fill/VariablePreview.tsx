@@ -16,7 +16,7 @@ export function VariablePreview({ isComplete, renderedText }: VariablePreviewPro
       </h3>
       <Card padding="sm" className="max-h-48 overflow-y-auto">
         <pre
-          className="whitespace-pre-wrap text-sm"
+          className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]"
           style={{
             fontFamily: 'var(--font-mono)',
             color: isComplete

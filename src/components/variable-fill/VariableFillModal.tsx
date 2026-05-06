@@ -46,7 +46,7 @@ export function VariableFillModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] animate-[fadeIn_150ms_ease-out]"
+      className="fixed inset-0 z-50 flex items-start justify-center px-3 py-3 animate-[fadeIn_150ms_ease-out] sm:pt-[10vh]"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
       onClick={variableFill.handleBackdropClick}
       data-testid="variable-fill-backdrop"
@@ -56,7 +56,7 @@ export function VariableFillModal({
         role="dialog"
         aria-modal="true"
         aria-label={`Fill variables for ${prompt.title}`}
-        className="relative m-0 flex w-full max-w-xl flex-col overflow-hidden rounded-xl border shadow-2xl animate-[slideDown_150ms_ease-out]"
+        className="relative m-0 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border shadow-2xl animate-[slideDown_150ms_ease-out]"
         style={{
           backgroundColor: 'var(--color-panel)',
           borderColor: 'var(--color-border)',
@@ -65,7 +65,7 @@ export function VariableFillModal({
       >
         <VariableFillHeader title={prompt.title} onCancel={onCancel} />
 
-        <div className="flex-1 overflow-y-auto px-5 py-4" style={{ maxHeight: '60vh' }}>
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
           <VariableInputList
             firstInputRef={variableFill.firstInputRef}
             onValueChange={variableFill.handleValueChange}

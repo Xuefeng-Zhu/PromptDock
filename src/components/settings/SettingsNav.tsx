@@ -13,10 +13,10 @@ export function SettingsNav({
 }: SettingsNavProps) {
   return (
     <nav
-      className="w-56 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-panel)] p-4"
+      className="w-full shrink-0 overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-panel)] p-3 md:w-56 md:overflow-visible md:border-b-0 md:border-r md:p-4"
       aria-label="Settings navigation"
     >
-      <ul className="space-y-1">
+      <ul className="flex gap-2 md:block md:space-y-1">
         {items.map((item) => {
           const isActive = activeSection === item.id;
           return (
@@ -26,7 +26,7 @@ export function SettingsNav({
                 onClick={() => onSelectSection(item.id)}
                 aria-selected={isActive}
                 className={[
-                  'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                  'flex min-h-10 w-full shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition-colors',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]',
                   isActive
                     ? 'bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]'

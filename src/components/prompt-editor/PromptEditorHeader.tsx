@@ -31,35 +31,35 @@ export function PromptEditorHeader({
 }: PromptEditorHeaderProps) {
   return (
     <>
-      <nav className="mb-2 flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+      <nav className="mb-2 flex min-w-0 flex-wrap items-center gap-1.5 text-sm" aria-label="Breadcrumb">
         <button
           type="button"
           onClick={onCancel}
-          className="text-[var(--color-primary)] hover:underline"
+          className="min-h-10 rounded-md pr-1 text-[var(--color-primary)] hover:underline sm:min-h-0"
         >
           {currentFolderName ?? 'Library'}
         </button>
         <ChevronRight className="h-3.5 w-3.5 text-[var(--color-text-placeholder)]" />
-        <span className="text-[var(--color-text-muted)]">
+        <span className="min-w-0 truncate text-[var(--color-text-muted)]">
           {isEditing ? (promptTitle ?? 'Edit Prompt') : 'New Prompt'}
         </span>
       </nav>
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-[var(--color-text-main)]">
           {isEditing ? 'Edit Prompt' : 'New Prompt'}
         </h1>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {isEditing && (onDuplicate || onArchive) && (
             <>
               {onDuplicate && (
-                <Button variant="secondary" size="sm" onClick={onDuplicate}>
+                <Button variant="secondary" size="sm" onClick={onDuplicate} className="h-10 sm:h-auto">
                   <Files className="mr-1.5 h-4 w-4" />
                   Duplicate
                 </Button>
               )}
               {onArchive && (
-                <Button variant="secondary" size="sm" onClick={onArchive}>
+                <Button variant="secondary" size="sm" onClick={onArchive} className="h-10 sm:h-auto">
                   <Archive className="mr-1.5 h-4 w-4" />
                   Archive
                 </Button>
@@ -67,7 +67,7 @@ export function PromptEditorHeader({
             </>
           )}
           {!isEditing && onFillFromJson && (
-            <Button variant="secondary" size="sm" onClick={onFillFromJson}>
+            <Button variant="secondary" size="sm" onClick={onFillFromJson} className="h-10 sm:h-auto">
               <FileJson className="mr-1.5 h-4 w-4" />
               From JSON
             </Button>
@@ -77,6 +77,7 @@ export function PromptEditorHeader({
             size="sm"
             onClick={onSave}
             disabled={isSaving}
+            className="h-10 sm:h-auto"
           >
             {isSaving ? 'Saving...' : 'Save'}
           </Button>

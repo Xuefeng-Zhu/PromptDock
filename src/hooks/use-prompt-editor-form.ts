@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import type { Folder, PromptRecipe, PromptVariable } from '../types/index';
+import type { PromptJsonDraft } from '../services/prompt-json';
 import { extractVariables } from '../utils/prompt-template';
 import {
   arePromptVariablesEqual,
@@ -27,6 +28,21 @@ interface UsePromptEditorFormOptions {
 function areTagsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((tag, index) => tag === right[index]);
+}
+
+function resolveTagList(availableTags: string[], tagValues: string[]): string[] {
+  const tagsByKey = new Map<string, string>();
+
+  for (const tag of tagValues) {
+    const resolvedTag = resolveExistingTagName(availableTags, tag);
+    const key = normalizeTag(resolvedTag);
+
+    if (key && !tagsByKey.has(key)) {
+      tagsByKey.set(key, resolvedTag);
+    }
+  }
+
+  return Array.from(tagsByKey.values());
 }
 
 export function usePromptEditorForm({
@@ -194,6 +210,20 @@ export function usePromptEditorForm({
     [],
   );
 
+  const applyJsonDraft = useCallback((data: PromptJsonDraft) => {
+    setTitle(data.title);
+    setDescription(data.description);
+    setBody(data.body);
+    setVariableDefinitions(resolvePromptVariables(data.body));
+    setTags(resolveTagList(availableTags, data.tags));
+    setFolderId(data.folderId);
+    setFavorite(data.favorite);
+    setTagInput('');
+    setShowTagInput(false);
+    setValidationError(null);
+    setVariableValues({});
+  }, [availableTags]);
+
   const savePrompt = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
@@ -259,6 +289,7 @@ export function usePromptEditorForm({
   }, [body, promptVariables, variableValues]);
 
   return {
+    applyJsonDraft,
     body,
     charCount,
     currentFolder,

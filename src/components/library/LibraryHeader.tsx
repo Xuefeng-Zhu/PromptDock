@@ -16,7 +16,7 @@ export function LibraryHeader({
   viewMode,
 }: LibraryHeaderProps) {
   return (
-    <div className="mb-5 flex items-center justify-between">
+    <div className="mb-5 flex items-center justify-between gap-3">
       <div className="flex items-baseline gap-3">
         <h1 className="text-xl font-bold text-[var(--color-text-main)]">
           All Prompts
@@ -26,7 +26,7 @@ export function LibraryHeader({
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <ViewModeToggle
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}

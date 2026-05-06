@@ -13,9 +13,42 @@ type ExecuteText = (options: {
 }) => Promise<PromptExecutionResult>;
 
 type TagUpdate = (tags: string[]) => string[];
+type CreatePromptInput = Parameters<PromptStore['createPrompt']>[0];
 
 function areTagsEqual(left: string[], right: string[]) {
   return left.length === right.length && left.every((tag, index) => tag === right[index]);
+}
+
+function toCreatePromptInput(
+  data: Partial<PromptRecipe>,
+  {
+    activeWorkspaceId,
+    mode,
+    userId,
+  }: {
+    activeWorkspaceId: string;
+    mode: AppMode;
+    userId: string | null;
+  },
+): CreatePromptInput {
+  const workspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
+  const createdBy = mode !== 'local' && userId ? userId : 'local';
+
+  return {
+    workspaceId,
+    title: data.title ?? 'Untitled',
+    description: data.description ?? '',
+    body: data.body ?? '',
+    variables: data.variables,
+    tags: data.tags ?? [],
+    folderId: data.folderId ?? null,
+    favorite: data.favorite ?? false,
+    archived: false,
+    archivedAt: null,
+    lastUsedAt: null,
+    createdBy,
+    version: 1,
+  };
 }
 
 interface UsePromptCrudActionsOptions {
@@ -78,23 +111,9 @@ export function usePromptCrudActions({
           await updatePrompt(screen.promptId, data);
           trackPromptAction('updated');
         } else {
-          const workspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
-          const createdBy = mode !== 'local' && userId ? userId : 'local';
-          await createPrompt({
-            workspaceId,
-            title: (data.title as string) ?? 'Untitled',
-            description: (data.description as string) ?? '',
-            body: (data.body as string) ?? '',
-            variables: data.variables,
-            tags: (data.tags as string[]) ?? [],
-            folderId: (data.folderId as string | null) ?? null,
-            favorite: (data.favorite as boolean) ?? false,
-            archived: false,
-            archivedAt: null,
-            lastUsedAt: null,
-            createdBy,
-            version: 1,
-          });
+          await createPrompt(
+            toCreatePromptInput(data, { activeWorkspaceId, mode, userId }),
+          );
           trackPromptAction('created');
         }
         setEditorHasUnsavedChanges(false);

@@ -175,6 +175,30 @@ describe('usePromptEditorForm', () => {
     expect(result.current.tags).toEqual(['alpha', 'Beta']);
   });
 
+  it('resolves imported JSON tags to existing tag casing', () => {
+    const onSave = vi.fn();
+    const { result } = renderHook(() =>
+      usePromptEditorForm({
+        availableTags: ['Writing', 'Product'],
+        folders,
+        onSave,
+      }),
+    );
+
+    act(() => {
+      result.current.applyJsonDraft({
+        title: 'Imported',
+        description: '',
+        body: 'Body',
+        tags: ['writing', 'Writing', ' product '],
+        folderId: null,
+        favorite: false,
+      });
+    });
+
+    expect(result.current.tags).toEqual(['Writing', 'Product']);
+  });
+
   it('renders and resets live preview variable values', () => {
     const onSave = vi.fn();
     const prompt = makePrompt();

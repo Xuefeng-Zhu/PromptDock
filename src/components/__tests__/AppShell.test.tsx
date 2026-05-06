@@ -915,7 +915,7 @@ describe('AppShell', () => {
       expect(screen.getByText('Summarize Text')).toBeDefined();
     });
 
-    it('clicking Delete in inspector dropdown calls deletePrompt on the store', async () => {
+    it('clicking Delete in inspector dropdown confirms before deleting from the store', async () => {
       const { mockRepo } = await renderOnLibraryScreen();
 
       await selectPromptCard('prompt-1');
@@ -932,6 +932,13 @@ describe('AppShell', () => {
       const deleteItem = screen.getByRole('menuitem', { name: 'Delete' });
       await act(async () => {
         fireEvent.click(deleteItem);
+      });
+
+      expect(mockRepo.delete).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: /Delete/i })).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
       });
 
       expect(mockRepo.delete).toHaveBeenCalledWith('prompt-1');

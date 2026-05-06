@@ -51,4 +51,39 @@ describe('PromptInspectorHeader', () => {
     expect(onRestore).toHaveBeenCalledWith('prompt-1');
     expect(screen.queryByRole('menuitem', { name: 'Archive' })).toBeNull();
   });
+
+  it('opens a confirmation dialog before deleting', () => {
+    const onDelete = vi.fn();
+    render(<PromptInspectorHeader prompt={makePrompt()} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+
+    expect(screen.getByRole('dialog', { name: /Delete "Test Prompt" permanently/i })).toBeDefined();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('does not delete when confirmation is cancelled', () => {
+    const onDelete = vi.fn();
+    render(<PromptInspectorHeader prompt={makePrompt()} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes after confirmation', () => {
+    const onDelete = vi.fn();
+    render(<PromptInspectorHeader prompt={makePrompt()} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+
+    expect(onDelete).toHaveBeenCalledWith('prompt-1');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 });

@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Archive, Files, Pencil, Star, Trash2 } from 'lucide-react';
 import {
   PromptActionsMenu,
   type PromptActionMenuItem,
 } from '../prompt-actions';
 import type { PromptRecipe } from '../../types/index';
+import { PromptDeleteConfirmationDialog } from './PromptDeleteConfirmationDialog';
 
 interface PromptInspectorHeaderProps {
   onArchive?: (id: string) => void;
@@ -24,6 +26,21 @@ export function PromptInspectorHeader({
   onToggleFavorite,
   prompt,
 }: PromptInspectorHeaderProps) {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const handleDeleteRequest = () => {
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+  };
+
+  const handleDeleteConfirm = () => {
+    setDeleteConfirmOpen(false);
+    onDelete?.(prompt.id);
+  };
+
   const archiveAction: PromptActionMenuItem = prompt.archived
     ? {
         type: 'item',
@@ -58,7 +75,7 @@ export function PromptInspectorHeader({
       danger: true,
       icon: <Trash2 className="h-4 w-4" />,
       label: 'Delete',
-      onSelect: () => onDelete?.(prompt.id),
+      onSelect: handleDeleteRequest,
     },
   ];
 
@@ -92,6 +109,14 @@ export function PromptInspectorHeader({
         <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
           {prompt.description}
         </p>
+      )}
+
+      {deleteConfirmOpen && (
+        <PromptDeleteConfirmationDialog
+          onCancel={handleDeleteCancel}
+          onConfirm={handleDeleteConfirm}
+          promptTitle={prompt.title}
+        />
       )}
     </div>
   );

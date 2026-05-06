@@ -302,7 +302,7 @@ describe('PromptInspector', () => {
       expect(screen.queryByRole('menu')).toBeNull();
     });
 
-    it('calls onDelete with prompt id and closes dropdown when "Delete" is clicked', () => {
+    it('confirms before calling onDelete from the actions menu', () => {
       const onDelete = vi.fn();
       render(
         <PromptInspector
@@ -318,10 +318,14 @@ describe('PromptInspector', () => {
 
       // Click "Delete"
       fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-      expect(onDelete).toHaveBeenCalledTimes(1);
-      expect(onDelete).toHaveBeenCalledWith(mockPrompt.id);
+      expect(onDelete).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: /Delete/i })).toBeDefined();
       // Dropdown should be closed
       expect(screen.queryByRole('menu')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(onDelete).toHaveBeenCalledWith(mockPrompt.id);
     });
 
     it('does not throw when callbacks are not provided and buttons are clicked', () => {

@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import type { Folder, PromptRecipe } from '../types/index';
+import type { PromptJsonDraft } from '../services/prompt-json';
 import { extractVariables } from '../utils/prompt-template';
 import { normalizeTag, resolveExistingTagName } from '../utils/tag-options';
 import { countChars, countWords } from '../utils/text-counts';
@@ -138,6 +139,19 @@ export function usePromptEditorForm({
     setBody((prev) => prev + '{{variable_name}}');
   }, []);
 
+  const applyJsonDraft = useCallback((data: PromptJsonDraft) => {
+    setTitle(data.title);
+    setDescription(data.description);
+    setBody(data.body);
+    setTags([...data.tags]);
+    setFolderId(data.folderId);
+    setFavorite(data.favorite);
+    setTagInput('');
+    setShowTagInput(false);
+    setValidationError(null);
+    setVariableValues({});
+  }, []);
+
   const savePrompt = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
@@ -192,6 +206,7 @@ export function usePromptEditorForm({
   }, [body, variableValues, variables]);
 
   return {
+    applyJsonDraft,
     body,
     charCount,
     currentFolder,

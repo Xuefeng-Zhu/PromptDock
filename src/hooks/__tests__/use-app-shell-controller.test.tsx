@@ -173,4 +173,5 @@ describe('useAppShellController', () => {
     expect(result.current.prompts.map((prompt) => prompt.id)).toContain('created-prompt');
     unmount();
   });
+
 });

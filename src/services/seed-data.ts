@@ -42,36 +42,6 @@ export const SEED_RECIPES: SeedRecipeData[] = [
   },
   {
     workspaceId: 'local',
-    title: 'Generate Product Ideas',
-    description:
-      'Brainstorm creative product ideas for a given industry and target audience.',
-    body: `Generate {{count}} creative product ideas for the {{industry}} industry. The target audience is {{target_audience}}.\n\nFor each idea, provide:\n1. Product name\n2. One-sentence description\n3. Key differentiator\n4. Estimated complexity (low/medium/high)`,
-    tags: ['brainstorming', 'product', 'ideation'],
-    folderId: null,
-    favorite: false,
-    archived: false,
-    archivedAt: null,
-    lastUsedAt: null,
-    createdBy: 'local',
-    version: 1,
-  },
-  {
-    workspaceId: 'local',
-    title: 'Code Review Assistant',
-    description:
-      'Get a thorough code review with actionable feedback on a code snippet.',
-    body: `Review the following {{language}} code. Focus on:\n- Correctness and potential bugs\n- Performance considerations\n- Readability and naming conventions\n- Security concerns\n\nCode:\n\`\`\`{{language}}\n{{code}}\n\`\`\`\n\nProvide specific, actionable feedback with suggested improvements.`,
-    tags: ['code-review', 'development', 'engineering'],
-    folderId: null,
-    favorite: false,
-    archived: false,
-    archivedAt: null,
-    lastUsedAt: null,
-    createdBy: 'local',
-    version: 1,
-  },
-  {
-    workspaceId: 'local',
     title: 'Email Draft',
     description:
       'Draft a professional email based on the purpose, recipient, and key points.',
@@ -87,11 +57,11 @@ export const SEED_RECIPES: SeedRecipeData[] = [
   },
   {
     workspaceId: 'local',
-    title: 'Meeting Notes Extractor',
+    title: 'PromptDock JSON Recipe Generator',
     description:
-      'Extract structured action items, decisions, and summaries from raw meeting notes.',
-    body: `Extract structured information from the following meeting notes.\n\nMeeting notes:\n{{notes}}\n\nPlease provide:\n1. Meeting summary (2-3 sentences)\n2. Key decisions made\n3. Action items with owners: {{attendees}}\n4. Follow-up items for the next meeting`,
-    tags: ['meetings', 'productivity', 'organization'],
+      'Generate valid JSON that can be pasted into PromptDock\'s From JSON flow.',
+    body: `Create a PromptDock prompt recipe as a single valid JSON object.\n\nRequirements:\n- Output JSON only, with no Markdown.\n- Include required fields: "title" and "body".\n- Optional fields may include: "description", "tags", "folder", and "favorite".\n- In the generated prompt body, use PromptDock variables by wrapping variable names in two opening and two closing curly braces.\n- Do not include app-owned fields like id, workspaceId, createdAt, updatedAt, createdBy, version, archived, or lastUsedAt.\n\nPrompt I want to create:\n{{prompt_goal}}\n\nReturn this shape:\n{\n  "title": "...",\n  "description": "...",\n  "body": "...",\n  "tags": ["..."],\n  "folder": "...",\n  "favorite": false\n}`,
+    tags: ['promptdock', 'json', 'templates'],
     folderId: null,
     favorite: false,
     archived: false,

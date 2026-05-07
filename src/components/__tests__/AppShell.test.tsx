@@ -271,6 +271,25 @@ describe('AppShell', () => {
       expect(screen.getByText('Email Draft')).toBeDefined();
     });
 
+    it('opens a modal before deleting a folder', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Writing folder' }));
+      });
+
+      const dialog = screen.getByRole('dialog', { name: 'Delete "Writing"?' });
+      expect(within(dialog).getByText('1 prompt will stay in your library and move to No folder.')).toBeDefined();
+      expect(mockRepo.update).not.toHaveBeenCalled();
+
+      await act(async () => {
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete folder' }));
+      });
+
+      expect(mockRepo.update).toHaveBeenCalledWith('prompt-1', { folderId: null });
+      expect(screen.queryByRole('dialog', { name: 'Delete "Writing"?' })).toBeNull();
+    });
+
     it('opens command palette when ⌘K is pressed', async () => {
       await renderOnLibraryScreen();
       expect(screen.queryByTestId('command-palette-backdrop')).toBeNull();

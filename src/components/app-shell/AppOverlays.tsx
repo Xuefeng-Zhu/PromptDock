@@ -1,6 +1,7 @@
 import type { useAppShellController } from '../../hooks/use-app-shell-controller';
 import { ToastContainer } from '../feedback';
 import { CommandPalette } from '../prompt-search';
+import { FolderDeleteConfirmationDialog } from '../sidebar/FolderDeleteConfirmationDialog';
 import { VariableFillModal } from '../variable-fill';
 
 type AppShellController = ReturnType<typeof useAppShellController>;
@@ -14,10 +15,13 @@ export function AppOverlays({ controller }: AppOverlaysProps) {
     defaultAction,
     handleCommandPaletteClose,
     handleCommandPaletteSelect,
+    handleFolderDeleteCancel,
+    handleFolderDeleteConfirm,
     handleVariableFillCancel,
     handleVariableFillCopy,
     handleVariableFillPaste,
     libraryData,
+    folderDeleteConfirmation,
     prompts,
   } = controller;
 
@@ -38,6 +42,15 @@ export function AppOverlays({ controller }: AppOverlaysProps) {
           defaultAction={defaultAction}
           onCopy={handleVariableFillCopy}
           onPaste={handleVariableFillPaste}
+        />
+      )}
+
+      {folderDeleteConfirmation && (
+        <FolderDeleteConfirmationDialog
+          folder={folderDeleteConfirmation.folder}
+          promptCount={folderDeleteConfirmation.promptCount}
+          onCancel={handleFolderDeleteCancel}
+          onConfirm={handleFolderDeleteConfirm}
         />
       )}
 

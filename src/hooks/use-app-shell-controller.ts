@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { getConflictService } from '../App';
 import type { AppShellProps } from '../components/app-shell/types';
 import { useAppModeStore } from '../stores/app-mode-store';
@@ -24,12 +24,9 @@ function formatPromptCount(count: number): string {
   return `${count} prompt${count === 1 ? '' : 's'}`;
 }
 
-function createDeleteFolderConfirmationMessage(folder: Folder, promptCount: number): string {
-  if (promptCount > 0) {
-    return `Delete "${folder.name}"?\n\n${formatPromptCount(promptCount)} will stay in your library and move to No folder.`;
-  }
-
-  return `Delete "${folder.name}"?`;
+interface FolderDeleteConfirmation {
+  folder: Folder;
+  promptCount: number;
 }
 
 export function useAppShellController({
@@ -64,6 +61,7 @@ export function useAppShellController({
   const setUserId = useAppModeStore((s) => s.setUserId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
   const addToast = useToastStore((s) => s.addToast);
+  const [folderDeleteConfirmation, setFolderDeleteConfirmation] = useState<FolderDeleteConfirmation | null>(null);
 
   const navigation = useShellNavigation({ addToast });
   const {
@@ -183,13 +181,27 @@ export function useAppShellController({
   );
 
   const handleDeleteFolder = useCallback(
-    async (folder: Folder) => {
+    (folder: Folder) => {
       if (blockIfEditorHasUnsavedChanges()) return;
 
-      const affectedPromptCount = prompts.filter((prompt) => prompt.folderId === folder.id).length;
-      if (!window.confirm(createDeleteFolderConfirmationMessage(folder, affectedPromptCount))) {
-        return;
-      }
+      setFolderDeleteConfirmation({
+        folder,
+        promptCount: prompts.filter((prompt) => prompt.folderId === folder.id).length,
+      });
+    },
+    [blockIfEditorHasUnsavedChanges, prompts],
+  );
+
+  const handleFolderDeleteCancel = useCallback(() => {
+    setFolderDeleteConfirmation(null);
+  }, []);
+
+  const handleFolderDeleteConfirm = useCallback(
+    async () => {
+      const folder = folderDeleteConfirmation?.folder;
+      if (!folder) return;
+
+      setFolderDeleteConfirmation(null);
 
       try {
         const isPersistedFolder = userFolders.some((item) => item.id === folder.id);
@@ -210,11 +222,10 @@ export function useAppShellController({
     },
     [
       addToast,
-      blockIfEditorHasUnsavedChanges,
       clearFolderAssignments,
       deleteFolder,
+      folderDeleteConfirmation,
       handleFolderDeleted,
-      prompts,
       userFolders,
     ],
   );
@@ -250,6 +261,8 @@ export function useAppShellController({
     handleEditorDuplicate: promptCrud.handleEditorDuplicate,
     handleEditorSave: promptCrud.handleEditorSave,
     handleFilterChange: navigation.handleFilterChange,
+    handleFolderDeleteCancel,
+    handleFolderDeleteConfirm,
     handleNewPrompt: navigation.handleNewPrompt,
     handleOnboardingComplete: navigation.handleOnboardingComplete,
     handleRestorePrompt: promptCrud.handleRestorePrompt,
@@ -268,6 +281,7 @@ export function useAppShellController({
     handleVariableFillPaste: promptLaunchFlow.handleVariableFillPaste,
     libraryData,
     mode,
+    folderDeleteConfirmation,
     prompts,
     screen,
     searchQuery,

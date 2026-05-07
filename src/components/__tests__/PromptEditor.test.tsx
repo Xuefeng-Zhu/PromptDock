@@ -58,6 +58,24 @@ describe('PromptEditor', () => {
     expect(bodyTextarea.rows).toBe(12);
   });
 
+  it('constrains the live preview rail so overflowing preview content can scroll', () => {
+    const largeBody = Array.from({ length: 80 }, (_, index) => `Review item ${index + 1}`).join('\n');
+    render(
+      <PromptEditor
+        {...defaultProps}
+        promptId="large-prompt"
+        prompt={{ ...MOCK_PROMPTS[0], id: 'large-prompt', body: largeBody }}
+      />,
+    );
+
+    const previewRail = screen.getByRole('complementary', { name: 'Live Preview' });
+    expect(previewRail.className).toContain('h-full');
+    expect(previewRail.className).toContain('min-h-0');
+    expect(previewRail.className).toContain('overflow-y-auto');
+    expect(previewRail.parentElement?.className).toContain('h-full');
+    expect(previewRail.parentElement?.className).toContain('min-h-0');
+  });
+
   it('renders the Insert variable button', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Insert variable')).toBeDefined();

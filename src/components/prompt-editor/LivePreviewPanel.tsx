@@ -20,9 +20,14 @@ export function LivePreviewPanel({
   onVariableValueChange,
 }: LivePreviewPanelProps) {
   return (
-    <aside className="w-80 shrink-0 border-l border-[var(--color-border)] bg-[var(--color-panel)] overflow-y-auto">
+    <aside
+      aria-labelledby="live-preview-heading"
+      className="h-full min-h-0 w-80 shrink-0 overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-panel)]"
+    >
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text-main)]">Live Preview</h2>
+        <h2 id="live-preview-heading" className="text-sm font-semibold text-[var(--color-text-main)]">
+          Live Preview
+        </h2>
         <button
           type="button"
           onClick={onResetPreview}

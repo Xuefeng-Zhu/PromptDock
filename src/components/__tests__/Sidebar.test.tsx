@@ -69,6 +69,20 @@ describe('Sidebar', () => {
     expect(onItemSelect).not.toHaveBeenCalled();
   });
 
+  it('keeps the delete action visible for the selected folder', () => {
+    render(
+      <Sidebar
+        {...defaultProps}
+        activeItem="folder-writing"
+        onDeleteFolder={vi.fn()}
+      />,
+    );
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete Writing folder' });
+    expect(deleteButton.className).toContain('opacity-100');
+    expect(deleteButton.className).toContain('pointer-events-auto');
+  });
+
   it('calls onItemSelect with "library" when clicking All Prompts', () => {
     const onItemSelect = vi.fn();
     render(<Sidebar {...defaultProps} onItemSelect={onItemSelect} />);

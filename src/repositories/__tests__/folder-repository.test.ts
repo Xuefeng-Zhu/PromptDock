@@ -55,7 +55,7 @@ describe('FolderRepository', () => {
     const folder = await repo.createFolder('Client Work', 'local');
 
     expect(folder.name).toBe('Client Work');
-    expect(folder.id).toMatch(/^folder-client-work-/);
+    expect(folder.id).toBe('folder-client-work');
     expect(backend.writeFolders).toHaveBeenCalledWith([expect.objectContaining({
       id: folder.id,
       name: 'Client Work',

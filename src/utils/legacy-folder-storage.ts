@@ -1,5 +1,6 @@
 import type { Folder } from '../types/index';
 
+// One-time import for folders created before folder persistence moved behind IStorageBackend.
 const LEGACY_FOLDERS_KEY = 'promptdock_folders';
 
 interface SerializedLegacyFolder {

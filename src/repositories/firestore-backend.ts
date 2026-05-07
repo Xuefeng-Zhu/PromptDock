@@ -50,6 +50,7 @@ export interface FirestoreWorkspaceDoc {
 
 export interface FirestoreFolderDoc {
   name: string;
+  // Stored for cross-device duplicate checks without relying on display casing or spacing.
   normalizedName?: string;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;

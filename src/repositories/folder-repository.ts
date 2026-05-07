@@ -55,13 +55,13 @@ export class FolderRepository implements IFolderRepository {
   }
 
   async createFolder(name: string, workspaceId: string): Promise<Folder> {
-    if (this.firestoreDelegate) {
-      return this.firestoreDelegate.createFolder(name, workspaceId);
-    }
-
     const cleanedName = cleanFolderName(name);
     if (!cleanedName) {
       throw new Error('Folder name is required.');
+    }
+
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.createFolder(cleanedName, workspaceId);
     }
 
     await this.ensureLoaded();

@@ -5,7 +5,7 @@ import { EditorFolderField } from '../prompt-editor/EditorFolderField';
 interface PromptFolderSectionProps {
   folder?: Folder;
   folders?: Folder[];
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onUpdateFolder?: (id: string, folderId: string | null) => void;
   prompt: PromptRecipe;
 }

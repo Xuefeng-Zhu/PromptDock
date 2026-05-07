@@ -11,11 +11,13 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { SyncService } from '../sync-service';
 import { ConflictService } from '../conflict-service';
 import { PromptRepository } from '../../repositories/prompt-repository';
+import { createFolderStore } from '../../stores/folder-store';
 import { createPromptStore } from '../../stores/prompt-store';
 import type { AppModeStore } from '../../stores/app-mode-store';
+import type { FolderStore } from '../../stores/folder-store';
 import type { PromptStore } from '../../stores/prompt-store';
-import type { PromptRecipe } from '../../types/index';
-import type { IPromptRepository } from '../../repositories/interfaces';
+import type { Folder, PromptRecipe } from '../../types/index';
+import type { IFolderRepository, IPromptRepository } from '../../repositories/interfaces';
 import type { LocalStorageBackend } from '../../repositories/local-storage-backend';
 import type { StoreApi } from 'zustand';
 
@@ -38,6 +40,16 @@ function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
     lastUsedAt: null,
     createdBy: 'local',
     version: 1,
+    ...overrides,
+  };
+}
+
+function makeFolder(overrides: Partial<Folder> = {}): Folder {
+  return {
+    id: `folder-${Math.random().toString(36).slice(2, 8)}`,
+    name: 'General',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
     ...overrides,
   };
 }
@@ -115,10 +127,21 @@ function createMockFirestoreDelegate(): IPromptRepository {
   };
 }
 
+function createMockFolderRepo(): IFolderRepository {
+  return {
+    getAllFolders: vi.fn(async () => []),
+    reloadAllFolders: vi.fn(async () => []),
+    createFolder: vi.fn(async (name, workspaceId) =>
+      makeFolder({ id: `${workspaceId}-${name}`, name }),
+    ),
+  };
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('SyncService ↔ PromptStore wiring', () => {
   let mockAppModeStore: AppModeStore;
+  let folderStore: StoreApi<FolderStore>;
   let promptStore: StoreApi<PromptStore>;
   let promptRepo: PromptRepository;
   let conflictService: ConflictService;
@@ -129,6 +152,7 @@ describe('SyncService ↔ PromptStore wiring', () => {
     mockAppModeStore = createMockAppModeStore();
     backend = createMockBackend();
     promptRepo = new PromptRepository(backend);
+    folderStore = createFolderStore(createMockFolderRepo());
     promptStore = createPromptStore(promptRepo);
     conflictService = new ConflictService();
   });
@@ -220,6 +244,32 @@ describe('SyncService ↔ PromptStore wiring', () => {
       promptStore.setState({ prompts: [] });
 
       expect(promptStore.getState().prompts).toHaveLength(0);
+    });
+  });
+
+  describe('folder sync wiring', () => {
+    it('updates FolderStore when remote folder changes arrive', () => {
+      const remoteFolders = [
+        makeFolder({ id: 'folder-design', name: 'Design' }),
+        makeFolder({ id: 'folder-research', name: 'Research' }),
+      ];
+      const onRemoteFoldersChanged = (folders: Folder[]) => {
+        folderStore.getState().setFolders(folders);
+      };
+
+      syncService = new SyncService({
+        appModeStore: mockAppModeStore,
+        onRemotePromptsChanged: vi.fn(),
+        onRemoteFoldersChanged,
+        onConflictDetected: vi.fn(),
+      });
+
+      onRemoteFoldersChanged(remoteFolders);
+
+      expect(folderStore.getState().folders.map((folder) => folder.name)).toEqual([
+        'Design',
+        'Research',
+      ]);
     });
   });
 

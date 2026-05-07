@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Sidebar } from '../sidebar';
 import { PromptEditor } from '../prompt-editor';
-import { createFolder, readFolders, writeFolders } from '../../utils/folder-storage';
 import type { Folder } from '../../types/index';
 
 // ─── Folder Creation Integration Tests ─────────────────────────────────────────
@@ -83,49 +82,6 @@ describe('Sidebar folder creation', () => {
     fireEvent.change(input, { target: { value: 'Test' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(screen.queryByLabelText('New folder name')).toBeNull();
-  });
-});
-
-// ─── Folder Persistence Tests ──────────────────────────────────────────────────
-
-describe('Folder persistence (folder-storage utility)', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  it('createFolder persists a folder to localStorage', () => {
-    const folder = createFolder('Test Folder');
-    expect(folder.name).toBe('Test Folder');
-    expect(folder.id).toContain('folder-');
-    const stored = readFolders();
-    expect(stored).toHaveLength(1);
-    expect(stored[0].name).toBe('Test Folder');
-  });
-
-  it('readFolders returns empty array when no folders exist', () => {
-    expect(readFolders()).toEqual([]);
-  });
-
-  it('writeFolders and readFolders round-trip correctly', () => {
-    const folders: Folder[] = [
-      { id: 'f1', name: 'Alpha', createdAt: new Date('2024-01-01'), updatedAt: new Date('2024-01-01') },
-      { id: 'f2', name: 'Beta', createdAt: new Date('2024-02-01'), updatedAt: new Date('2024-02-01') },
-    ];
-    writeFolders(folders);
-    const result = readFolders();
-    expect(result).toHaveLength(2);
-    expect(result[0].name).toBe('Alpha');
-    expect(result[1].name).toBe('Beta');
-    expect(result[0].createdAt).toBeInstanceOf(Date);
-  });
-
-  it('createFolder appends to existing folders', () => {
-    createFolder('First');
-    createFolder('Second');
-    const stored = readFolders();
-    expect(stored).toHaveLength(2);
-    expect(stored[0].name).toBe('First');
-    expect(stored[1].name).toBe('Second');
   });
 });
 

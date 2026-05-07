@@ -34,6 +34,12 @@ export interface IPromptRepository {
   toggleFavorite(id: string): Promise<PromptRecipe>;
 }
 
+export interface IFolderRepository {
+  createFolder(name: string, workspaceId: string): Promise<Folder>;
+  getAllFolders(workspaceId: string): Promise<Folder[]>;
+  reloadAllFolders?(workspaceId: string): Promise<Folder[]>;
+}
+
 export interface IWorkspaceRepository {
   create(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace>;
   getById(id: string): Promise<Workspace | null>;

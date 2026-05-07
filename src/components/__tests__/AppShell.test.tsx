@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
-import type { PromptRecipe } from '../../types/index';
-import type { IPromptRepository } from '../../repositories/interfaces';
+import type { Folder, PromptRecipe } from '../../types/index';
+import type { IFolderRepository, IPromptRepository } from '../../repositories/interfaces';
+import { initFolderStore } from '../../stores/folder-store';
 import { initPromptStore } from '../../stores/prompt-store';
 import { initSettingsStore, DEFAULT_SETTINGS } from '../../stores/settings-store';
 import { initAppModeStore } from '../../stores/app-mode-store';
@@ -105,6 +106,28 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
   };
 }
 
+function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository {
+  const folders = [...initialFolders];
+
+  return {
+    getAllFolders: vi.fn(async () => folders.map((folder) => ({ ...folder }))),
+    reloadAllFolders: vi.fn(async () => folders.map((folder) => ({ ...folder }))),
+    createFolder: vi.fn(async (name) => {
+      const existing = folders.find((folder) => folder.name.toLowerCase() === name.trim().toLowerCase());
+      if (existing) return { ...existing };
+
+      const folder: Folder = {
+        id: `folder-${name.toLowerCase().replace(/\s+/g, '-')}`,
+        name: name.trim(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      folders.push(folder);
+      return folder;
+    }),
+  };
+}
+
 // ─── Setup ─────────────────────────────────────────────────────────────────────
 
 let mockRepo: IPromptRepository;
@@ -122,6 +145,9 @@ async function setupStore(
   mockRepo = createMockRepo(prompts);
   const store = initPromptStore(mockRepo);
   await store.getState().loadPrompts();
+
+  const folderStore = initFolderStore(createMockFolderRepo());
+  await folderStore.getState().loadFolders();
 
   // Initialize SettingsStore so SettingsScreen can render
   mockSettingsRepo = {

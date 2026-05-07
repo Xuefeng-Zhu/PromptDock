@@ -18,7 +18,7 @@ interface SelectOption {
 interface EditorFolderFieldProps {
   folderId: string | null;
   folderOptions: SelectOption[];
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onFolderChange: (folderId: string | null) => void;
 }
 
@@ -121,7 +121,7 @@ export function EditorFolderField({
   }, []);
 
   const selectFolderOption = useCallback(
-    (option: FolderQuickOption) => {
+    async (option: FolderQuickOption) => {
       if (option.kind === 'none') {
         onFolderChange(null);
         closeEditor();
@@ -134,7 +134,13 @@ export function EditorFolderField({
         return;
       }
 
-      const createdFolder = onCreateFolder?.(option.value);
+      let createdFolder: Folder | void;
+      try {
+        createdFolder = await onCreateFolder?.(option.value);
+      } catch {
+        closeEditor();
+        return;
+      }
       if (createdFolder) {
         const createdOption = {
           label: createdFolder.name,
@@ -169,7 +175,7 @@ export function EditorFolderField({
       if (event.key === 'Enter') {
         event.preventDefault();
         if (clampedHighlightedIndex >= 0) {
-          selectFolderOption(quickFolderOptions[clampedHighlightedIndex]);
+          void selectFolderOption(quickFolderOptions[clampedHighlightedIndex]);
         } else {
           closeEditor();
         }
@@ -248,7 +254,7 @@ export function EditorFolderField({
                     aria-selected={index === clampedHighlightedIndex}
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setHighlightedIndex(index)}
-                    onClick={() => selectFolderOption(option)}
+                    onClick={() => void selectFolderOption(option)}
                     className={[
                       'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors',
                       index === clampedHighlightedIndex

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { trackScreenView } from '../../services/analytics-service';
 import type { ToastStore } from '../../stores/toast-store';
-import type { Folder, PromptRecipe } from '../../types/index';
-import { createFolder, readFolders } from '../../utils/folder-storage';
+import type { PromptRecipe } from '../../types/index';
 import { isOnboardingComplete } from '../../utils/onboarding';
 import {
   createDefaultPromptFilters,
@@ -34,7 +33,6 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   const [variableFillPromptId, setVariableFillPromptId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>(() => createDefaultPromptFilters());
   const [activeSidebarItem, setActiveSidebarItem] = useState('library');
-  const [userFolders, setUserFolders] = useState<Folder[]>(() => readFolders());
   const [editorHasUnsavedChanges, setEditorHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
@@ -76,12 +74,6 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     },
     [blockIfEditorHasUnsavedChanges],
   );
-
-  const handleCreateFolder = useCallback((name: string) => {
-    const folder = createFolder(name);
-    setUserFolders((prev) => [...prev, folder]);
-    return folder;
-  }, []);
 
   const handleOnboardingComplete = useCallback((_choice: 'local' | 'signin') => {
     setScreen({ name: 'library' });
@@ -129,7 +121,6 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     handleCommandPaletteOpen,
     handleConflictBack,
     handleConflictBadgeClick,
-    handleCreateFolder,
     handleEditorCancel,
     handleFilterChange,
     handleNewPrompt,
@@ -145,7 +136,6 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     setScreen,
     setSelectedPromptId,
     setVariableFillPromptId,
-    userFolders,
     variableFillPromptId,
   };
 }

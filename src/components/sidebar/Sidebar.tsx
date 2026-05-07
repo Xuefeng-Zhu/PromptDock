@@ -21,7 +21,7 @@ export interface SidebarProps {
   tagCounts?: Record<string, number>;
   onSettingsOpen?: () => void;
   onToggleTheme?: () => void;
-  onCreateFolder?: (name: string) => void;
+  onCreateFolder?: (name: string) => void | Promise<unknown>;
   onClose?: () => void;
   theme?: UserSettings['theme'];
   variant?: 'desktop' | 'drawer';

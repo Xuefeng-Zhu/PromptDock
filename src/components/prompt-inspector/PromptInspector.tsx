@@ -19,7 +19,7 @@ export interface PromptInspectorProps {
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
   onRestore?: (id: string) => void;
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onDelete?: (id: string) => void;
   onCopyBody?: (body: string, promptId?: string) => void;
   onClose?: () => void;

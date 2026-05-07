@@ -2,8 +2,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AppShell } from '../app-shell';
-import type { PromptRecipe } from '../../types/index';
-import type { IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
+import type { Folder, PromptRecipe } from '../../types/index';
+import type { IFolderRepository, IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
+import { initFolderStore } from '../../stores/folder-store';
 import { initPromptStore } from '../../stores/prompt-store';
 import { initSettingsStore, DEFAULT_SETTINGS } from '../../stores/settings-store';
 import { initAppModeStore } from '../../stores/app-mode-store';
@@ -86,6 +87,19 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
   };
 }
 
+function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository {
+  return {
+    getAllFolders: vi.fn(async () => initialFolders.map((folder) => ({ ...folder }))),
+    reloadAllFolders: vi.fn(async () => initialFolders.map((folder) => ({ ...folder }))),
+    createFolder: vi.fn(async (name) => ({
+      id: `folder-${name.toLowerCase().replace(/\s+/g, '-')}`,
+      name,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })),
+  };
+}
+
 // ─── Setup ─────────────────────────────────────────────────────────────────────
 
 let mockRepo: IPromptRepository;
@@ -94,6 +108,9 @@ async function setupStore(prompts: PromptRecipe[] = TEST_PROMPTS) {
   mockRepo = createMockRepo(prompts);
   const store = initPromptStore(mockRepo);
   await store.getState().loadPrompts();
+
+  const folderStore = initFolderStore(createMockFolderRepo());
+  await folderStore.getState().loadFolders();
 
   const settingsRepo: ISettingsRepository = {
     get: vi.fn(async () => ({ ...DEFAULT_SETTINGS })),

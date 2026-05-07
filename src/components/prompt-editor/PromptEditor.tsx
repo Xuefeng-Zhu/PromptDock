@@ -50,7 +50,7 @@ export function PromptEditor({
   });
 
   return (
-    <div className="flex h-full overflow-hidden bg-[var(--color-background)]">
+    <div className="flex h-full min-h-0 overflow-hidden bg-[var(--color-background)]">
       <div className="min-w-0 flex-1 overflow-y-auto">
         <div className={form.isEditorExpanded ? 'mx-auto w-full px-4 py-6 sm:px-8' : 'mx-auto w-full max-w-4xl px-4 py-6 sm:px-8'}>
           <PromptEditorHeader
@@ -122,7 +122,7 @@ export function PromptEditor({
       </div>
 
       {!form.isEditorExpanded && (
-        <div className="hidden shrink-0 lg:block">
+        <div className="hidden h-full min-h-0 shrink-0 lg:block">
           <LivePreviewPanel
             body={form.body}
             promptVariables={form.promptVariables}

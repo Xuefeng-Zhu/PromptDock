@@ -30,7 +30,7 @@ function SidebarFolderItem({
   return (
     <div
       className={[
-        'flex min-h-10 w-full items-center gap-1 rounded-lg text-sm transition-colors duration-150 md:min-h-0',
+        'group flex min-h-10 w-full items-center gap-1 rounded-lg text-sm transition-colors duration-150 md:min-h-0',
         isActive
           ? 'bg-[var(--color-primary)]/10 font-medium text-[var(--color-primary)]'
           : 'text-[var(--color-text-main)] hover:bg-gray-100',
@@ -63,7 +63,7 @@ function SidebarFolderItem({
           onClick={() => {
             void onDeleteFolder(folder);
           }}
-          className="mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 md:h-7 md:w-7"
+          className="mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] opacity-100 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 md:h-7 md:w-7 md:pointer-events-none md:opacity-0 md:transition-opacity md:group-focus-within:pointer-events-auto md:group-focus-within:opacity-100 md:group-hover:pointer-events-auto md:group-hover:opacity-100"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>

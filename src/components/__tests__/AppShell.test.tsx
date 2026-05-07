@@ -125,6 +125,12 @@ function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository 
       folders.push(folder);
       return folder;
     }),
+    deleteFolder: vi.fn(async (id) => {
+      const index = folders.findIndex((folder) => folder.id === id);
+      if (index !== -1) {
+        folders.splice(index, 1);
+      }
+    }),
   };
 }
 

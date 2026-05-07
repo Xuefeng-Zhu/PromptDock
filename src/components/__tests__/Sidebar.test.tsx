@@ -52,6 +52,23 @@ describe('Sidebar', () => {
     expect(onItemSelect).toHaveBeenCalledWith('folder-writing');
   });
 
+  it('calls onDeleteFolder when clicking a folder delete action', () => {
+    const onDeleteFolder = vi.fn();
+    const onItemSelect = vi.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        onDeleteFolder={onDeleteFolder}
+        onItemSelect={onItemSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Writing folder' }));
+
+    expect(onDeleteFolder).toHaveBeenCalledWith(mockFolders[0]);
+    expect(onItemSelect).not.toHaveBeenCalled();
+  });
+
   it('calls onItemSelect with "library" when clicking All Prompts', () => {
     const onItemSelect = vi.fn();
     render(<Sidebar {...defaultProps} onItemSelect={onItemSelect} />);

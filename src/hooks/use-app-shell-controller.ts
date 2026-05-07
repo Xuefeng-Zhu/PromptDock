@@ -6,6 +6,7 @@ import { useFolderStore } from '../stores/folder-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
+import type { Folder } from '../types/index';
 import { isTauriRuntime } from '../utils/runtime';
 import { hideMainWindow } from '../utils/window';
 import { useLibraryData } from './use-library-data';
@@ -18,6 +19,18 @@ import {
   useSelectedPromptVisibility,
   useShellNavigation,
 } from './app-shell/use-shell-navigation';
+
+function formatPromptCount(count: number): string {
+  return `${count} prompt${count === 1 ? '' : 's'}`;
+}
+
+function createDeleteFolderConfirmationMessage(folder: Folder, promptCount: number): string {
+  if (promptCount > 0) {
+    return `Delete "${folder.name}"?\n\n${formatPromptCount(promptCount)} will stay in your library and move to No folder.`;
+  }
+
+  return `Delete "${folder.name}"?`;
+}
 
 export function useAppShellController({
   authService,
@@ -36,9 +49,11 @@ export function useAppShellController({
   const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
+  const clearFolderAssignments = usePromptStore((s) => s.clearFolderAssignments);
   const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
   const userFolders = useFolderStore((s) => s.folders);
   const createFolder = useFolderStore((s) => s.createFolder);
+  const deleteFolder = useFolderStore((s) => s.deleteFolder);
 
   const theme = useSettingsStore((s) => s.settings.theme);
   const storedDefaultAction = useSettingsStore((s) => s.settings.defaultAction);
@@ -59,6 +74,7 @@ export function useAppShellController({
     selectedPromptId,
     setCommandPaletteOpen,
     setEditorHasUnsavedChanges,
+    handleFolderDeleted,
     setScreen,
     setSelectedPromptId,
     setVariableFillPromptId,
@@ -165,6 +181,29 @@ export function useAppShellController({
     [addToast, createFolder],
   );
 
+  const handleDeleteFolder = useCallback(
+    async (folder: Folder) => {
+      const affectedPromptCount = prompts.filter((prompt) => prompt.folderId === folder.id).length;
+      if (!window.confirm(createDeleteFolderConfirmationMessage(folder, affectedPromptCount))) {
+        return;
+      }
+
+      try {
+        const movedPromptCount = await clearFolderAssignments(folder.id);
+        await deleteFolder(folder.id);
+        handleFolderDeleted(folder.id);
+
+        const movedSummary = movedPromptCount > 0
+          ? ` and moved ${formatPromptCount(movedPromptCount)} to No folder`
+          : '';
+        addToast(`Deleted folder "${folder.name}"${movedSummary}.`, 'success');
+      } catch (err) {
+        addToast(`Failed to delete folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      }
+    },
+    [addToast, clearFolderAssignments, deleteFolder, handleFolderDeleted, prompts],
+  );
+
   const showInspector = screen.name === 'library' && libraryData.selectedPrompt !== null;
 
   return {
@@ -187,6 +226,7 @@ export function useAppShellController({
     handleCopyPromptBody: promptCrud.handleCopyPromptBody,
     handleCreateFolder,
     handleDeletePrompt: promptCrud.handleDeletePrompt,
+    handleDeleteFolder,
     handleDuplicatePrompt: promptCrud.handleDuplicatePrompt,
     handleEditPrompt: promptCrud.handleEditPrompt,
     handleEditorArchive: promptCrud.handleEditorArchive,

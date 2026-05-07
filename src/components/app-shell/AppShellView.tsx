@@ -24,6 +24,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     handleConflictBadgeClick,
     handleCopyPromptBody,
     handleCreateFolder,
+    handleDeleteFolder,
     handleDeletePrompt,
     handleDuplicatePrompt,
     handleEditPrompt,
@@ -135,6 +136,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
           onSettingsOpen={handleSettingsOpen}
           onToggleTheme={handleToggleTheme}
           onCreateFolder={handleCreateFolder}
+          onDeleteFolder={handleDeleteFolder}
           theme={theme}
         />
 
@@ -162,6 +164,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
                 onSettingsOpen={handleMobileSettingsOpen}
                 onToggleTheme={handleToggleTheme}
                 onCreateFolder={handleCreateFolder}
+                onDeleteFolder={handleDeleteFolder}
                 onClose={closeMobileNav}
                 theme={theme}
               />

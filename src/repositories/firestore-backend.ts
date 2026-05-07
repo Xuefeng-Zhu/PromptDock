@@ -469,4 +469,13 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   async reloadAllFolders(workspaceId: string): Promise<Folder[]> {
     return this.getAllFolders(workspaceId);
   }
+
+  async deleteFolder(id: string, _workspaceId: string): Promise<void> {
+    const { doc, deleteDoc } = await import('firebase/firestore');
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const firestore = await getFirebaseFirestore();
+    const docRef = doc(firestore, 'workspaces', this.workspaceId, 'folders', id);
+
+    await deleteDoc(docRef);
+  }
 }

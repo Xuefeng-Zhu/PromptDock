@@ -134,6 +134,7 @@ function createMockFolderRepo(): IFolderRepository {
     createFolder: vi.fn(async (name, workspaceId) =>
       makeFolder({ id: `${workspaceId}-${name}`, name }),
     ),
+    deleteFolder: vi.fn(async () => {}),
   };
 }
 

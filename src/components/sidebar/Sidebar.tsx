@@ -22,6 +22,7 @@ export interface SidebarProps {
   onSettingsOpen?: () => void;
   onToggleTheme?: () => void;
   onCreateFolder?: (name: string) => void | Promise<unknown>;
+  onDeleteFolder?: (folder: Folder) => void | Promise<unknown>;
   onClose?: () => void;
   theme?: UserSettings['theme'];
   variant?: 'desktop' | 'drawer';
@@ -44,6 +45,7 @@ export function Sidebar({
   onSettingsOpen,
   onToggleTheme,
   onCreateFolder,
+  onDeleteFolder,
   onClose,
   theme = 'system',
   variant = 'desktop',
@@ -93,6 +95,7 @@ export function Sidebar({
           activeItem={activeItem}
           folders={folders}
           onCreateFolder={onCreateFolder}
+          onDeleteFolder={onDeleteFolder}
           onItemSelect={onItemSelect}
           promptCountByFolder={promptCountByFolder}
         />

@@ -101,15 +101,24 @@ function createFolderRepo(initialFolders: Folder[] = []): IFolderRepository {
       folders.push(folder);
       return folder;
     }),
+    deleteFolder: vi.fn(async (id) => {
+      const index = folders.findIndex((folder) => folder.id === id);
+      if (index !== -1) {
+        folders.splice(index, 1);
+      }
+    }),
   };
 }
 
-async function setupStores(initialPrompts: PromptRecipe[] = [makePrompt()]) {
+async function setupStores(
+  initialPrompts: PromptRecipe[] = [makePrompt()],
+  initialFolders: Folder[] = [],
+) {
   const promptRepo = createPromptRepo(initialPrompts);
   const promptStore = initPromptStore(promptRepo);
   await promptStore.getState().loadPrompts();
 
-  const folderRepo = createFolderRepo();
+  const folderRepo = createFolderRepo(initialFolders);
   const folderStore = initFolderStore(folderRepo);
   await folderStore.getState().loadFolders();
 
@@ -215,6 +224,58 @@ describe('useAppShellController', () => {
       'Client Work',
     );
     expect(localStorage.getItem('promptdock_folders')).toBeNull();
+    unmount();
+  });
+
+  it('deletes an empty folder without updating prompts', async () => {
+    const folder: Folder = {
+      id: 'folder-empty',
+      name: 'Empty',
+      createdAt: new Date('2024-01-04T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+    };
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { folderRepo, promptRepo } = await setupStores([makePrompt()], [folder]);
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    await act(async () => {
+      await result.current.handleDeleteFolder(folder);
+    });
+
+    expect(confirmSpy).toHaveBeenCalledWith('Delete "Empty"?');
+    expect(promptRepo.update).not.toHaveBeenCalled();
+    expect(folderRepo.deleteFolder).toHaveBeenCalledWith('folder-empty', 'local');
+    expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-empty')).toBe(false);
+
+    confirmSpy.mockRestore();
+    unmount();
+  });
+
+  it('deletes a folder with prompts by moving them to no folder', async () => {
+    const folder: Folder = {
+      id: 'folder-client',
+      name: 'Client',
+      createdAt: new Date('2024-01-04T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+    };
+    const prompt = makePrompt({ id: 'prompt-foldered', folderId: folder.id });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { folderRepo, promptRepo } = await setupStores([prompt], [folder]);
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    await act(async () => {
+      await result.current.handleDeleteFolder(folder);
+    });
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'Delete "Client"?\n\n1 prompt will stay in your library and move to No folder.',
+    );
+    expect(promptRepo.update).toHaveBeenCalledWith('prompt-foldered', { folderId: null });
+    expect(folderRepo.deleteFolder).toHaveBeenCalledWith('folder-client', 'local');
+    expect(result.current.prompts.find((item) => item.id === 'prompt-foldered')?.folderId).toBeNull();
+    expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client')).toBe(false);
+
+    confirmSpy.mockRestore();
     unmount();
   });
 });

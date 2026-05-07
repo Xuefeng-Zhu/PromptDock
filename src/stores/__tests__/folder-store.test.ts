@@ -28,6 +28,7 @@ function createRepo(): IFolderRepository {
     createFolder: vi.fn(async (name, workspaceId) =>
       makeFolder({ id: `${workspaceId}-${name}`, name }),
     ),
+    deleteFolder: vi.fn(async () => {}),
   };
 }
 
@@ -64,5 +65,20 @@ describe('FolderStore', () => {
     expect(store.getState().folders[0]).toEqual(
       expect.objectContaining({ id: 'workspace-b-Design', name: 'Design' }),
     );
+  });
+
+  it('deletes folders in the active workspace and removes them from state', async () => {
+    store.setState({
+      activeWorkspaceId: 'workspace-a',
+      folders: [
+        makeFolder({ id: 'folder-remove', name: 'Remove' }),
+        makeFolder({ id: 'folder-keep', name: 'Keep' }),
+      ],
+    } satisfies Partial<FolderStore>);
+
+    await store.getState().deleteFolder('folder-remove');
+
+    expect(repo.deleteFolder).toHaveBeenCalledWith('folder-remove', 'workspace-a');
+    expect(store.getState().folders.map((folder) => folder.id)).toEqual(['folder-keep']);
   });
 });

@@ -8,6 +8,7 @@ export interface FolderStore {
   activeWorkspaceId: string;
   loadFolders: () => Promise<void>;
   createFolder: (name: string) => Promise<Folder>;
+  deleteFolder: (id: string) => Promise<void>;
   setActiveWorkspaceId: (workspaceId: string) => void;
   setFolders: (folders: Folder[]) => void;
 }
@@ -44,6 +45,14 @@ export function createFolderStore(repo: IFolderRepository) {
       const folder = await repo.createFolder(name, activeWorkspaceId);
       set((state) => ({ folders: upsertFolder(state.folders, folder) }));
       return folder;
+    },
+
+    async deleteFolder(id: string) {
+      const { activeWorkspaceId } = get();
+      await repo.deleteFolder(id, activeWorkspaceId);
+      set((state) => ({
+        folders: state.folders.filter((folder) => folder.id !== id),
+      }));
     },
 
     setActiveWorkspaceId(workspaceId: string) {

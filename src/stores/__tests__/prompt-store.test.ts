@@ -265,6 +265,41 @@ describe('PromptStore', () => {
     });
   });
 
+  // ── clearFolderAssignments ─────────────────────────────────────────────────
+
+  describe('clearFolderAssignments', () => {
+    it('moves prompts in the deleted folder to no folder without removing them', async () => {
+      repo = createMockRepo([
+        makePrompt({ id: 'p1', title: 'In Folder', folderId: 'folder-remove' }),
+        makePrompt({ id: 'p2', title: 'Also In Folder', folderId: 'folder-remove' }),
+        makePrompt({ id: 'p3', title: 'Elsewhere', folderId: 'folder-keep' }),
+      ]);
+      store = createPromptStore(repo);
+      await store.getState().loadPrompts();
+
+      const movedCount = await store.getState().clearFolderAssignments('folder-remove');
+
+      expect(movedCount).toBe(2);
+      expect(repo.update).toHaveBeenCalledWith('p1', { folderId: null });
+      expect(repo.update).toHaveBeenCalledWith('p2', { folderId: null });
+      expect(store.getState().prompts.map((prompt) => prompt.id)).toEqual(['p1', 'p2', 'p3']);
+      expect(store.getState().prompts.find((prompt) => prompt.id === 'p1')?.folderId).toBeNull();
+      expect(store.getState().prompts.find((prompt) => prompt.id === 'p2')?.folderId).toBeNull();
+      expect(store.getState().prompts.find((prompt) => prompt.id === 'p3')?.folderId).toBe('folder-keep');
+    });
+
+    it('clears a matching folder filter when assignments are removed', async () => {
+      repo = createMockRepo([makePrompt({ id: 'p1', folderId: 'folder-remove' })]);
+      store = createPromptStore(repo);
+      await store.getState().loadPrompts();
+      store.getState().setFolderFilter('folder-remove');
+
+      await store.getState().clearFolderAssignments('folder-remove');
+
+      expect(store.getState().folderFilter).toBeNull();
+    });
+  });
+
   // ── toggleFavorite ─────────────────────────────────────────────────────────
 
   describe('toggleFavorite', () => {

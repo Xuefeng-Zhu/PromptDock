@@ -43,7 +43,7 @@ export function AccountMenuPopover({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((current) => !current)}
-        className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+        className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-gray-100 md:h-auto md:w-auto md:p-2"
         style={{ color: 'var(--color-text-muted)' }}
       >
         <User className="h-4 w-4" />
@@ -53,7 +53,7 @@ export function AccountMenuPopover({
         <div
           role="dialog"
           aria-label="Account"
-          className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-[calc(100vw-1.5rem)] max-w-72 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3 shadow-lg"
         >
           <AccountPanel
             authService={authService}

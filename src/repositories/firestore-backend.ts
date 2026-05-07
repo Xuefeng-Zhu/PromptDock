@@ -8,9 +8,16 @@
  * Requirements: 7.2, 7.7, 8.1, 8.2, 8.3
  */
 
-import type { Folder, PromptRecipe, Workspace, UserSettings } from '../types/index';
+import type {
+  Folder,
+  PromptRecipe,
+  PromptVariable,
+  Workspace,
+  UserSettings,
+} from '../types/index';
 import { cleanFolderName, normalizeFolderName } from '../utils/folder-names';
 import type { IFolderRepository, IPromptRepository } from './interfaces';
+import { resolvePromptVariables } from '../utils/prompt-variables';
 
 // ─── Firestore Document Types ──────────────────────────────────────────────────
 // These represent the shape of documents stored in Firestore, where Date fields
@@ -28,6 +35,7 @@ export interface FirestorePromptDoc {
   title: string;
   description: string;
   body: string;
+  variables?: PromptVariable[];
   tags: string[];
   folderId: string | null;
   favorite: boolean;
@@ -109,10 +117,15 @@ function nullableTimestampToDate(timestamp: FirestoreDateValue): Date | null {
  * Convert a PromptRecipe TypeScript object to a Firestore document.
  */
 export function promptRecipeToFirestoreDoc(recipe: PromptRecipe): FirestorePromptDoc {
+  const variables = recipe.variables
+    ? resolvePromptVariables(recipe.body, recipe.variables)
+    : undefined;
+
   return {
     title: recipe.title,
     description: recipe.description,
     body: recipe.body,
+    ...(variables && variables.length > 0 ? { variables } : {}),
     tags: [...recipe.tags],
     folderId: recipe.folderId,
     favorite: recipe.favorite,
@@ -131,12 +144,17 @@ export function promptRecipeToFirestoreDoc(recipe: PromptRecipe): FirestorePromp
  * Convert a Firestore document back to a PromptRecipe TypeScript object.
  */
 export function firestoreDocToPromptRecipe(id: string, doc: FirestorePromptDoc): PromptRecipe {
+  const variables = Array.isArray(doc.variables)
+    ? resolvePromptVariables(doc.body, doc.variables)
+    : undefined;
+
   return {
     id,
     workspaceId: doc.workspaceId,
     title: doc.title,
     description: doc.description,
     body: doc.body,
+    ...(variables && variables.length > 0 ? { variables } : {}),
     tags: [...doc.tags],
     folderId: doc.folderId,
     favorite: doc.favorite,
@@ -243,10 +261,14 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
     const promptsCol = await this.getPromptsCollection();
 
     const now = new Date();
+    const variables = recipe.variables
+      ? resolvePromptVariables(recipe.body, recipe.variables)
+      : undefined;
     const docData = {
       title: recipe.title,
       description: recipe.description,
       body: recipe.body,
+      ...(variables && variables.length > 0 ? { variables } : {}),
       tags: [...recipe.tags],
       folderId: recipe.folderId,
       favorite: recipe.favorite,
@@ -381,6 +403,9 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
       title: `Copy of ${original.title}`,
       description: original.description,
       body: original.body,
+      variables: original.variables
+        ? resolvePromptVariables(original.body, original.variables)
+        : undefined,
       tags: [...original.tags],
       folderId: original.folderId,
       favorite: false,

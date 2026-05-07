@@ -8,6 +8,7 @@ import { PromptVariablesSection } from './PromptVariablesSection';
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface PromptInspectorProps {
+  ariaLabel?: string;
   availableTags?: string[];
   prompt: PromptRecipe;
   folder?: Folder;
@@ -17,9 +18,11 @@ export interface PromptInspectorProps {
   onEdit?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
+  onRestore?: (id: string) => void;
   onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onDelete?: (id: string) => void;
   onCopyBody?: (body: string, promptId?: string) => void;
+  onClose?: () => void;
   onUpdateFolder?: (id: string, folderId: string | null) => void;
   onUpdateTags?: (id: string, updateTags: (tags: string[]) => string[]) => void;
 }
@@ -27,6 +30,7 @@ export interface PromptInspectorProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function PromptInspector({
+  ariaLabel = 'Prompt details',
   availableTags = [],
   prompt,
   folder,
@@ -36,24 +40,28 @@ export function PromptInspector({
   onEdit,
   onDuplicate,
   onArchive,
+  onRestore,
   onCreateFolder,
   onDelete,
   onCopyBody,
+  onClose,
   onUpdateFolder,
   onUpdateTags,
 }: PromptInspectorProps) {
   return (
     <aside
       className="flex flex-col h-full border-l border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden"
-      aria-label="Prompt details"
+      aria-label={ariaLabel}
     >
       <div className="flex-1 overflow-y-auto">
         <PromptInspectorHeader
           prompt={prompt}
           onArchive={onArchive}
           onDelete={onDelete}
+          onRestore={onRestore}
           onDuplicate={onDuplicate}
           onEdit={onEdit}
+          onClose={onClose}
           onToggleFavorite={onToggleFavorite}
         />
         <PromptFolderSection

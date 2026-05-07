@@ -49,6 +49,16 @@ describe('PromptGrid', () => {
     expect(options.length).toBe(6);
   });
 
+  it('keeps non-virtualized grid rows sized to the card content', () => {
+    render(<PromptGrid {...defaultProps} prompts={[MOCK_PROMPTS[0]]} />);
+
+    const listbox = screen.getByRole('listbox', { name: 'Prompt list' });
+
+    expect(listbox.className).toContain('auto-rows-max');
+    expect(listbox.className).toContain('content-start');
+    expect(listbox.className).toContain('items-start');
+  });
+
   it('renders each prompt title', () => {
     render(<PromptGrid {...defaultProps} />);
     expect(screen.getByText('Summarize Text')).toBeDefined();

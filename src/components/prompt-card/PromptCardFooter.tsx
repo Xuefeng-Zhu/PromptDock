@@ -18,7 +18,7 @@ export function PromptCardFooter({
     <div
       className={
         isList
-          ? 'ml-auto flex shrink-0 items-center gap-3'
+          ? 'flex w-full shrink-0 items-center justify-between gap-3 sm:ml-auto sm:w-auto sm:justify-start'
           : 'mt-3 flex items-center justify-between border-t border-[var(--color-border)] pt-2'
       }
     >

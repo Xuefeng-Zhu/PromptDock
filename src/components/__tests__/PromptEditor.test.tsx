@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { PromptEditor } from '../prompt-editor';
 import { MOCK_PROMPTS, MOCK_FOLDERS } from '../../data/mock-data';
 
@@ -167,6 +167,60 @@ describe('PromptEditor', () => {
     expect(screen.getByText('Template formatting')).toBeDefined();
   });
 
+  it('configures variable input controls and saves their metadata', async () => {
+    const onSave = vi.fn();
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'Typed variables' },
+    });
+    fireEvent.change(screen.getByLabelText('Body'), {
+      target: { value: 'Write in {{tone}} about {{context}}' },
+    });
+
+    expect(screen.getByText('Variable controls')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Use dropdown input for tone',
+    }));
+    const toneOptions = screen.getByLabelText('Options for tone') as HTMLTextAreaElement;
+    fireEvent.change(toneOptions, {
+      target: { value: 'Friendly\n' },
+    });
+    expect(toneOptions.value).toBe('Friendly\n');
+
+    fireEvent.change(toneOptions, {
+      target: { value: 'Friendly\nProfessional' },
+    });
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Use textarea input for context',
+    }));
+    fireEvent.change(screen.getByLabelText('Description for context'), {
+      target: { value: 'Background material' },
+    });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: '',
+            description: '',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+          {
+            name: 'context',
+            defaultValue: '',
+            description: 'Background material',
+            inputType: 'textarea',
+            options: [],
+          },
+        ],
+      }));
+    });
+  });
+
   it('expands the editor and restores the preview rail', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Live Preview')).toBeDefined();
@@ -183,6 +237,92 @@ describe('PromptEditor', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByText('Save')).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Save options' })).toBeNull();
+  });
+
+  it('shows the From JSON action on the new prompt page', () => {
+    render(<PromptEditor {...defaultProps} />);
+    expect(screen.getByRole('button', { name: /From JSON/ })).toBeDefined();
+  });
+
+  it('fills the form from valid JSON on the new prompt page', async () => {
+    const onSave = vi.fn();
+    render(
+      <PromptEditor
+        {...defaultProps}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /From JSON/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Fill prompt form from JSON' });
+    fireEvent.change(within(dialog).getByLabelText('Prompt JSON'), {
+      target: {
+        value: JSON.stringify({
+          title: 'JSON prompt',
+          description: 'Imported from JSON',
+          body: 'Hello {{name}}',
+          tags: ['draft'],
+          folder: 'Writing',
+          favorite: true,
+        }),
+      },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fill Form' }));
+
+    await waitFor(() => {
+      expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('JSON prompt');
+    });
+    expect((screen.getByLabelText('Description') as HTMLTextAreaElement).value).toBe('Imported from JSON');
+    expect((screen.getByLabelText('Body') as HTMLTextAreaElement).value).toBe('Hello {{name}}');
+    expect(screen.getByRole('button', { name: 'Remove draft tag' })).toBeDefined();
+    expect(screen.getByRole('combobox', { name: 'Folder' }).textContent).toContain('Writing');
+    expect(screen.queryByRole('dialog', { name: 'Fill prompt form from JSON' })).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'JSON prompt',
+        description: 'Imported from JSON',
+        body: 'Hello {{name}}',
+        tags: ['draft'],
+        folderId: 'folder-writing',
+        favorite: true,
+      }));
+    });
+  });
+
+  it('shows a parse error without filling the form from invalid JSON', () => {
+    render(<PromptEditor {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /From JSON/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Fill prompt form from JSON' });
+    fireEvent.change(within(dialog).getByLabelText('Prompt JSON'), {
+      target: { value: '{nope' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fill Form' }));
+
+    expect(within(dialog).getByRole('alert').textContent).toContain(
+      'Invalid JSON: unable to parse input.',
+    );
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('');
+  });
+
+  it('shows required field errors without filling the form from JSON', () => {
+    render(<PromptEditor {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /From JSON/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Fill prompt form from JSON' });
+    fireEvent.change(within(dialog).getByLabelText('Prompt JSON'), {
+      target: { value: JSON.stringify({ tags: ['draft'] }) },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fill Form' }));
+
+    const alert = within(dialog).getByRole('alert');
+    expect(alert.textContent).toContain('title is required');
+    expect(alert.textContent).toContain('body is required');
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('');
   });
 
   it('requires title and body before saving', async () => {
@@ -236,6 +376,17 @@ describe('PromptEditor', () => {
     expect(screen.getByText('Duplicate')).toBeDefined();
     expect(screen.getByText('Archive')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Copy prompt' })).toBeDefined();
+  });
+
+  it('does not show the From JSON action when editing', () => {
+    render(
+      <PromptEditor
+        {...defaultProps}
+        promptId="prompt-summarize"
+        prompt={MOCK_PROMPTS[0]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /From JSON/ })).toBeNull();
   });
 
   it('shows metadata footer when editing', () => {

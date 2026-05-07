@@ -1,5 +1,15 @@
-import type { PromptRecipe, ImportResult, DuplicateInfo } from '../types/index';
+import type {
+  PromptRecipe,
+  ImportResult,
+  DuplicateInfo,
+  PromptVariable,
+} from '../types/index';
 import type { IImportExportService } from './interfaces';
+import {
+  isPromptVariableInputType,
+  normalizePromptVariableOptions,
+  resolvePromptVariables,
+} from '../utils/prompt-variables';
 
 /**
  * Schema version for the export JSON format.
@@ -34,6 +44,7 @@ interface ExportDocument {
 interface ExportedPrompt {
   title: string;
   body: string;
+  variables?: PromptVariable[];
   description?: string;
   tags?: string[];
   folderId?: string | null;
@@ -124,11 +135,11 @@ export class ImportExportService implements IImportExportService {
       const prompt = item;
       const promptErrors: string[] = [];
 
-      if (typeof prompt.title !== 'string' || prompt.title.length === 0) {
+      if (typeof prompt.title !== 'string' || prompt.title.trim().length === 0) {
         promptErrors.push(`Prompt at index ${i}: missing or invalid required field "title"`);
       }
 
-      if (typeof prompt.body !== 'string') {
+      if (typeof prompt.body !== 'string' || prompt.body.trim().length === 0) {
         promptErrors.push(`Prompt at index ${i}: missing or invalid required field "body"`);
       }
 
@@ -138,6 +149,10 @@ export class ImportExportService implements IImportExportService {
 
       if ('tags' in prompt && !isStringArray(prompt.tags)) {
         promptErrors.push(`Prompt at index ${i}: optional field "tags" must be an array of strings`);
+      }
+
+      if ('variables' in prompt) {
+        validatePromptVariables(prompt.variables, i, promptErrors);
       }
 
       if (
@@ -215,6 +230,12 @@ export class ImportExportService implements IImportExportService {
     if (recipe.tags && recipe.tags.length > 0) {
       exported.tags = recipe.tags;
     }
+    if (recipe.variables && recipe.variables.length > 0) {
+      const variables = resolvePromptVariables(recipe.body, recipe.variables);
+      if (variables.length > 0) {
+        exported.variables = variables;
+      }
+    }
     if (recipe.folderId !== null) {
       exported.folderId = recipe.folderId;
     }
@@ -241,13 +262,17 @@ export class ImportExportService implements IImportExportService {
    */
   private toPromptRecipe(data: Record<string, unknown>): PromptRecipe {
     const now = new Date();
+    const variables = Array.isArray(data.variables)
+      ? resolvePromptVariables(data.body as string, data.variables as PromptVariable[])
+      : undefined;
 
     return {
       id: crypto.randomUUID(),
       workspaceId: '',
-      title: data.title as string,
+      title: (data.title as string).trim(),
       description: typeof data.description === 'string' ? data.description : '',
       body: data.body as string,
+      ...(variables && variables.length > 0 ? { variables } : {}),
       tags: isStringArray(data.tags) ? data.tags : [],
       folderId: typeof data.folderId === 'string' ? data.folderId : null,
       favorite: typeof data.favorite === 'boolean' ? data.favorite : false,
@@ -260,4 +285,62 @@ export class ImportExportService implements IImportExportService {
       version: 1,
     };
   }
+}
+
+function validatePromptVariables(
+  value: unknown,
+  promptIndex: number,
+  errors: string[],
+): void {
+  if (!Array.isArray(value)) {
+    errors.push(`Prompt at index ${promptIndex}: optional field "variables" must be an array`);
+    return;
+  }
+
+  value.forEach((item, variableIndex) => {
+    const prefix = `Prompt at index ${promptIndex}, variable at index ${variableIndex}`;
+
+    if (!isRecord(item)) {
+      errors.push(`${prefix}: expected an object`);
+      return;
+    }
+
+    if (typeof item.name !== 'string' || item.name.trim().length === 0) {
+      errors.push(`${prefix}: missing or invalid required field "name"`);
+    }
+
+    if ('defaultValue' in item && typeof item.defaultValue !== 'string') {
+      errors.push(`${prefix}: optional field "defaultValue" must be a string`);
+    }
+
+    if ('description' in item && typeof item.description !== 'string') {
+      errors.push(`${prefix}: optional field "description" must be a string`);
+    }
+
+    if ('inputType' in item && !isPromptVariableInputType(item.inputType)) {
+      errors.push(`${prefix}: optional field "inputType" must be text, textarea, or dropdown`);
+    }
+
+    if ('options' in item && !isStringArray(item.options)) {
+      errors.push(`${prefix}: optional field "options" must be an array of strings`);
+    }
+
+    const options = normalizePromptVariableOptions(item.options);
+
+    if (
+      item.inputType === 'dropdown'
+      && options.length === 0
+    ) {
+      errors.push(`${prefix}: dropdown variables require at least one option`);
+    }
+
+    if (
+      item.inputType === 'dropdown'
+      && typeof item.defaultValue === 'string'
+      && item.defaultValue.length > 0
+      && !options.includes(item.defaultValue)
+    ) {
+      errors.push(`${prefix}: dropdown defaultValue must match one of its options`);
+    }
+  });
 }

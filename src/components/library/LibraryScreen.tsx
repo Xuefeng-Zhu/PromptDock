@@ -66,7 +66,7 @@ export function LibraryScreen({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col p-6">
+      <div className="flex min-h-0 flex-1 flex-col p-4 md:p-6">
         <LibraryHeader
           displayCount={displayCount}
           onNewPrompt={onNewPrompt}
@@ -75,7 +75,7 @@ export function LibraryScreen({
         />
 
         {/* ── Filters ───────────────────────────────────────────────────── */}
-        <div className="relative z-20 mb-5 flex items-center justify-between gap-3">
+        <div className="relative z-20 mb-4 flex flex-wrap items-center justify-between gap-3 md:mb-5">
           <PromptFiltersPopover
             activeFilter={activeFilter}
             onFilterChange={onFilterChange}

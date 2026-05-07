@@ -38,12 +38,12 @@ export function PromptFiltersPanel({
     <div
       role="dialog"
       aria-label="Filters"
-      className="absolute left-0 top-full mt-3 w-[min(46rem,calc(100vw-3rem))] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] shadow-2xl"
+      className="absolute left-0 top-full mt-3 w-[calc(100vw-2rem)] max-w-[46rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] shadow-2xl sm:w-[min(46rem,calc(100vw-3rem))]"
     >
       <div className="absolute -top-2 left-6 h-4 w-4 rotate-45 border-l border-t border-[var(--color-border)] bg-[var(--color-panel)]" />
 
-      <div className="relative border-b border-[var(--color-border)] p-5">
-        <div className="flex items-start justify-between gap-4">
+      <div className="relative border-b border-[var(--color-border)] p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div>
             <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Filters</h2>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -62,15 +62,15 @@ export function PromptFiltersPanel({
         <ActiveFilterChips chips={draftFilterChips} onRemoveChip={onRemoveChip} />
       </div>
 
-      <div className="grid max-h-[27rem] grid-cols-1 overflow-y-auto md:grid-cols-3">
-        <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
+      <div className="grid max-h-[min(27rem,calc(100dvh-18rem))] grid-cols-1 overflow-y-auto md:grid-cols-3">
+        <div className="space-y-6 border-b border-[var(--color-border)] p-4 sm:p-5 md:border-b-0 md:border-r">
           <StatusFilterGroup
             statuses={draftFilters.statuses}
             onChange={(statuses) => onUpdateDraftFilters({ statuses })}
           />
         </div>
 
-        <div className="space-y-6 border-b border-[var(--color-border)] p-5 md:border-b-0 md:border-r">
+        <div className="space-y-6 border-b border-[var(--color-border)] p-4 sm:p-5 md:border-b-0 md:border-r">
           <FolderTagFilterGroups
             draftFilters={draftFilters}
             folderOptions={folderOptions}
@@ -79,7 +79,7 @@ export function PromptFiltersPanel({
           />
         </div>
 
-        <div className="space-y-6 p-5">
+        <div className="space-y-6 p-4 sm:p-5">
           <LastUsedFilterGroup
             value={draftFilters.lastUsed}
             onChange={(lastUsed) => onUpdateDraftFilters({ lastUsed })}
@@ -87,11 +87,11 @@ export function PromptFiltersPanel({
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-[var(--color-border)] p-5">
-        <Button type="button" variant="secondary" size="md" onClick={onReset}>
+      <div className="flex flex-col-reverse gap-2 border-t border-[var(--color-border)] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <Button type="button" variant="secondary" size="md" onClick={onReset} className="w-full sm:w-auto">
           Reset
         </Button>
-        <Button type="button" variant="primary" size="md" onClick={onApply}>
+        <Button type="button" variant="primary" size="md" onClick={onApply} className="w-full sm:w-auto">
           Apply filters
         </Button>
       </div>

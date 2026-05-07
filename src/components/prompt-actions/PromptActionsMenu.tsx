@@ -44,7 +44,7 @@ export function PromptActionsMenu({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="p-1 rounded-md hover:bg-gray-100 transition-colors text-[var(--color-text-muted)]"
+        className="flex h-10 w-10 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 md:h-auto md:w-auto md:p-1"
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="menu"
@@ -98,7 +98,7 @@ function PromptActionMenuButton({
       role="menuitem"
       onClick={onClick}
       className={[
-        'flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+        'flex min-h-10 w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors',
         danger
           ? 'text-red-600 hover:bg-red-50'
           : 'text-[var(--color-text-main)] hover:bg-gray-50',

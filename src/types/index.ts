@@ -6,6 +6,7 @@ export interface PromptRecipe {
   title: string;
   description: string;
   body: string;
+  variables?: PromptVariable[];
   tags: string[];
   folderId: string | null;
   favorite: boolean;
@@ -29,7 +30,11 @@ export interface PromptVariable {
   name: string;
   defaultValue: string;
   description: string;
+  inputType: PromptVariableInputType;
+  options: string[];
 }
+
+export type PromptVariableInputType = 'text' | 'textarea' | 'dropdown';
 
 export interface Workspace {
   id: string;

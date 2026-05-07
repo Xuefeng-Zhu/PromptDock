@@ -23,7 +23,7 @@ export function CommandPaletteResults({
       ref={resultsListRef}
       role="listbox"
       aria-label="Search results"
-      className="max-h-72 overflow-y-auto py-1"
+      className="max-h-[min(60dvh,18rem)] overflow-y-auto py-1"
     >
       {prompts.length === 0 ? (
         <PromptSearchEmptyState variant="palette">No prompts found</PromptSearchEmptyState>
@@ -34,7 +34,7 @@ export function CommandPaletteResults({
             role="option"
             aria-selected={index === highlightedIndex}
             className={[
-              'flex cursor-pointer flex-col gap-0.5 px-4 py-2.5 transition-colors',
+              'flex min-h-14 cursor-pointer flex-col gap-0.5 px-4 py-2.5 transition-colors',
               index === highlightedIndex
                 ? 'bg-[var(--color-primary-light)]'
                 : 'hover:bg-gray-50',
@@ -49,7 +49,7 @@ export function CommandPaletteResults({
               {prompt.title}
             </span>
             <span
-              className="truncate text-xs"
+              className="line-clamp-2 text-xs"
               style={{ color: 'var(--color-text-muted)' }}
             >
               {prompt.description}

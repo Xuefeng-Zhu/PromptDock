@@ -207,6 +207,11 @@ describe('AppShell', () => {
     );
     mockHideMainWindow.mockReset();
     mockHideMainWindow.mockResolvedValue(undefined);
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: 1024,
+      writable: true,
+    });
     localStorage.clear();
   });
 
@@ -219,6 +224,38 @@ describe('AppShell', () => {
     it('renders the Sidebar after completing onboarding', async () => {
       await renderOnLibraryScreen();
       expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeDefined();
+    });
+
+    it('opens and closes the mobile navigation drawer from the top bar', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeDefined();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close navigation' }));
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
+    });
+
+    it('closes the mobile navigation drawer from backdrop and Escape', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Close navigation backdrop' }));
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
+    });
+
+    it('closes the mobile navigation drawer after selecting a navigation item', async () => {
+      await renderOnLibraryScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+      const mobileNav = screen.getByRole('navigation', { name: 'Mobile navigation' });
+      fireEvent.click(within(mobileNav).getByText('Favorites'));
+
+      expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).toBeNull();
     });
 
     it('renders prompts from PromptStore on library screen', async () => {
@@ -941,7 +978,7 @@ describe('AppShell', () => {
       expect(screen.getByText('Summarize Text')).toBeDefined();
     });
 
-    it('clicking Delete in inspector dropdown calls deletePrompt on the store', async () => {
+    it('clicking Delete in inspector dropdown confirms before deleting from the store', async () => {
       const { mockRepo } = await renderOnLibraryScreen();
 
       await selectPromptCard('prompt-1');
@@ -958,6 +995,13 @@ describe('AppShell', () => {
       const deleteItem = screen.getByRole('menuitem', { name: 'Delete' });
       await act(async () => {
         fireEvent.click(deleteItem);
+      });
+
+      expect(mockRepo.delete).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: /Delete/i })).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
       });
 
       expect(mockRepo.delete).toHaveBeenCalledWith('prompt-1');

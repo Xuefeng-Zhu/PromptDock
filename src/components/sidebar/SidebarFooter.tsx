@@ -20,7 +20,7 @@ export function SidebarFooter({
       <button
         type="button"
         onClick={onSettingsOpen}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)] transition-colors"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 py-2 text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)] md:min-h-0 md:py-1.5"
         aria-label="Settings"
       >
         <Settings className="h-4 w-4" />
@@ -30,7 +30,7 @@ export function SidebarFooter({
       <button
         type="button"
         onClick={onToggleTheme}
-        className="rounded-lg p-2 text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)] transition-colors"
+        className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)] md:h-auto md:w-auto md:p-2"
         aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       >
         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

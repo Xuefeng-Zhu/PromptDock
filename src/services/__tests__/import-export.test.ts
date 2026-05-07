@@ -32,10 +32,10 @@ function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
 // ─── Generators ────────────────────────────────────────────────────────────────
 
 /** Non-empty string for title (import requires non-empty title) */
-const titleArb = fc.stringMatching(/^[a-zA-Z0-9 ]{1,40}$/);
+const titleArb = fc.stringMatching(/^[a-zA-Z0-9 ]{1,40}$/).filter((value) => value.trim().length > 0);
 
-/** String for body */
-const bodyArb = fc.stringMatching(/^[a-zA-Z0-9 {}]{0,80}$/);
+/** Non-empty string for body (import requires non-empty trimmed body) */
+const bodyArb = fc.stringMatching(/^[a-zA-Z0-9 {}]{1,80}$/).filter((value) => value.trim().length > 0);
 
 /** String for description */
 const descriptionArb = fc.stringMatching(/^[a-zA-Z0-9 ]{0,40}$/);
@@ -108,6 +108,49 @@ describe('ImportExportService — Unit Tests', () => {
     expect(parsed.prompts[1].title).toBe('Beta');
   });
 
+  it('should export variable metadata when configured', () => {
+    const prompts = [
+      makePrompt({
+        body: 'Write in a {{tone}} tone about {{context}}',
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: 'Friendly',
+            description: 'Voice for the response',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+          {
+            name: 'context',
+            defaultValue: '',
+            description: 'Background details',
+            inputType: 'textarea',
+            options: [],
+          },
+        ],
+      }),
+    ];
+
+    const parsed = JSON.parse(service.exportToJSON(prompts));
+
+    expect(parsed.prompts[0].variables).toEqual([
+      {
+        name: 'tone',
+        defaultValue: 'Friendly',
+        description: 'Voice for the response',
+        inputType: 'dropdown',
+        options: ['Friendly', 'Professional'],
+      },
+      {
+        name: 'context',
+        defaultValue: '',
+        description: 'Background details',
+        inputType: 'textarea',
+        options: [],
+      },
+    ]);
+  });
+
   it('should import valid JSON and produce PromptRecipe objects', () => {
     const json = JSON.stringify({
       version: '1.0',
@@ -124,6 +167,90 @@ describe('ImportExportService — Unit Tests', () => {
       expect(result.prompts[0].title).toBe('Imported Prompt');
       expect(result.prompts[0].body).toBe('Some body text');
       expect(result.prompts[0].id).toBeDefined();
+    }
+  });
+
+  it('should import variable metadata for matching placeholders', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        {
+          title: 'Imported Prompt',
+          body: 'Use {{tone}} tone for {{context}}',
+          variables: [
+            {
+              name: 'tone',
+              defaultValue: 'Professional',
+              description: 'Tone choice',
+              inputType: 'dropdown',
+              options: ['Friendly', 'Professional'],
+            },
+            {
+              name: 'context',
+              description: 'Long-form context',
+              inputType: 'textarea',
+            },
+          ],
+        },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.prompts[0].variables).toEqual([
+        {
+          name: 'tone',
+          defaultValue: 'Professional',
+          description: 'Tone choice',
+          inputType: 'dropdown',
+          options: ['Friendly', 'Professional'],
+        },
+        {
+          name: 'context',
+          defaultValue: '',
+          description: 'Long-form context',
+          inputType: 'textarea',
+          options: [],
+        },
+      ]);
+    }
+  });
+
+  it('should trim imported prompt title while preserving body formatting', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        { title: '  Imported Prompt  ', body: '  Some body text  ' },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.prompts[0].title).toBe('Imported Prompt');
+      expect(result.prompts[0].body).toBe('  Some body text  ');
+    }
+  });
+
+  it('should reject prompts with blank titles or bodies', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        { title: '   ', body: 'Body' },
+        { title: 'Title', body: '' },
+        { title: 'Another title', body: '   ' },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.some((e) => e.includes('title'))).toBe(true);
+      expect(result.errors.filter((e) => e.includes('body'))).toHaveLength(2);
     }
   });
 
@@ -203,6 +330,38 @@ describe('ImportExportService — Unit Tests', () => {
     }
   });
 
+  it('should reject invalid variable metadata', () => {
+    const json = JSON.stringify({
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      prompts: [
+        {
+          title: 'Invalid variables',
+          body: 'Hello {{tone}}',
+          variables: [
+            { name: 'tone', inputType: 'dropdown', options: [] },
+            {
+              name: 'audience',
+              inputType: 'dropdown',
+              defaultValue: 'Developers',
+              options: ['Managers'],
+            },
+            { name: '', inputType: 'slider' },
+          ],
+        },
+      ],
+    });
+    const result = service.importFromJSON(json);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.some((e) => e.includes('dropdown variables require'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('dropdown defaultValue'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('inputType'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('name'))).toBe(true);
+    }
+  });
+
   it('should detect duplicates by title and body', () => {
     const existing = [makePrompt({ id: 'e1', title: 'Shared Title', body: 'Shared Body' })];
     const incoming = [makePrompt({ id: 'i1', title: 'Shared Title', body: 'Shared Body' })];
@@ -275,12 +434,12 @@ describe('Feature: prompt-dock, Property 17: Import/Export Round-Trip', () => {
           expect(result.prompts).toHaveLength(prompts.length);
 
           // Sort both by title+body for stable comparison
-          const sortKey = (p: { title: string; body: string }) => `${p.title}|||${p.body}`;
+          const sortKey = (p: { title: string; body: string }) => `${p.title.trim()}|||${p.body}`;
           const originalSorted = [...prompts].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
           const importedSorted = [...result.prompts].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
           for (let i = 0; i < originalSorted.length; i++) {
-            expect(importedSorted[i].title).toBe(originalSorted[i].title);
+            expect(importedSorted[i].title).toBe(originalSorted[i].title.trim());
             expect(importedSorted[i].body).toBe(originalSorted[i].body);
 
             // Description: export only includes non-empty descriptions

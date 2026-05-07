@@ -132,7 +132,7 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] animate-[fadeIn_150ms_ease-out]"
+      className="fixed inset-0 z-50 flex items-start justify-center px-3 py-3 animate-[fadeIn_150ms_ease-out] sm:pt-[15vh]"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
       onClick={handleBackdropClick}
       data-testid="command-palette-backdrop"
@@ -143,7 +143,7 @@ export function CommandPalette({
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="relative m-0 flex w-full max-w-lg flex-col overflow-hidden rounded-xl border shadow-2xl animate-[slideDown_150ms_ease-out]"
+        className="relative m-0 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border shadow-2xl animate-[slideDown_150ms_ease-out]"
         style={{
           backgroundColor: 'var(--color-panel)',
           borderColor: 'var(--color-border)',

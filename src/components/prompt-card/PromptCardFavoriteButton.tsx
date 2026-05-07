@@ -16,7 +16,7 @@ export function PromptCardFavoriteButton({
         event.stopPropagation();
         onClick();
       }}
-      className="shrink-0 rounded-md p-0.5 transition-colors hover:bg-gray-100"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:h-auto sm:w-auto sm:p-0.5"
       aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
     >
       <Star

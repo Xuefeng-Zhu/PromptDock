@@ -67,7 +67,7 @@ export function PromptSortDropdown({ activeFilter, onFilterChange }: PromptSortD
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 transition-colors hover:bg-gray-50 hover:text-[var(--color-text-main)]"
+        className="inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-md px-2 py-2 transition-colors hover:bg-gray-50 hover:text-[var(--color-text-main)] sm:min-h-0 sm:py-1.5"
         aria-haspopup="menu"
         aria-expanded={open}
       >

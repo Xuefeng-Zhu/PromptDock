@@ -27,12 +27,6 @@ export class FolderRepository implements IFolderRepository {
     await this.backend.writeFolders(this.folders);
   }
 
-  async replaceLocalFolders(folders: Folder[]): Promise<void> {
-    this.folders = folders.map((folder) => ({ ...folder }));
-    this.loaded = true;
-    await this.persist();
-  }
-
   async getAllFolders(workspaceId: string): Promise<Folder[]> {
     if (this.firestoreDelegate) {
       return this.firestoreDelegate.getAllFolders(workspaceId);

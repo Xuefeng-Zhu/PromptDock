@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { LocalStorageBackend } from './repositories/local-storage-backend';
 import { BrowserStorageBackend } from './repositories/browser-storage-backend';
 import type { IStorageBackend } from './repositories/interfaces';
-import type { Folder } from './types/index';
 import { PromptRepository } from './repositories/prompt-repository';
 import { FolderRepository } from './repositories/folder-repository';
 import { SettingsRepository } from './repositories/settings-repository';
@@ -22,8 +21,6 @@ import { AppShell } from './components/app-shell';
 import { ErrorBoundary } from './components/shared';
 import { applyTheme } from './utils/theme';
 import { isTauriRuntime } from './utils/runtime';
-import { clearLegacyFolders, readLegacyFolders } from './utils/legacy-folder-storage';
-import { normalizeFolderName } from './utils/folder-names';
 
 // ─── App Initialization ────────────────────────────────────────────────────────
 
@@ -49,20 +46,6 @@ export function shouldTrackAppOpen(
   analyticsSurface: AnalyticsSurface,
 ): boolean {
   return enableBackgroundServices && analyticsSurface === 'main';
-}
-
-function mergeLegacyFolders(existingFolders: Folder[], legacyFolders: Folder[]): Folder[] {
-  const folders = [...existingFolders];
-  const names = new Set(folders.map((folder) => normalizeFolderName(folder.name)));
-
-  for (const folder of legacyFolders) {
-    const normalizedName = normalizeFolderName(folder.name);
-    if (!normalizedName || names.has(normalizedName)) continue;
-    folders.push(folder);
-    names.add(normalizedName);
-  }
-
-  return folders;
 }
 
 /** Get the shared ConflictService instance (available after initialization). */
@@ -141,13 +124,6 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
   // 5. Load initial data into stores
   await promptStore.getState().loadPrompts();
   await folderStore.getState().loadFolders();
-  const legacyFolders = readLegacyFolders();
-  if (legacyFolders.length > 0) {
-    const mergedFolders = mergeLegacyFolders(folderStore.getState().folders, legacyFolders);
-    await folderRepo.replaceLocalFolders(mergedFolders);
-    folderStore.getState().setFolders(mergedFolders);
-    clearLegacyFolders();
-  }
   await settingsStore.getState().loadSettings();
 
   // 6. Register global hotkey from settings (best-effort — ignore failures at startup)

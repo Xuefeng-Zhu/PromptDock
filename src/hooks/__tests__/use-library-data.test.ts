@@ -88,7 +88,15 @@ describe('useLibraryData', () => {
     expect(result.current.selectedPromptFolder?.name).toBe('Work');
     expect(result.current.selectedPromptVariables).toEqual(['name', 'place']);
     expect(result.current.variableFillPrompt?.id).toBe('derived-folder');
-    expect(result.current.variableFillVariables).toEqual(['topic']);
+    expect(result.current.variableFillVariables).toEqual([
+      {
+        name: 'topic',
+        defaultValue: '',
+        description: '',
+        inputType: 'text',
+        options: [],
+      },
+    ]);
     expect(result.current.sidebarFilterCounts.archived).toBe(1);
     expect(result.current.sidebarTagCounts).toEqual({ writing: 1, research: 1 });
     expect(result.current.availableTags).toEqual(['research', 'writing']);

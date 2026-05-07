@@ -3,6 +3,7 @@ import { CATEGORY_COLORS, PROMPT_CATEGORY_MAP } from '../data/mock-data';
 import type { Folder, PromptRecipe } from '../types/index';
 import { computeFilterCounts, computeTagCounts } from '../utils/sidebar-counts';
 import { extractVariables } from '../utils/prompt-template';
+import { resolvePromptRecipeVariables } from '../utils/prompt-variables';
 import { filterPrompts } from '../utils/library-filtering';
 import { deriveTagFilterOptions } from '../utils/library-filter-options';
 import { formatFolderLabel } from '../utils/folder-label';
@@ -133,7 +134,7 @@ export function useLibraryData({
   );
 
   const variableFillVariables = useMemo(
-    () => (variableFillPrompt ? extractVariables(variableFillPrompt.body) : []),
+    () => (variableFillPrompt ? resolvePromptRecipeVariables(variableFillPrompt) : []),
     [variableFillPrompt],
   );
 

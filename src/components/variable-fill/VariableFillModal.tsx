@@ -3,13 +3,13 @@ import { VariableFillActions } from './VariableFillActions';
 import { VariableFillHeader } from './VariableFillHeader';
 import { VariableInputList } from './VariableInputList';
 import { VariablePreview } from './VariablePreview';
-import type { PromptRecipe, UserSettings } from '../../types/index';
+import type { PromptRecipe, PromptVariable, UserSettings } from '../../types/index';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface VariableFillModalProps {
   prompt: PromptRecipe;
-  variables: string[];
+  variables: PromptVariable[];
   onCancel: () => void;
   defaultAction?: UserSettings['defaultAction'];
   onCopy: (renderedText: string) => void | Promise<void>;

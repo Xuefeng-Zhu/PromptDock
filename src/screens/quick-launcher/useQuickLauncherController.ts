@@ -6,6 +6,7 @@ import { usePromptSearchResults } from '../../hooks/use-prompt-search-results';
 import { usePromptStore } from '../../stores/prompt-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { extractVariables } from '../../utils/prompt-template';
+import { resolvePromptRecipeVariables } from '../../utils/prompt-variables';
 import type { PromptRecipe } from '../../types/index';
 
 function formatActionError(action: string, err: unknown): string {
@@ -156,7 +157,9 @@ export function useQuickLauncherController() {
     [results, highlightIndex, handleSelectPrompt, moveHighlightedIndex],
   );
 
-  const selectedVariables = selectedPrompt ? extractVariables(selectedPrompt.body) : [];
+  const selectedVariables = selectedPrompt
+    ? resolvePromptRecipeVariables(selectedPrompt)
+    : [];
 
   return {
     actionError,

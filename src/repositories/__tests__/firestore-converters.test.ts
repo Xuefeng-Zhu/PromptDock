@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import type { PromptRecipe, Workspace, UserSettings } from '../../types/index';
 import {
+  type FirestorePromptDoc,
   promptRecipeToFirestoreDoc,
   firestoreDocToPromptRecipe,
   workspaceToFirestoreDoc,
@@ -81,6 +82,7 @@ function assertPromptRecipeEqual(original: PromptRecipe, roundTripped: PromptRec
   expect(roundTripped.title).toBe(original.title);
   expect(roundTripped.description).toBe(original.description);
   expect(roundTripped.body).toBe(original.body);
+  expect(roundTripped.variables).toEqual(original.variables);
   expect(roundTripped.tags).toEqual(original.tags);
   expect(roundTripped.folderId).toBe(original.folderId);
   expect(roundTripped.favorite).toBe(original.favorite);
@@ -154,6 +156,22 @@ describe('PromptRecipe Firestore converter', () => {
     title: 'Test Recipe',
     description: 'A test prompt recipe',
     body: 'Hello {{name}}, welcome to {{place}}!',
+    variables: [
+      {
+        name: 'name',
+        defaultValue: '',
+        description: 'Person to greet',
+        inputType: 'text',
+        options: [],
+      },
+      {
+        name: 'place',
+        defaultValue: 'PromptDock',
+        description: 'Destination',
+        inputType: 'dropdown',
+        options: ['PromptDock', 'Earth'],
+      },
+    ],
     tags: ['greeting', 'test'],
     folderId: 'folder-1',
     favorite: true,
@@ -213,6 +231,17 @@ describe('PromptRecipe Firestore converter', () => {
     firestoreDocToPromptRecipe(recipe.id, doc);
     // The original recipe tags should be unchanged after conversion
     expect(originalTags).toEqual(['a', 'b', 'c']);
+  });
+
+  it('should ignore malformed variable metadata from schemaless documents', () => {
+    const doc = {
+      ...promptRecipeToFirestoreDoc(sampleRecipe),
+      variables: 'not-an-array',
+    } as unknown as FirestorePromptDoc;
+
+    const result = firestoreDocToPromptRecipe(sampleRecipe.id, doc);
+
+    expect(result.variables).toBeUndefined();
   });
 });
 

@@ -50,12 +50,7 @@ function SidebarFolderItem({
         </span>
         <span className="min-w-0 flex-1 truncate">{folder.name}</span>
         {count !== undefined && count > 0 && (
-          <span
-            className={[
-              'flex-shrink-0 text-xs tabular-nums text-[var(--color-text-muted)] transition-opacity',
-              isActive ? 'opacity-0' : 'group-focus-within:opacity-0 group-hover:opacity-0',
-            ].join(' ')}
-          >
+          <span className="flex-shrink-0 text-xs tabular-nums text-[var(--color-text-muted)] transition-opacity group-focus-within:opacity-0 group-hover:opacity-0">
             {count}
           </span>
         )}
@@ -68,12 +63,7 @@ function SidebarFolderItem({
           onClick={() => {
             void onDeleteFolder(folder);
           }}
-          className={[
-            'absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-opacity hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 md:h-7 md:w-7',
-            isActive
-              ? 'pointer-events-auto opacity-100'
-              : 'pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100',
-          ].join(' ')}
+          className="pointer-events-none absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 md:h-7 md:w-7"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>

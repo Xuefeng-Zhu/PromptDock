@@ -1,5 +1,6 @@
-import { Lightbulb, X } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import type { PromptVariable } from '../../types/index';
+import { LivePreviewVariableControl } from './LivePreviewVariableControl';
 
 interface LivePreviewPanelProps {
   body: string;
@@ -8,10 +9,6 @@ interface LivePreviewPanelProps {
   variableValues: Record<string, string>;
   onResetPreview: () => void;
   onVariableValueChange: (name: string, value: string) => void;
-}
-
-function formatVariableLabel(variableName: string): string {
-  return variableName.charAt(0).toUpperCase() + variableName.slice(1);
 }
 
 export function LivePreviewPanel({
@@ -38,59 +35,12 @@ export function LivePreviewPanel({
       <div className="px-5 py-4 space-y-3">
         <p className="text-xs text-[var(--color-text-muted)]">Preview with example values</p>
         {promptVariables.map((variable) => (
-          <div
+          <LivePreviewVariableControl
             key={variable.name}
-            className="relative rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
-          >
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-0.5">
-              {formatVariableLabel(variable.name)}
-            </label>
-            <div className="flex items-start justify-between gap-2">
-              {variable.inputType === 'textarea' ? (
-                <textarea
-                  value={variableValues[variable.name] ?? variable.defaultValue}
-                  onChange={(event) => onVariableValueChange(variable.name, event.target.value)}
-                  placeholder={`Enter ${variable.name}…`}
-                  rows={3}
-                  className="min-h-16 flex-1 resize-none bg-transparent text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none"
-                  aria-label={`Preview value for ${variable.name}`}
-                />
-              ) : variable.inputType === 'dropdown' ? (
-                <select
-                  value={variableValues[variable.name] ?? variable.defaultValue}
-                  onChange={(event) => onVariableValueChange(variable.name, event.target.value)}
-                  className="flex-1 bg-transparent text-sm text-[var(--color-text-main)] outline-none"
-                  aria-label={`Preview value for ${variable.name}`}
-                >
-                  <option value="">Select {variable.name}…</option>
-                  {variable.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={variableValues[variable.name] ?? variable.defaultValue}
-                  onChange={(event) => onVariableValueChange(variable.name, event.target.value)}
-                  placeholder={`Enter ${variable.name}…`}
-                  className="flex-1 bg-transparent text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-placeholder)] outline-none"
-                  aria-label={`Preview value for ${variable.name}`}
-                />
-              )}
-              {(variableValues[variable.name] ?? variable.defaultValue) && (
-                <button
-                  type="button"
-                  onClick={() => onVariableValueChange(variable.name, '')}
-                  className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors"
-                  aria-label={`Clear ${variable.name}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
+            variable={variable}
+            value={variableValues[variable.name] ?? variable.defaultValue}
+            onValueChange={onVariableValueChange}
+          />
         ))}
         {promptVariables.length === 0 && (
           <p className="text-xs text-[var(--color-text-placeholder)] italic">

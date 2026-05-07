@@ -126,6 +126,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   return {
     activeFilter,
     activeSidebarItem,
+    blockIfEditorHasUnsavedChanges,
     commandPaletteOpen,
     editorHasUnsavedChanges,
     handleCommandPaletteOpen,

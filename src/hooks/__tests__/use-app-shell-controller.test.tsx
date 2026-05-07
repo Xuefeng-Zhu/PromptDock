@@ -103,9 +103,11 @@ function createFolderRepo(initialFolders: Folder[] = []): IFolderRepository {
     }),
     deleteFolder: vi.fn(async (id) => {
       const index = folders.findIndex((folder) => folder.id === id);
-      if (index !== -1) {
-        folders.splice(index, 1);
+      if (index === -1) {
+        throw new Error(`Folder not found: ${id}`);
       }
+
+      folders.splice(index, 1);
     }),
   };
 }
@@ -272,8 +274,71 @@ describe('useAppShellController', () => {
     );
     expect(promptRepo.update).toHaveBeenCalledWith('prompt-foldered', { folderId: null });
     expect(folderRepo.deleteFolder).toHaveBeenCalledWith('folder-client', 'local');
+    expect(
+      vi.mocked(folderRepo.deleteFolder).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(promptRepo.update).mock.invocationCallOrder[0]);
     expect(result.current.prompts.find((item) => item.id === 'prompt-foldered')?.folderId).toBeNull();
     expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client')).toBe(false);
+
+    confirmSpy.mockRestore();
+    unmount();
+  });
+
+  it('does not delete folders while the editor has unsaved changes', async () => {
+    const folder: Folder = {
+      id: 'folder-client',
+      name: 'Client',
+      createdAt: new Date('2024-01-04T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+    };
+    const prompt = makePrompt({ id: 'prompt-foldered', folderId: folder.id });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { folderRepo, promptRepo } = await setupStores([prompt], [folder]);
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    act(() => {
+      result.current.handleEditPrompt('prompt-foldered');
+    });
+    act(() => {
+      result.current.setEditorHasUnsavedChanges(true);
+    });
+
+    await act(async () => {
+      await result.current.handleDeleteFolder(folder);
+    });
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(folderRepo.deleteFolder).not.toHaveBeenCalled();
+    expect(promptRepo.update).not.toHaveBeenCalled();
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[toasts.length - 1]?.message).toBe(
+      'Save or cancel your prompt changes before leaving the editor.',
+    );
+
+    confirmSpy.mockRestore();
+    unmount();
+  });
+
+  it('clears derived folder assignments without deleting a missing folder record', async () => {
+    const derivedFolder: Folder = {
+      id: 'folder-imported',
+      name: 'Imported',
+      createdAt: new Date('2024-01-04T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+    };
+    const prompt = makePrompt({ id: 'prompt-derived', folderId: derivedFolder.id });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { folderRepo, promptRepo } = await setupStores([prompt], []);
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    await act(async () => {
+      await result.current.handleDeleteFolder(derivedFolder);
+    });
+
+    expect(folderRepo.deleteFolder).not.toHaveBeenCalled();
+    expect(promptRepo.update).toHaveBeenCalledWith('prompt-derived', { folderId: null });
+    expect(result.current.prompts.find((item) => item.id === 'prompt-derived')?.folderId).toBeNull();
+    expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-imported')).toBe(false);
 
     confirmSpy.mockRestore();
     unmount();

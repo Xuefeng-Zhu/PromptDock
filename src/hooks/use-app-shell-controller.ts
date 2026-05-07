@@ -69,6 +69,7 @@ export function useAppShellController({
   const {
     activeFilter,
     activeSidebarItem,
+    blockIfEditorHasUnsavedChanges,
     commandPaletteOpen,
     screen,
     selectedPromptId,
@@ -183,14 +184,20 @@ export function useAppShellController({
 
   const handleDeleteFolder = useCallback(
     async (folder: Folder) => {
+      if (blockIfEditorHasUnsavedChanges()) return;
+
       const affectedPromptCount = prompts.filter((prompt) => prompt.folderId === folder.id).length;
       if (!window.confirm(createDeleteFolderConfirmationMessage(folder, affectedPromptCount))) {
         return;
       }
 
       try {
+        const isPersistedFolder = userFolders.some((item) => item.id === folder.id);
+        if (isPersistedFolder) {
+          await deleteFolder(folder.id);
+        }
+
         const movedPromptCount = await clearFolderAssignments(folder.id);
-        await deleteFolder(folder.id);
         handleFolderDeleted(folder.id);
 
         const movedSummary = movedPromptCount > 0
@@ -201,7 +208,15 @@ export function useAppShellController({
         addToast(`Failed to delete folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
       }
     },
-    [addToast, clearFolderAssignments, deleteFolder, handleFolderDeleted, prompts],
+    [
+      addToast,
+      blockIfEditorHasUnsavedChanges,
+      clearFolderAssignments,
+      deleteFolder,
+      handleFolderDeleted,
+      prompts,
+      userFolders,
+    ],
   );
 
   const showInspector = screen.name === 'library' && libraryData.selectedPrompt !== null;

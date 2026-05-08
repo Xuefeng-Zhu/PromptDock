@@ -84,6 +84,29 @@ describe('FolderRepository', () => {
     expect(backend.readFolders).toHaveBeenCalledTimes(1);
   });
 
+  it('deletes folders through the configured storage backend', async () => {
+    const removed = makeFolder({ id: 'folder-remove', name: 'Remove' });
+    const kept = makeFolder({ id: 'folder-keep', name: 'Keep' });
+    const backend = createMockBackend([removed, kept]);
+    const repo = new FolderRepository(backend);
+
+    await repo.deleteFolder('folder-remove', 'local');
+
+    expect(backend.writeFolders).toHaveBeenCalledWith([expect.objectContaining({
+      id: 'folder-keep',
+      name: 'Keep',
+    })]);
+  });
+
+  it('throws when deleting a missing folder', async () => {
+    const backend = createMockBackend();
+    const repo = new FolderRepository(backend);
+
+    await expect(repo.deleteFolder('missing-folder', 'local')).rejects.toThrow(
+      'Folder not found: missing-folder',
+    );
+  });
+
   it('delegates synced folder reads and writes by active workspace', async () => {
     const backend = createMockBackend();
     const syncedRepo: IFolderRepository = {
@@ -100,6 +123,7 @@ describe('FolderRepository', () => {
       createFolder: vi.fn(async (name, workspaceId) =>
         makeFolder({ id: `${workspaceId}-${name}`, name }),
       ),
+      deleteFolder: vi.fn(async () => {}),
     };
     const repo = new FolderRepository(backend);
     repo.setFirestoreDelegate(syncedRepo);
@@ -113,6 +137,23 @@ describe('FolderRepository', () => {
 
     expect(syncedRepo.getAllFolders).toHaveBeenCalledWith('workspace-a');
     expect(syncedRepo.createFolder).toHaveBeenCalledWith('Design', 'workspace-b');
+    expect(backend.writeFolders).not.toHaveBeenCalled();
+  });
+
+  it('delegates synced folder deletion by active workspace', async () => {
+    const backend = createMockBackend();
+    const syncedRepo: IFolderRepository = {
+      getAllFolders: vi.fn(async () => []),
+      reloadAllFolders: vi.fn(async () => []),
+      createFolder: vi.fn(async (name) => makeFolder({ name })),
+      deleteFolder: vi.fn(async () => {}),
+    };
+    const repo = new FolderRepository(backend);
+    repo.setFirestoreDelegate(syncedRepo);
+
+    await repo.deleteFolder('folder-a', 'workspace-a');
+
+    expect(syncedRepo.deleteFolder).toHaveBeenCalledWith('folder-a', 'workspace-a');
     expect(backend.writeFolders).not.toHaveBeenCalled();
   });
 });

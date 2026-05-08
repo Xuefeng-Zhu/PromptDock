@@ -75,6 +75,16 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     [blockIfEditorHasUnsavedChanges],
   );
 
+  const handleFolderDeleted = useCallback(
+    (folderId: string) => {
+      if (activeSidebarItem !== folderId) return;
+
+      setActiveSidebarItem('library');
+      setActiveFilter(createDefaultPromptFilters());
+    },
+    [activeSidebarItem],
+  );
+
   const handleOnboardingComplete = useCallback((_choice: 'local' | 'signin') => {
     setScreen({ name: 'library' });
   }, []);
@@ -116,6 +126,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   return {
     activeFilter,
     activeSidebarItem,
+    blockIfEditorHasUnsavedChanges,
     commandPaletteOpen,
     editorHasUnsavedChanges,
     handleCommandPaletteOpen,
@@ -123,6 +134,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     handleConflictBadgeClick,
     handleEditorCancel,
     handleFilterChange,
+    handleFolderDeleted,
     handleNewPrompt,
     handleOnboardingComplete,
     handleSelectPrompt,

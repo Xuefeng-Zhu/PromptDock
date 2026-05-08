@@ -79,4 +79,20 @@ export class FolderRepository implements IFolderRepository {
     await this.persist();
     return { ...folder };
   }
+
+  async deleteFolder(id: string, workspaceId: string): Promise<void> {
+    if (this.firestoreDelegate) {
+      return this.firestoreDelegate.deleteFolder(id, workspaceId);
+    }
+
+    await this.ensureLoaded();
+
+    const initialLength = this.folders.length;
+    this.folders = this.folders.filter((folder) => folder.id !== id);
+    if (this.folders.length === initialLength) {
+      throw new Error(`Folder not found: ${id}`);
+    }
+
+    await this.persist();
+  }
 }

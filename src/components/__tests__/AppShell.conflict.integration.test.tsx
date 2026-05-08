@@ -97,6 +97,7 @@ function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository 
       createdAt: new Date(),
       updatedAt: new Date(),
     })),
+    deleteFolder: vi.fn(async () => {}),
   };
 }
 

@@ -125,6 +125,12 @@ function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository 
       folders.push(folder);
       return folder;
     }),
+    deleteFolder: vi.fn(async (id) => {
+      const index = folders.findIndex((folder) => folder.id === id);
+      if (index !== -1) {
+        folders.splice(index, 1);
+      }
+    }),
   };
 }
 
@@ -263,6 +269,25 @@ describe('AppShell', () => {
       expect(screen.getByText('Summarize Text')).toBeDefined();
       expect(screen.getByText('Code Review')).toBeDefined();
       expect(screen.getByText('Email Draft')).toBeDefined();
+    });
+
+    it('opens a modal before deleting a folder', async () => {
+      const { mockRepo } = await renderOnLibraryScreen();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Writing folder' }));
+      });
+
+      const dialog = screen.getByRole('dialog', { name: 'Delete "Writing"?' });
+      expect(within(dialog).getByText('1 prompt will stay in your library and move to No folder.')).toBeDefined();
+      expect(mockRepo.update).not.toHaveBeenCalled();
+
+      await act(async () => {
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete folder' }));
+      });
+
+      expect(mockRepo.update).toHaveBeenCalledWith('prompt-1', { folderId: null });
+      expect(screen.queryByRole('dialog', { name: 'Delete "Writing"?' })).toBeNull();
     });
 
     it('opens command palette when ⌘K is pressed', async () => {

@@ -52,6 +52,39 @@ describe('Sidebar', () => {
     expect(onItemSelect).toHaveBeenCalledWith('folder-writing');
   });
 
+  it('calls onDeleteFolder when clicking a folder delete action', () => {
+    const onDeleteFolder = vi.fn();
+    const onItemSelect = vi.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        onDeleteFolder={onDeleteFolder}
+        onItemSelect={onItemSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Writing folder' }));
+
+    expect(onDeleteFolder).toHaveBeenCalledWith(mockFolders[0]);
+    expect(onItemSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps the selected folder delete action hidden until hover or focus', () => {
+    render(
+      <Sidebar
+        {...defaultProps}
+        activeItem="folder-writing"
+        onDeleteFolder={vi.fn()}
+      />,
+    );
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete Writing folder' });
+    expect(deleteButton.className).toContain('opacity-0');
+    expect(deleteButton.className).toContain('pointer-events-none');
+    expect(deleteButton.className).toContain('group-hover:opacity-100');
+    expect(deleteButton.className).toContain('group-focus-within:opacity-100');
+  });
+
   it('calls onItemSelect with "library" when clicking All Prompts', () => {
     const onItemSelect = vi.fn();
     render(<Sidebar {...defaultProps} onItemSelect={onItemSelect} />);

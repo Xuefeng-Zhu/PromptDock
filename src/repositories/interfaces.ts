@@ -36,6 +36,7 @@ export interface IPromptRepository {
 
 export interface IFolderRepository {
   createFolder(name: string, workspaceId: string): Promise<Folder>;
+  deleteFolder(id: string, workspaceId: string): Promise<void>;
   getAllFolders(workspaceId: string): Promise<Folder[]>;
   reloadAllFolders?(workspaceId: string): Promise<Folder[]>;
 }

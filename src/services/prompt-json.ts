@@ -17,6 +17,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Resolves an imported folder reference to an existing folder id.
+ * Imports may use either a display name or id, but unknown folders are rejected
+ * so the editor never creates hidden or misspelled folder assignments.
+ */
 function resolveFolderId(
   value: unknown,
   folders: Folder[],
@@ -50,6 +55,10 @@ function resolveFolderId(
   return { folderId: matchedFolder.id };
 }
 
+/**
+ * Parses imported tags into trimmed, case-insensitively deduped labels.
+ * The first spelling wins so user casing is preserved in the editor draft.
+ */
 function parseTags(value: unknown): { tags: string[]; error?: string } {
   if (value === undefined) return { tags: [] };
 
@@ -70,6 +79,11 @@ function parseTags(value: unknown): { tags: string[]; error?: string } {
   return { tags: Array.from(tagsByKey.values()) };
 }
 
+/**
+ * Parses a user-supplied prompt JSON snippet into an editor-ready draft.
+ * Validates required fields, dedupes tags, resolves folder/folderId against
+ * known folders, and returns accumulated errors without throwing for bad input.
+ */
 export function parsePromptJson(
   json: string,
   { folders = [] }: ParsePromptJsonOptions = {},

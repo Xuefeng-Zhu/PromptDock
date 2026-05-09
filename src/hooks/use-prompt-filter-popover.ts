@@ -22,6 +22,11 @@ interface UsePromptFilterPopoverOptions {
   tagOptions: Array<SearchableMultiSelectOption<TagFilter>>;
 }
 
+/**
+ * Keeps the filter popover's draft state separate from applied library filters.
+ * Drafts reset from the applied filter whenever the popover closes, and only
+ * become active when the user applies them.
+ */
 export function usePromptFilterPopover({
   activeFilter,
   onFilterChange,

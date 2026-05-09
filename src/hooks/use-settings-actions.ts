@@ -8,6 +8,11 @@ import {
   type ThemeOption,
 } from '../components/settings/settings-data';
 
+/**
+ * Wraps settings mutations with runtime capability checks and user-facing errors.
+ * Global hotkeys and paste-by-default are desktop-only, so browser mode hides
+ * those controls and refuses unsupported paste settings.
+ */
 export function useSettingsActions() {
   const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);

@@ -18,6 +18,11 @@ async function getWindowLabel(): Promise<string | null> {
   }
 }
 
+/**
+ * Mounts the React tree that matches the current runtime window.
+ * Tauri launches the quick launcher in a separate labeled window, while browser
+ * dev and the main desktop window render the full app shell.
+ */
 async function mount() {
   const label = await getWindowLabel();
 

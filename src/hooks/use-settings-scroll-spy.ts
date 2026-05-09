@@ -4,6 +4,11 @@ interface ScrollSpyItem<SectionId extends string> {
   id: SectionId;
 }
 
+/**
+ * Tracks the active settings section inside a scrollable container.
+ * Section refs are caller-owned so the hook can support arbitrary settings
+ * layouts while still providing smooth in-container navigation.
+ */
 export function useSettingsScrollSpy<SectionId extends string>(
   items: readonly ScrollSpyItem<SectionId>[],
   initialSection: SectionId,

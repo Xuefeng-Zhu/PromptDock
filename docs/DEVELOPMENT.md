@@ -70,6 +70,21 @@ VITE_USE_EMULATOR=true
 | Icons | Prefer `lucide-react`. |
 | Tests | Co-locate tests in `__tests__/` directories. Use `.property.test.ts` for fast-check invariants and `.integration.test.tsx` for cross-module UI flows. |
 
+### Code Documentation
+
+Use comments to preserve intent, not to narrate syntax. Prefer TSDoc comments for exported functions, hooks, classes, store factories, repositories, and shared utilities when callers need to understand behavior, side effects, return values, or edge cases.
+
+Good places for comments:
+
+- Business rules and data transformations
+- Persistence or sync mappings
+- Runtime-specific behavior for browser, Tauri, Firebase, or emulators
+- Async side effects such as listeners, timers, subscriptions, native commands, and file or clipboard access
+- Non-obvious algorithms such as filtering, ranking, virtualization, variable resolution, and conflict resolution
+- Public APIs used across modules
+
+Avoid comments that repeat the code. Small UI components and obvious helpers can stay uncommented. When changing documented behavior, update the nearby comment in the same patch.
+
 Use `npm run lint` for static TypeScript/React guardrails, `npm run build` for TypeScript validation and production bundling, and `npm test` for behavioral coverage.
 
 ## Branching and PR Expectations

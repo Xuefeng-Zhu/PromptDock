@@ -24,6 +24,10 @@ function isRootLibraryItem(item: string): boolean {
   return item === 'library' || item === 'favorites' || item === 'recent' || item === 'archived';
 }
 
+/**
+ * Owns top-level app navigation state and route-like screen transitions.
+ * Also guards editor exits with unsaved changes and tracks screen-view analytics.
+ */
 export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   const [screen, setScreen] = useState<Screen>(() => ({
     name: isOnboardingComplete() ? 'library' : 'onboarding',
@@ -152,6 +156,10 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
   };
 }
 
+/**
+ * Clears the selected prompt when filters or navigation hide it from the library.
+ * This prevents inspector panels from showing data that is no longer in view.
+ */
 export function useSelectedPromptVisibility({
   filteredPrompts,
   screen,

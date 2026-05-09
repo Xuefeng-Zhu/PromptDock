@@ -39,6 +39,11 @@ function getExecutionResult(pasted: boolean): PromptExecutionResult {
     : { action: 'copied', message: 'Prompt copied to clipboard' };
 }
 
+/**
+ * Centralizes prompt execution side effects for copy and paste flows.
+ * Successful executions update last-used metadata best-effort and emit analytics;
+ * browser paste fallbacks may report "copied" when native paste is unavailable.
+ */
 export function usePromptExecution({
   defaultAction,
   markPromptUsed,

@@ -31,6 +31,11 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+/**
+ * Positions a floating dropdown against its trigger while keeping it on-screen.
+ * Recomputes placement on resize and scroll, choosing top placement only when
+ * there is more available space above than below.
+ */
 export function useAnchoredDropdownPosition<T extends HTMLElement>({
   anchorRef,
   gap = 8,

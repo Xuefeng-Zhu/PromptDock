@@ -41,6 +41,11 @@ export interface AppInitializationOptions {
 
 export type AnalyticsSurface = 'main' | 'quick_launcher';
 
+/**
+ * Determines whether startup should emit an app-open analytics event.
+ * Background services are disabled in tests and auxiliary windows to avoid
+ * duplicate events from the quick launcher surface.
+ */
 export function shouldTrackAppOpen(
   enableBackgroundServices: boolean,
   analyticsSurface: AnalyticsSurface,
@@ -63,6 +68,12 @@ export function getAuthService(): AuthService | null {
   return authServiceInstance;
 }
 
+/**
+ * Idempotently initializes PromptDock's runtime dependencies.
+ * Wires storage, repositories, Zustand stores, optional background services,
+ * auth restoration, analytics, and the global hotkey; concurrent callers share
+ * the same initialization promise.
+ */
 export function initializeApp(options: AppInitializationOptions = {}): Promise<void> {
   if (initialized) return Promise.resolve();
   if (initializationPromise) return initializationPromise;
@@ -78,6 +89,11 @@ export function initializeApp(options: AppInitializationOptions = {}): Promise<v
   return initializationPromise;
 }
 
+/**
+ * Performs the ordered startup sequence after initializeApp has handled
+ * singleton guards. Side effects include persistent storage reads/writes,
+ * store creation, optional seed data, hotkey registration, and sync wiring.
+ */
 async function runAppInitialization(options: AppInitializationOptions): Promise<void> {
   const {
     seedDefaultData = true,
@@ -255,6 +271,11 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
 // ─── Theme Manager ─────────────────────────────────────────────────────────────
 // Rendered only after stores are initialised so useSettingsStore is safe to call.
 
+/**
+ * Applies the persisted theme setting to the document root.
+ * System theme listens for OS preference changes while explicit light/dark modes
+ * apply once per setting change.
+ */
 export function ThemeManager() {
   const theme = useSettingsStore((s) => s.settings.theme);
 

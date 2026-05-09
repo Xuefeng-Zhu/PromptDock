@@ -7,6 +7,11 @@ interface UseAppModeActionsOptions {
   setUserId: AppModeStore['setUserId'];
 }
 
+/**
+ * Bridges auth outcomes into AppModeStore transitions.
+ * The SyncService subscription in App initialization reacts to these mode
+ * changes to start or stop cloud sync.
+ */
 export function useAppModeActions({
   setMode,
   setUserId,

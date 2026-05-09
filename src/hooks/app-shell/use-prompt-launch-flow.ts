@@ -29,6 +29,11 @@ interface UsePromptLaunchFlowOptions {
   variableFillPromptId: string | null;
 }
 
+/**
+ * Coordinates prompt execution from the command palette and variable modal.
+ * Prompts with placeholders are routed through the fill flow; prompts without
+ * placeholders execute immediately using the user's default copy/paste action.
+ */
 export function usePromptLaunchFlow({
   addToast,
   copyText,
@@ -79,6 +84,8 @@ export function usePromptLaunchFlow({
           source: 'variable_fill',
         });
         addToast(result.message, 'success');
+        // Close only the modal that initiated this async copy; if the user has
+        // opened another prompt meanwhile, leave the newer modal in place.
         setVariableFillPromptId((currentId) => (currentId === promptId ? null : currentId));
       } catch (err) {
         addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
@@ -98,6 +105,8 @@ export function usePromptLaunchFlow({
           source: 'variable_fill',
         });
         addToast(result.message, 'success');
+        // Close only the modal that initiated this async paste; if the user has
+        // opened another prompt meanwhile, leave the newer modal in place.
         setVariableFillPromptId((currentId) => (currentId === promptId ? null : currentId));
       } catch (err) {
         addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');

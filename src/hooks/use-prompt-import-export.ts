@@ -11,6 +11,11 @@ function formatImportError(prefix: string, err: unknown): string {
   return `${prefix}: ${err instanceof Error ? err.message : String(err)}`;
 }
 
+/**
+ * Converts parsed import records into create payloads for the active storage mode.
+ * Imported ids and timestamps are intentionally discarded because repositories
+ * own identity and modification metadata for newly inserted prompts.
+ */
 function toImportedPromptData(
   prompt: PromptRecipe,
   workspaceId: string,
@@ -32,6 +37,11 @@ function toImportedPromptData(
   };
 }
 
+/**
+ * Owns the import/export workflow for settings screens.
+ * Tracks validation errors, duplicate-resolution state, save/open dialog side
+ * effects, and whether imported prompts should be written locally or to sync.
+ */
 export function usePromptImportExport() {
   const prompts = usePromptStore((s) => s.prompts);
   const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
@@ -55,6 +65,10 @@ export function usePromptImportExport() {
   const targetWorkspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
   const targetCreatedBy = mode !== 'local' && userId ? userId : 'local';
 
+  /**
+   * Inserts already-validated prompts into the current workspace one by one.
+   * Sequential writes keep repository side effects and error reporting predictable.
+   */
   const importPrompts = useCallback(
     async (incomingPrompts: PromptRecipe[]) => {
       for (const prompt of incomingPrompts) {
@@ -102,6 +116,8 @@ export function usePromptImportExport() {
       const duplicateIncomingIds = new Set(nextDuplicates.map((dupe) => dupe.incoming.id));
       const nonDuplicates = result.prompts.filter((prompt) => !duplicateIncomingIds.has(prompt.id));
 
+      // Pause the import when duplicates exist so the user can choose whether
+      // to skip or overwrite before any incoming prompt is persisted.
       if (nextDuplicates.length > 0) {
         setDuplicates(nextDuplicates);
         setPendingNonDuplicates(nonDuplicates);

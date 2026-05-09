@@ -10,6 +10,11 @@ import type { LocalStorageBackend } from './local-storage-backend';
 
 const LOCAL_WORKSPACE_ID = 'local';
 
+/**
+ * Repository for the single local workspace used outside synced mode.
+ * It mirrors the repository cache/persist pattern used for prompts and folders,
+ * but intentionally ignores user ids because local mode has one workspace only.
+ */
 export class WorkspaceRepository implements IWorkspaceRepository {
   private workspace: Workspace | null = null;
   private loaded = false;

@@ -19,6 +19,11 @@ export interface ToastStore {
 
 let nextId = 1;
 
+/**
+ * Global toast queue with optional auto-dismiss timers.
+ * Toast ids are generated locally because messages are transient UI state and
+ * are never persisted or synced.
+ */
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
 

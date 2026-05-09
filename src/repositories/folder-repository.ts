@@ -2,6 +2,11 @@ import type { Folder } from '../types/index';
 import { cleanFolderName, createFolderId, normalizeFolderName } from '../utils/folder-names';
 import type { IFolderRepository, IStorageBackend } from './interfaces';
 
+/**
+ * Creates a stable local folder id and appends a numeric suffix on collision.
+ * Name uniqueness is checked separately, so collisions here are mostly from
+ * legacy data or manually edited storage.
+ */
 function createUniqueFolderId(name: string, folders: Folder[]): string {
   const baseId = createFolderId(name);
   const existingIds = new Set(folders.map((folder) => folder.id));
@@ -17,6 +22,11 @@ function createUniqueFolderId(name: string, folders: Folder[]): string {
   return candidate;
 }
 
+/**
+ * Local folder repository with optional Firestore delegation for synced mode.
+ * Local operations cache folders in memory and persist the full collection after
+ * each mutation; synced operations are forwarded to the active delegate.
+ */
 export class FolderRepository implements IFolderRepository {
   private folders: Folder[] = [];
   private loaded = false;

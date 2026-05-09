@@ -18,6 +18,11 @@ const RESULT_ROW_HEIGHT = 76;
 const OVERSCAN_ROWS = 5;
 const INITIAL_VIRTUAL_VIEWPORT_HEIGHT = 480;
 
+/**
+ * Provides deterministic virtual rows before the launcher result pane is measured.
+ * This keeps large result sets visible on the first paint instead of waiting for
+ * react-virtual to observe the scroll container.
+ */
 function createInitialVirtualRows(rowCount: number) {
   const visibleRowCount = Math.min(
     rowCount,
@@ -32,6 +37,11 @@ function createInitialVirtualRows(rowCount: number) {
   }));
 }
 
+/**
+ * Renders quick-launcher search results with virtualization for large libraries.
+ * Highlight changes are scrolled into view so keyboard navigation remains usable
+ * even when only a small slice of results is mounted.
+ */
 export function QuickLauncherResults({
   highlightIndex,
   isLoading,

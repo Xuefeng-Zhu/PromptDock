@@ -121,11 +121,13 @@ const DISPLAY_TOKENS: Record<string, { mac: string; other: string }> = {
   Backslash: { mac: '\\', other: '\\' },
 };
 
+/** Detects whether keycap labels should use macOS symbols. */
 export function isMacPlatform(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /mac|iphone|ipad|ipod/i.test(navigator.platform);
 }
 
+/** Splits a persisted hotkey combo into normalized non-empty tokens. */
 export function splitHotkey(value: string): string[] {
   return value
     .split('+')
@@ -133,6 +135,10 @@ export function splitHotkey(value: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Converts internal hotkey tokens to user-facing keycap labels.
+ * Letter and digit code tokens are shortened so recorded combos stay readable.
+ */
 export function displayHotkeyToken(token: string, isMac: boolean): string {
   const mapped = DISPLAY_TOKENS[token];
   if (mapped) return isMac ? mapped.mac : mapped.other;
@@ -141,6 +147,10 @@ export function displayHotkeyToken(token: string, isMac: boolean): string {
   return token;
 }
 
+/**
+ * Extracts modifier tokens from a keyboard event in the order expected by Tauri.
+ * Meta is stored as CommandOrControl so one setting works cross-platform.
+ */
 export function eventModifiers(event: HotkeyKeyboardEventLike): string[] {
   const parts: string[] = [];
   if (event.metaKey || event.key === 'Meta') parts.push('CommandOrControl');
@@ -150,6 +160,10 @@ export function eventModifiers(event: HotkeyKeyboardEventLike): string[] {
   return parts;
 }
 
+/**
+ * Resolves the non-modifier key from KeyboardEvent.code first, then key.
+ * Returns null for pure modifier events or keys Tauri cannot register.
+ */
 export function eventPrimaryKey(event: HotkeyKeyboardEventLike): string | null {
   const { code, key } = event;
 
@@ -166,6 +180,7 @@ export function eventPrimaryKey(event: HotkeyKeyboardEventLike): string | null {
   return KEY_FROM_KEY[key] ?? null;
 }
 
+/** Returns true for keys that should not complete a hotkey recording alone. */
 export function isModifierKey(key: string): boolean {
   return MODIFIER_KEYS.has(key);
 }

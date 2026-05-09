@@ -31,12 +31,18 @@ export type ActiveFilterChip =
   | { id: string; label: string; kind: 'tag'; value: TagFilter }
   | { id: string; label: string; kind: 'lastUsed' };
 
+/** Toggles one multi-select filter value while preserving the order of others. */
 export function toggleFilterValue<T extends string>(values: T[], value: T): T[] {
   return values.includes(value)
     ? values.filter((item) => item !== value)
     : [...values, value];
 }
 
+/**
+ * Converts active filter state into removable chips for the library toolbar.
+ * Labels prefer caller-provided display names and fall back to stable formatting
+ * for folder ids that no longer have a known Folder record.
+ */
 export function getActiveFilterChips(
   filters: PromptFilters,
   folderLabels: Record<string, string>,
@@ -90,6 +96,10 @@ export function getActiveFilterChips(
   return chips;
 }
 
+/**
+ * Returns a new filter object with the selected chip removed.
+ * This mirrors getActiveFilterChips so chip UI can stay stateless.
+ */
 export function removeFilterChipFromFilters(
   filters: PromptFilters,
   chip: ActiveFilterChip,

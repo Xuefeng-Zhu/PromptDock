@@ -14,6 +14,11 @@ interface UseVariableFillOptions {
   variables: PromptVariable[];
 }
 
+/**
+ * Manages the variable-fill modal state for a prompt template.
+ * Defaults seed the initial values, rendered text preserves unresolved
+ * placeholders, and async copy/paste callbacks are guarded against unmounts.
+ */
 export function useVariableFill({
   defaultAction,
   onCancel,
@@ -75,6 +80,8 @@ export function useVariableFill({
       .then(() => {
         if (!mountedRef.current) return;
         setCopied(true);
+        // The copied affordance is visual only; avoid state updates if the modal
+        // closes before the timeout completes.
         setTimeout(() => {
           if (mountedRef.current) {
             setCopied(false);

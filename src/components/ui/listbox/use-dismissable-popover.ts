@@ -8,6 +8,11 @@ interface UseDismissablePopoverOptions<T extends HTMLElement> {
   open: boolean;
 }
 
+/**
+ * Wires common popover dismissal behavior.
+ * Listeners are installed only while open so closed popovers do not intercept
+ * document clicks or Escape presses.
+ */
 export function useDismissablePopover<T extends HTMLElement>({
   closeOnEscape = true,
   closeOnOutsideClick = true,

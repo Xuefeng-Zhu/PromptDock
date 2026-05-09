@@ -13,6 +13,11 @@ function formatActionError(action: string, err: unknown): string {
   return `Failed to ${action}: ${err instanceof Error ? err.message : String(err)}`;
 }
 
+/**
+ * Owns the quick-launcher window workflow: loading prompts on focus, keyboard
+ * navigation, variable-fill selection, copy/paste execution, and hiding the
+ * Tauri launcher window after successful actions.
+ */
 export function useQuickLauncherController() {
   const prompts = usePromptStore((s) => s.prompts);
   const isLoading = usePromptStore((s) => s.isLoading);
@@ -129,6 +134,8 @@ export function useQuickLauncherController() {
   const handleSelectPrompt = useCallback(
     (prompt: PromptRecipe) => {
       const variables = extractVariables(prompt.body);
+      // Prompts with placeholders need the fill UI first; plain prompts can
+      // execute immediately using the user's default quick-launcher action.
       if (variables.length > 0) {
         setSelectedPrompt(prompt);
       } else if (defaultAction === 'paste') {

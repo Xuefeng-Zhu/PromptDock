@@ -8,10 +8,18 @@ export interface PromptTemplatePart {
 const variableParser = new VariableParser();
 const TEMPLATE_VARIABLE_TOKEN = /^{{\w+}}$/;
 
+/**
+ * Extracts unique `{{variable}}` names from a prompt body.
+ * Ordering follows first appearance in the template and names are case-sensitive.
+ */
 export function extractVariables(body: string): string[] {
   return variableParser.parse(body);
 }
 
+/**
+ * Splits template text into renderable text and variable-token segments.
+ * Used by preview/highlighting UI; only exact `{{word}}` tokens become variables.
+ */
 export function splitPromptTemplateParts(text: string): PromptTemplatePart[] {
   return text.split(/({{\w+}})/g).map((part) => ({
     text: part,
@@ -19,6 +27,10 @@ export function splitPromptTemplateParts(text: string): PromptTemplatePart[] {
   }));
 }
 
+/**
+ * Renders a prompt body by replacing variables with supplied non-empty values.
+ * Missing or empty values leave the original placeholder intact for the user.
+ */
 export function renderPromptTemplate(
   body: string,
   values: Record<string, string>,
@@ -28,6 +40,9 @@ export function renderPromptTemplate(
   });
 }
 
+/**
+ * Validates that every extracted variable has a non-blank value before execution.
+ */
 export function areAllPromptVariablesFilled(
   variables: string[],
   values: Record<string, string>,

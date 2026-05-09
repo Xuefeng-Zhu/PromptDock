@@ -210,13 +210,27 @@ export function useAppShellController({
       setFolderDeleteConfirmation(null);
 
       try {
+        const promptsToRestore = prompts.filter((prompt) => prompt.folderId === folder.id);
         // Folder deletion is two-phase: first detach prompts from the folder,
         // then delete the persisted folder record if one exists. Derived legacy
-        // folders may only exist because prompts reference their id.
+        // folders may only exist because prompts reference their id. If the
+        // persisted folder delete fails after prompts were detached, restore the
+        // prompt assignments so the failed operation does not partially move data.
         const movedPromptCount = await clearFolderAssignments(folder.id);
         const isPersistedFolder = userFolders.some((item) => item.id === folder.id);
         if (isPersistedFolder) {
-          await deleteFolder(folder.id);
+          try {
+            await deleteFolder(folder.id);
+          } catch (err) {
+            if (movedPromptCount > 0) {
+              await Promise.all(
+                promptsToRestore.map((prompt) =>
+                  updatePrompt(prompt.id, { folderId: folder.id }),
+                ),
+              );
+            }
+            throw err;
+          }
         }
 
         handleFolderDeleted(folder.id);
@@ -235,6 +249,8 @@ export function useAppShellController({
       deleteFolder,
       folderDeleteConfirmation,
       handleFolderDeleted,
+      prompts,
+      updatePrompt,
       userFolders,
     ],
   );

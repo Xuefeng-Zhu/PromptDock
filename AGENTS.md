@@ -163,6 +163,20 @@ Prefer small reusable components over growing screen files. Before adding non-tr
 - Keep domain-specific composition in `src/components/` and reusable visual primitives in `src/components/ui/`.
 - When extracting UI, preserve accessibility roles/labels and move focused component tests or add coverage at the level where behavior is owned.
 
+### Code Documentation
+
+Keep comments concise and behavior-focused. Prefer TSDoc (`/** ... */`) for exported functions, hooks, classes, store factories, repositories, and shared utilities when the behavior is not obvious from the signature alone.
+
+Add or update comments when code introduces:
+- Cross-module contracts or public APIs
+- Business rules, data normalization, or persistence mapping
+- Runtime-specific behavior for Tauri, browser, Firebase, or sync
+- Async side effects, subscriptions, timers, native commands, or event listeners
+- Non-obvious algorithms such as filtering, ranking, virtualization, conflict handling, or variable resolution
+- Edge cases where future maintainers might otherwise infer the wrong behavior
+
+Avoid comments that restate the implementation. UI components and small helpers do not need TSDoc unless they own a reusable contract or hidden behavior. When behavior changes, update nearby comments in the same patch so documentation stays truthful.
+
 ## Commands
 
 ```bash

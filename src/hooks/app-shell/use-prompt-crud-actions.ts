@@ -19,6 +19,11 @@ function areTagsEqual(left: string[], right: string[]) {
   return left.length === right.length && left.every((tag, index) => tag === right[index]);
 }
 
+/**
+ * Builds the repository create payload from editor data.
+ * Workspace ownership is derived from the current mode so local prompts never
+ * accidentally inherit a synced workspace or user id.
+ */
 function toCreatePromptInput(
   data: Partial<PromptRecipe>,
   {
@@ -72,6 +77,11 @@ interface UsePromptCrudActionsOptions {
   userId: string | null;
 }
 
+/**
+ * Binds prompt CRUD operations to app-shell UI state, toasts, and analytics.
+ * Repository methods remain the source of persistence; this hook handles
+ * selection cleanup, editor navigation, and optimistic UI affordances.
+ */
 export function usePromptCrudActions({
   activeWorkspaceId,
   addToast,
@@ -208,6 +218,8 @@ export function usePromptCrudActions({
 
       tagDraftsRef.current.set(id, nextTags);
 
+      // Serialize tag writes per prompt so rapid chip edits preserve the latest
+      // draft instead of letting slower earlier updates overwrite newer tags.
       const previousUpdate = pendingTagUpdatesRef.current.get(id) ?? Promise.resolve();
       const queuedUpdate = previousUpdate
         .catch(() => undefined)

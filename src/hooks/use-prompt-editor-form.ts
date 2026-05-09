@@ -31,6 +31,10 @@ function areTagsEqual(left: string[], right: string[]): boolean {
   return left.every((tag, index) => tag === right[index]);
 }
 
+/**
+ * Resolves tag input against existing tags before saving editor state.
+ * Matching is normalized, but the first available display casing is preserved.
+ */
 function resolveTagList(availableTags: string[], tagValues: string[]): string[] {
   const tagsByKey = new Map<string, string>();
 
@@ -46,6 +50,11 @@ function resolveTagList(availableTags: string[], tagValues: string[]): string[] 
   return Array.from(tagsByKey.values());
 }
 
+/**
+ * Manages prompt editor draft state, validation, derived variables, and preview.
+ * The hook keeps persisted prompt data separate from unsaved form edits and
+ * reports dirty state so navigation can guard against accidental loss.
+ */
 export function usePromptEditorForm({
   availableTags = [],
   folders,
@@ -225,6 +234,10 @@ export function usePromptEditorForm({
     setVariableValues({});
   }, [availableTags]);
 
+  /**
+   * Validates required fields and dropdown invariants before handing data to the
+   * repository layer. Title/description are trimmed, but body whitespace is kept.
+   */
   const savePrompt = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
@@ -288,6 +301,8 @@ export function usePromptEditorForm({
   const renderedPreview = useMemo(() => {
     if (!body) return '';
     let result = body;
+    // Preview uses defaults when explicit fill values are absent, but leaves
+    // unresolved placeholders visible so users can spot missing data.
     for (const variable of promptVariables) {
       const value = variableValues[variable.name] ?? variable.defaultValue;
       if (value) {

@@ -9,6 +9,11 @@ import { resolvePromptVariables } from '../utils/prompt-variables';
 // Maintains an in-memory cache of prompts and persists to the backend on every
 // mutation.
 
+/**
+ * Prompt repository for local-first storage with optional synced delegation.
+ * Local mode lazily loads prompts into an in-memory cache and writes the full
+ * collection after each mutation; synced mode forwards operations to Firestore.
+ */
 export class PromptRepository implements IPromptRepository {
   private prompts: PromptRecipe[] = [];
   private loaded = false;

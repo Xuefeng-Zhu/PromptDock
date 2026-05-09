@@ -19,6 +19,11 @@ interface UseLibraryDataOptions {
   variableFillPromptId: string | null;
 }
 
+/**
+ * Combines persisted folders with fallback folders inferred from prompt data.
+ * The fallback keeps prompts reachable after imports or legacy data loads where
+ * a prompt references a folder id that no longer has a stored Folder record.
+ */
 function deriveFolders(prompts: PromptRecipe[], userFolders: Folder[]): Folder[] {
   const folderMap = new Map<string, Folder>();
 
@@ -45,6 +50,7 @@ function deriveFolders(prompts: PromptRecipe[], userFolders: Folder[]): Folder[]
   }));
 }
 
+/** Counts visible, non-archived prompts per folder for sidebar badges. */
 function countPromptsByFolder(prompts: PromptRecipe[]): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const prompt of prompts) {
@@ -66,6 +72,11 @@ function createCategoryColorMap(): Record<string, string> {
   return map;
 }
 
+/**
+ * Derives memoized view models consumed by the app shell and library screen.
+ * Keeps search/filter results, sidebar counts, selected prompt details, and
+ * variable-fill data consistent from the same prompt/folder inputs.
+ */
 export function useLibraryData({
   activeFilter,
   activeSidebarItem,

@@ -93,12 +93,20 @@ Required GitHub Actions secret:
 | Secret | Description |
 |---|---|
 | `FIREBASE_SERVICE_ACCOUNT_PROMPTDOCK_95E31` | Firebase service account JSON used by the Hosting deploy action. |
+| `VITE_FIREBASE_API_KEY` | Firebase web API key baked into the hosted Vite bundle. |
 
-Optional GitHub Actions config for browser and desktop sync/Analytics:
+Optional GitHub Actions variables for Firebase Hosting:
 
 | Name | Type | Description |
 |---|---|---|
-| `VITE_FIREBASE_API_KEY` | Secret | Firebase web API key baked into the Vite bundle. |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Variable | Firebase Auth domain. Defaults to `promptdock-95e31.firebaseapp.com` in the workflow. |
+
+The Hosting workflow hard-codes `VITE_FIREBASE_PROJECT_ID=promptdock-95e31` and `VITE_USE_EMULATOR=false`. It does not currently pass Firebase Analytics values into the hosted browser build.
+
+Optional GitHub Actions variables for desktop release sync/Analytics:
+
+| Name | Type | Description |
+|---|---|---|
 | `VITE_FIREBASE_AUTH_DOMAIN` | Variable | Firebase Auth domain. Defaults to `promptdock-95e31.firebaseapp.com` in the workflow. |
 | `VITE_FIREBASE_APP_ID` | Variable | Firebase web app ID, required for Analytics. |
 | `VITE_FIREBASE_MEASUREMENT_ID` | Variable | Google Analytics measurement ID, required for Analytics. |
@@ -106,9 +114,11 @@ Optional GitHub Actions config for browser and desktop sync/Analytics:
 | `VITE_FIREBASE_STORAGE_BUCKET` | Variable | Optional Firebase web app config field. |
 | `VITE_FIREBASE_ANALYTICS_ENABLED` | Variable | Set to `false` to disable Analytics even when configured. Defaults to `true`. |
 
-The Firebase Hosting and desktop release build jobs use the `firebase-hosting`
-environment so the same production Firebase secret and variables can be shared
-by the browser bundle and signed desktop bundles.
+The desktop release workflows also require the `VITE_FIREBASE_API_KEY` secret,
+hard-code `VITE_FIREBASE_PROJECT_ID=promptdock-95e31`, and set
+`VITE_USE_EMULATOR=false`. The Firebase Hosting and desktop release build jobs
+use the `firebase-hosting` environment so the production Firebase secret and
+variables can be shared where each workflow consumes them.
 
 Manual deploy from a local machine:
 

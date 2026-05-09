@@ -7,7 +7,7 @@ PromptDock uses Vitest for TypeScript tests, Testing Library for React component
 | Test type | Location | Purpose |
 |---|---|---|
 | Unit tests | `src/services/__tests__/`, `src/repositories/__tests__/`, `src/stores/__tests__/`, `src/utils/__tests__/` | Validate pure business logic, data access behavior, state actions, and utility fallbacks. |
-| Component tests | `src/components/__tests__/`, `src/components/ui/__tests__/`, `src/screens/__tests__` | Validate rendering, accessibility roles, keyboard behavior, and user events. |
+| Component tests | `src/components/__tests__/`, `src/components/ui/__tests__/`, `src/screens/__tests__/` | Validate rendering, accessibility roles, keyboard behavior, and user events. |
 | Integration tests | `*.integration.test.tsx` | Validate cross-module flows such as sync wiring, folder/tag behavior, and conflict UI. |
 | Property tests | `*.property.test.ts` | Validate invariants over generated data. |
 | Setup sanity tests | `src/setup.test.ts` | Confirms Vitest and fast-check are operational. |

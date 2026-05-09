@@ -461,7 +461,7 @@ kbd {
   gap: 1.35rem 2.4rem;
   align-items: start;
   width: min(1060px, calc(100% - 36px));
-  margin: 0 auto 5.6rem;
+  margin: 5.6rem auto 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 2rem 0;
@@ -1341,7 +1341,7 @@ details a {
 
   .release-section {
     width: min(100% - 24px, 1060px);
-    margin-bottom: 4.2rem;
+    margin-top: 4.2rem;
     padding: 1.6rem 0;
   }
 

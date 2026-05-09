@@ -1261,6 +1261,26 @@ details a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .nav-links .web-link {
+    display: none;
+  }
+
+  .nav-links a[href="#demo"] {
+    order: 1;
+  }
+
+  .nav-links a[href="#features"] {
+    order: 2;
+  }
+
+  .nav-links a[href="#download"] {
+    order: 3;
+  }
+
+  .nav-links a[href="#faq"] {
+    order: 4;
+  }
+
   .nav-links a {
     text-align: center;
     padding-left: 0.28rem;

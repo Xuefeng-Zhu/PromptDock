@@ -81,7 +81,7 @@ Result:
 - 773 passed.
 - 0 failed.
 - 0 skipped.
-- Rust/Tauri compiled with 4 Rust unit tests currently present.
+- Rust/Tauri compiled with 5 Rust unit tests currently present.
 
 ## Recommended Missing Tests
 

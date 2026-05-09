@@ -313,9 +313,51 @@ describe('useAppShellController', () => {
 
     expect(promptRepo.update).toHaveBeenCalledWith('prompt-foldered', { folderId: null });
     expect(folderRepo.deleteFolder).not.toHaveBeenCalled();
-    expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client')).toBe(true);
+    expect(
+      result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client'),
+    ).toBe(true);
     const toasts = useToastStore.getState().toasts;
     expect(toasts[toasts.length - 1]?.message).toBe('Failed to delete folder: Offline');
+
+    unmount();
+  });
+
+  it('restores prompt folder assignments when persisted folder deletion fails', async () => {
+    const folder: Folder = {
+      id: 'folder-client',
+      name: 'Client',
+      createdAt: new Date('2024-01-04T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+    };
+    const prompt = makePrompt({ id: 'prompt-foldered', folderId: folder.id });
+    const { folderRepo, promptRepo } = await setupStores([prompt], [folder]);
+    vi.mocked(folderRepo.deleteFolder).mockRejectedValueOnce(new Error('Store write failed'));
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    act(() => {
+      result.current.handleDeleteFolder(folder);
+    });
+
+    await act(async () => {
+      await result.current.handleFolderDeleteConfirm();
+    });
+
+    expect(promptRepo.update).toHaveBeenNthCalledWith(1, 'prompt-foldered', { folderId: null });
+    expect(folderRepo.deleteFolder).toHaveBeenCalledWith('folder-client', 'local');
+    expect(promptRepo.update).toHaveBeenNthCalledWith(2, 'prompt-foldered', {
+      folderId: 'folder-client',
+    });
+    expect(
+      vi.mocked(folderRepo.deleteFolder).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(promptRepo.update).mock.invocationCallOrder[1]);
+    expect(result.current.prompts.find((item) => item.id === 'prompt-foldered')?.folderId).toBe(
+      'folder-client',
+    );
+    expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client')).toBe(true);
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[toasts.length - 1]?.message).toBe(
+      'Failed to delete folder: Store write failed',
+    );
 
     unmount();
   });

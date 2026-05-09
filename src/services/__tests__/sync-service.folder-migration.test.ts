@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SyncService } from '../sync-service';
 import type { AppModeStore } from '../../stores/app-mode-store';
-import type { Folder } from '../../types/index';
+import type { Folder, PromptRecipe } from '../../types/index';
 
 const firestoreMocks = vi.hoisted(() => {
   const state = {
@@ -91,6 +91,43 @@ function makeFolder(overrides: Partial<Folder> = {}): Folder {
   };
 }
 
+function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
+  return {
+    id: 'prompt-with-variables',
+    workspaceId: 'local',
+    title: 'Prompt with variables',
+    description: 'Uses variable metadata',
+    body: 'Write a {{tone}} reply to {{recipient}}.',
+    variables: [
+      {
+        name: 'tone',
+        defaultValue: 'friendly',
+        description: 'Voice to use',
+        inputType: 'dropdown',
+        options: ['friendly', 'formal'],
+      },
+      {
+        name: 'recipient',
+        defaultValue: '',
+        description: 'Who receives the message',
+        inputType: 'text',
+        options: [],
+      },
+    ],
+    tags: ['email'],
+    folderId: null,
+    favorite: false,
+    archived: false,
+    archivedAt: null,
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+    lastUsedAt: null,
+    createdBy: 'local',
+    version: 3,
+    ...overrides,
+  };
+}
+
 describe('SyncService folder migration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -126,6 +163,26 @@ describe('SyncService folder migration', () => {
       expect.objectContaining({
         name: 'Design',
         normalizedName: 'design',
+      }),
+    );
+  });
+
+  it('preserves prompt variable metadata when migrating local prompts', async () => {
+    const service = new SyncService({ appModeStore: createMockAppModeStore() });
+    const prompt = makePrompt();
+
+    await service.transitionToSynced(
+      'user-1',
+      'workspace-1',
+      [prompt],
+      'migrate',
+    );
+
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ id: prompt.id }),
+      expect.objectContaining({
+        body: prompt.body,
+        variables: prompt.variables,
       }),
     );
   });

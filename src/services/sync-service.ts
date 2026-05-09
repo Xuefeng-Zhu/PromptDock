@@ -15,6 +15,7 @@ import type { Folder, PromptRecipe } from '../types/index';
 import type { AppModeStore } from '../stores/app-mode-store';
 import type { FirestoreBackend } from '../repositories/firestore-backend';
 import { normalizeFolderName } from '../utils/folder-names';
+import { resolvePromptVariables } from '../utils/prompt-variables';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -323,7 +324,8 @@ export class SyncService {
   /**
    * Copies local prompts into Firestore during first sync without overwriting
    * existing remote prompt ids. Per-prompt failures are logged and skipped so one
-   * bad record does not abort the whole sign-in migration.
+   * bad record does not abort the whole sign-in migration. Saved variable
+   * metadata is preserved and reconciled against the current prompt body.
    *
    * Requirement: 2.3
    */
@@ -348,10 +350,15 @@ export class SyncService {
           continue;
         }
 
+        const variables = prompt.variables
+          ? resolvePromptVariables(prompt.body, prompt.variables)
+          : undefined;
+
         await setDoc(promptRef, {
           title: prompt.title,
           description: prompt.description,
           body: prompt.body,
+          ...(variables && variables.length > 0 ? { variables } : {}),
           tags: [...prompt.tags],
           folderId: prompt.folderId,
           favorite: prompt.favorite,

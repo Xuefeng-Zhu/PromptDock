@@ -43,6 +43,10 @@ function usePromptGridColumnCount(viewMode: 'grid' | 'list'): number {
   return columnCount;
 }
 
+/**
+ * Provides deterministic rows before react-virtual measures the scroll element.
+ * This avoids an empty first paint in tests and in very fast initial renders.
+ */
 function createInitialVirtualRows(rowCount: number, rowHeight: number, rowGap: number) {
   const visibleRowCount = Math.min(
     rowCount,
@@ -103,6 +107,8 @@ export function PromptGrid({
     ? virtualRows
     : createInitialVirtualRows(rowCount, rowHeight, rowGap);
 
+  // Virtualization is row-based rather than card-based so the grid and list
+  // layouts can share the same scroll window while preserving column grouping.
   const virtualizedPromptRows = renderedVirtualRows.map((row) => ({
     ...row,
     prompts: prompts.slice(row.index * columnCount, row.index * columnCount + columnCount),

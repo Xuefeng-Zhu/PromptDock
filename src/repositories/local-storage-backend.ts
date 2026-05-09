@@ -117,6 +117,11 @@ const DEFAULT_WORKSPACE: Workspace = {
 
 // ─── LocalStorageBackend ───────────────────────────────────────────────────────
 
+/**
+ * Desktop persistence backend backed by Tauri Store JSON files.
+ * Each domain uses its own store file, Date fields are serialized explicitly,
+ * and corrupted store reads attempt backup-and-reset recovery.
+ */
 export class LocalStorageBackend {
   private stores: Map<string, Store> = new Map();
   private initialized = false;

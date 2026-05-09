@@ -21,6 +21,10 @@ export interface AppModeStore {
 // ─── Factory ───────────────────────────────────────────────────────────────────
 // Creates a standalone Zustand store for application mode state.
 
+/**
+ * Creates an isolated app-mode store for tests or app startup.
+ * Sync status updates stamp lastSyncedAt only when the app reaches the synced state.
+ */
 export function createAppModeStore() {
   return create<AppModeStore>((set) => ({
     // ── Initial state ────────────────────────────────────────────────────────
@@ -59,11 +63,16 @@ export function createAppModeStore() {
 
 let _store: StoreApi<AppModeStore> | null = null;
 
+/** Initializes the singleton app-mode store used by React components. */
 export function initAppModeStore(): StoreApi<AppModeStore> {
   _store = createAppModeStore();
   return _store;
 }
 
+/**
+ * Reads the initialized app-mode store, optionally through a selector.
+ * Throws before initialization so components cannot silently bind to missing state.
+ */
 export function useAppModeStore(): AppModeStore;
 export function useAppModeStore<T>(selector: (state: AppModeStore) => T): T;
 export function useAppModeStore<T>(selector?: (state: AppModeStore) => T) {

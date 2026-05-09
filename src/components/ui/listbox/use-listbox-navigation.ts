@@ -8,6 +8,11 @@ interface UseListboxNavigationOptions {
   setOpen: Dispatch<SetStateAction<boolean>>;
 }
 
+/**
+ * Provides keyboard navigation state for custom listbox-style controls.
+ * Opening starts from the selected option, arrow keys clamp inside the option
+ * range, and the highlighted option is scrolled into view.
+ */
 export function useListboxNavigation({
   onSelect,
   open,

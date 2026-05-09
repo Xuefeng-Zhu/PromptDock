@@ -15,6 +15,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
 // Uses lazy loading with an in-memory cache. Settings are read from the backend
 // on first access and persisted on every mutation.
 
+/**
+ * Repository for user settings across browser and desktop backends.
+ * Returns defensive copies so callers cannot mutate the in-memory cache without
+ * going through update(), which is responsible for persistence.
+ */
 export class SettingsRepository implements ISettingsRepository {
   private settings: UserSettings | null = null;
   private loaded = false;

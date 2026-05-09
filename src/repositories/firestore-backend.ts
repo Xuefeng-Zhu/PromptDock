@@ -245,6 +245,11 @@ export function firestoreDocToUserSettings(doc: FirestoreUserSettingsDoc): UserS
 
 // ─── FirestoreBackend ──────────────────────────────────────────────────────────
 
+/**
+ * Firestore-backed repository for synced prompts and folders.
+ * Uses workspace-scoped collections and mirrors local repository semantics while
+ * relying on Firestore server timestamps and version increments for mutations.
+ */
 export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   constructor(private workspaceId: string) {}
 

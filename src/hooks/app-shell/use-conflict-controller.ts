@@ -10,6 +10,11 @@ interface UseConflictControllerOptions {
   updatePrompt: PromptStore['updatePrompt'];
 }
 
+/**
+ * Adapts ConflictService's external subscription model for the app shell.
+ * The unresolved count is safe when sync is disabled, and conflict resolutions
+ * are persisted by writing the selected prompt version through PromptStore.
+ */
 export function useConflictController({
   addToast,
   conflictService,

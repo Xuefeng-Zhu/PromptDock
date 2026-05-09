@@ -45,6 +45,11 @@ export interface PromptStore {
 // Accepts a PromptRepository instance (dependency injection) and returns a
 // fully-wired Zustand store.
 
+/**
+ * Creates an isolated prompt store around an injected repository.
+ * Store actions update local Zustand state after repository mutations so UI
+ * consumers see the same PromptRecipe shape returned by persistence.
+ */
 export function createPromptStore(repo: IPromptRepository) {
   return create<PromptStore>((set, get) => ({
     // ── Initial state ────────────────────────────────────────────────────────
@@ -173,11 +178,16 @@ export function createPromptStore(repo: IPromptRepository) {
 
 let _store: StoreApi<PromptStore> | null = null;
 
+/** Initializes the singleton prompt store used by components. */
 export function initPromptStore(repo: IPromptRepository): StoreApi<PromptStore> {
   _store = createPromptStore(repo);
   return _store;
 }
 
+/**
+ * Reads the initialized prompt store, optionally through a selector.
+ * Throws before initialization to avoid components binding to an unconfigured repository.
+ */
 export function usePromptStore(): PromptStore;
 export function usePromptStore<T>(selector: (state: PromptStore) => T): T;
 export function usePromptStore<T>(selector?: (state: PromptStore) => T) {

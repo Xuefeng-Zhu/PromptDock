@@ -13,6 +13,11 @@ export interface FolderStore {
   setFolders: (folders: Folder[]) => void;
 }
 
+/**
+ * Inserts a newly created folder or replaces the existing folder with the same id.
+ * Firestore can return an existing folder for duplicate names, so create actions
+ * must be idempotent in the local store.
+ */
 function upsertFolder(folders: Folder[], folder: Folder): Folder[] {
   const existingIndex = folders.findIndex((item) => item.id === folder.id);
   if (existingIndex === -1) return [...folders, folder];
@@ -20,6 +25,11 @@ function upsertFolder(folders: Folder[], folder: Folder): Folder[] {
   return folders.map((item, index) => (index === existingIndex ? folder : item));
 }
 
+/**
+ * Creates the folder Zustand store around an injected repository.
+ * The active workspace id determines whether loads/mutations target local data
+ * or the synced Firestore delegate behind the repository.
+ */
 export function createFolderStore(repo: IFolderRepository) {
   return create<FolderStore>((set, get) => ({
     folders: [],
@@ -67,11 +77,16 @@ export function createFolderStore(repo: IFolderRepository) {
 
 let _store: StoreApi<FolderStore> | null = null;
 
+/** Initializes the singleton folder store used by components. */
 export function initFolderStore(repo: IFolderRepository): StoreApi<FolderStore> {
   _store = createFolderStore(repo);
   return _store;
 }
 
+/**
+ * Reads the initialized folder store, optionally through a selector.
+ * Throws before initialization so folder UI cannot render against missing data.
+ */
 export function useFolderStore(): FolderStore;
 export function useFolderStore<T>(selector: (state: FolderStore) => T): T;
 export function useFolderStore<T>(selector?: (state: FolderStore) => T) {

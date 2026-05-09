@@ -27,6 +27,10 @@ export interface SettingsStore {
 // Accepts a SettingsRepository instance (dependency injection) and returns a
 // fully-wired Zustand store.
 
+/**
+ * Creates an isolated settings store around an injected repository.
+ * The repository remains responsible for persistence and default merging.
+ */
 export function createSettingsStore(repo: ISettingsRepository) {
   return create<SettingsStore>((set) => ({
     // ── Initial state ────────────────────────────────────────────────────────
@@ -59,11 +63,16 @@ export function createSettingsStore(repo: ISettingsRepository) {
 
 let _store: StoreApi<SettingsStore> | null = null;
 
+/** Initializes the singleton settings store used by components. */
 export function initSettingsStore(repo: ISettingsRepository): StoreApi<SettingsStore> {
   _store = createSettingsStore(repo);
   return _store;
 }
 
+/**
+ * Reads the initialized settings store, optionally through a selector.
+ * Throws before initialization to catch startup-order mistakes early.
+ */
 export function useSettingsStore(): SettingsStore;
 export function useSettingsStore<T>(selector: (state: SettingsStore) => T): T;
 export function useSettingsStore<T>(selector?: (state: SettingsStore) => T) {

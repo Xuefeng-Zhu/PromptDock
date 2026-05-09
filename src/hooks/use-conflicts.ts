@@ -2,6 +2,11 @@ import { useCallback, useRef, useSyncExternalStore } from 'react';
 import type { ConflictService } from '../services/conflict-service';
 import type { PromptConflict, PromptRecipe } from '../types/index';
 
+/**
+ * Subscribes React components to unresolved conflicts from ConflictService.
+ * Caches the snapshot array so useSyncExternalStore only reports changes when
+ * conflict identity or resolution state actually changes.
+ */
 export function useConflicts(conflictService: ConflictService) {
   const cachedConflicts = useRef<PromptConflict[]>([]);
 
@@ -23,6 +28,11 @@ export function useConflicts(conflictService: ConflictService) {
   );
 }
 
+/**
+ * Builds keep-local and keep-remote handlers for ConflictCenter actions.
+ * The service marks the conflict resolved; callers optionally persist the chosen
+ * prompt version back through their repository/store layer.
+ */
 export function useConflictResolution(
   conflictService: ConflictService,
   onResolve?: (promptId: string, resolvedVersion: PromptRecipe) => void,

@@ -29,6 +29,12 @@ interface FolderDeleteConfirmation {
   promptCount: number;
 }
 
+/**
+ * Composes stores, domain hooks, navigation state, and app-shell handlers into
+ * the single controller consumed by AppShellView. This keeps the view mostly
+ * declarative while centralizing cross-cutting side effects such as toasts,
+ * folder cleanup, prompt execution, sync conflict actions, and auth transitions.
+ */
 export function useAppShellController({
   authService,
   conflictService: conflictServiceProp,
@@ -204,6 +210,9 @@ export function useAppShellController({
       setFolderDeleteConfirmation(null);
 
       try {
+        // Folder deletion is two-phase: first detach prompts from the folder,
+        // then delete the persisted folder record if one exists. Derived legacy
+        // folders may only exist because prompts reference their id.
         const movedPromptCount = await clearFolderAssignments(folder.id);
         const isPersistedFolder = userFolders.some((item) => item.id === folder.id);
         if (isPersistedFolder) {

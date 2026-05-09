@@ -17,6 +17,11 @@ interface UseAuthFormOptions {
   unavailableMessage?: string;
 }
 
+/**
+ * Manages email/password, Google, and sign-out form state for account panels.
+ * AuthService owns Firebase calls; this hook normalizes user-facing errors,
+ * clears sensitive fields on success, and notifies callers when app mode should change.
+ */
 export function useAuthForm({
   authService,
   initialMode = 'sign-in',

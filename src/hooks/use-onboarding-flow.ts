@@ -12,6 +12,11 @@ interface UseOnboardingFlowOptions {
   onComplete: (choice: OnboardingChoice) => void;
 }
 
+/**
+ * Coordinates first-run onboarding between local-only use and account sign-in.
+ * Completing either path marks onboarding as done and moves AppModeStore into
+ * the mode that App initialization and sync wiring expect.
+ */
 export function useOnboardingFlow({
   authService,
   onComplete,

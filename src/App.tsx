@@ -271,6 +271,11 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
 // ─── Theme Manager ─────────────────────────────────────────────────────────────
 // Rendered only after stores are initialised so useSettingsStore is safe to call.
 
+/**
+ * Applies the persisted theme setting to the document root.
+ * System theme listens for OS preference changes while explicit light/dark modes
+ * apply once per setting change.
+ */
 export function ThemeManager() {
   const theme = useSettingsStore((s) => s.settings.theme);
 

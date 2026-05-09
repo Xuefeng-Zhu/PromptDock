@@ -9,6 +9,10 @@ interface UsePromptSearchResultsOptions {
   includeArchived?: boolean;
 }
 
+/**
+ * Runs the shared prompt search engine outside React.
+ * Useful for tests and non-hook callers that need the same ranking semantics.
+ */
 export function searchPromptResults(
   prompts: PromptRecipe[],
   query: string,
@@ -17,6 +21,7 @@ export function searchPromptResults(
   return promptSearchEngine.search(prompts, query, options);
 }
 
+/** Memoized React wrapper around the shared prompt search engine. */
 export function usePromptSearchResults(
   prompts: PromptRecipe[],
   query: string,

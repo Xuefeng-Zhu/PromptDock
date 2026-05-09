@@ -40,6 +40,7 @@ interface IPromptRepository {
   getAll(workspaceId: string): Promise<PromptRecipe[]>;
   reloadAll?(workspaceId: string): Promise<PromptRecipe[]>;
   update(id: string, changes: Partial<PromptRecipe>): Promise<PromptRecipe>;
+  delete(id: string): Promise<void>;
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   duplicate(id: string): Promise<PromptRecipe>;
@@ -48,6 +49,19 @@ interface IPromptRepository {
 ```
 
 `PromptRepository` uses local/browser storage by default. In synced mode, `PromptRepository.setFirestoreDelegate()` forwards calls to `FirestoreBackend`.
+
+### `IFolderRepository`
+
+```ts
+interface IFolderRepository {
+  createFolder(name: string, workspaceId: string): Promise<Folder>;
+  deleteFolder(id: string, workspaceId: string): Promise<void>;
+  getAllFolders(workspaceId: string): Promise<Folder[]>;
+  reloadAllFolders?(workspaceId: string): Promise<Folder[]>;
+}
+```
+
+`FolderRepository` persists folders through the same `IStorageBackend` abstraction as prompts in local/browser mode. In synced mode, `FolderRepository.setFirestoreDelegate()` forwards folder operations to `FirestoreBackend`.
 
 ## Service Interfaces
 

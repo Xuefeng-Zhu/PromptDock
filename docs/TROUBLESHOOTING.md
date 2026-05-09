@@ -6,7 +6,7 @@ Use this guide when setup, runtime behavior, sync, tests, or builds are not beha
 
 ### `npm install` fails
 
-- Confirm Node.js is at least 18.
+- Confirm Node.js is at least 20.19. The checked-in `.nvmrc` currently recommends Node 24.
 - Delete `node_modules/` and reinstall if local dependencies are corrupted.
 - Prefer `npm ci` in CI or release checks because `package-lock.json` is committed.
 
@@ -230,6 +230,6 @@ Some component tests trigger asynchronous state updates after events. Wrap async
 ## Known Limitations
 
 - No configured E2E runner for full Tauri behavior.
-- No Rust unit tests for native commands.
+- Rust unit tests cover command helper behavior, but not real OS-level clipboard, hotkey, window, or paste integration.
 - Sync conflict state is in memory.
-- Folder persistence is not workspace-aware and currently bypasses the repository abstraction.
+- Local folder records do not store `workspaceId`, so local-only multi-workspace folder isolation is not implemented.

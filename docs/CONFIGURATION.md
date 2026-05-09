@@ -107,7 +107,7 @@ Firebase Analytics:
 `src-tauri/tauri.conf.json` defines:
 
 - Product name: `PromptDock`
-- Version: `0.4.0`
+- Version: `0.4.1`
 - Identifier: `com.promptdock.app`
 - Dev URL: `http://localhost:1420`
 - Frontend dist: `../dist`
@@ -133,9 +133,9 @@ The Rust layer also registers a tray icon and default hotkey in `src-tauri/src/l
 
 | Source | Version |
 |---|---|
-| `package.json` | `0.4.0` |
-| `src-tauri/tauri.conf.json` | `0.4.0` |
-| `src-tauri/Cargo.toml` | `0.4.0` |
-| Settings screen text | `v0.4.0` |
+| `package.json` | `0.4.1` |
+| `src-tauri/tauri.conf.json` | `0.4.1` |
+| `src-tauri/Cargo.toml` | `0.4.1` |
+| Settings screen text | `v0.4.1` |
 
 Keep these values aligned when cutting a release.

@@ -224,7 +224,7 @@ After a successful release build, the workflow verifies the app and DMG with:
 codesign --verify --deep --strict --verbose=4 PromptDock.app
 spctl -a -vv PromptDock.app
 xcrun stapler validate PromptDock.app
-xcrun stapler validate PromptDock_0.4.0_aarch64.dmg
+xcrun stapler validate PromptDock_0.4.1_aarch64.dmg
 ```
 
 ### Windows installer builds

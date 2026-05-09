@@ -287,6 +287,11 @@ export class ImportExportService implements IImportExportService {
   }
 }
 
+/**
+ * Validates variable metadata from import files before it reaches the editor.
+ * Dropdown variables must define options, and a non-empty default must match
+ * one of those options to avoid rendering an impossible initial value.
+ */
 function validatePromptVariables(
   value: unknown,
   promptIndex: number,

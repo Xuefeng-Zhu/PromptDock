@@ -22,6 +22,10 @@ interface SerializedWorkspace extends Omit<Workspace, 'createdAt' | 'updatedAt'>
   updatedAt: string;
 }
 
+/**
+ * Converts prompt Date fields into ISO strings for Tauri Store persistence.
+ * All non-date prompt metadata is preserved exactly.
+ */
 function serializePrompt(recipe: PromptRecipe): SerializedPromptRecipe {
   return {
     ...recipe,
@@ -32,6 +36,10 @@ function serializePrompt(recipe: PromptRecipe): SerializedPromptRecipe {
   };
 }
 
+/**
+ * Restores persisted prompt date strings to Date objects used by UI and services.
+ * Nullable timestamps remain null so archive/usage state is not invented.
+ */
 function deserializePrompt(raw: SerializedPromptRecipe): PromptRecipe {
   return {
     ...raw,
@@ -42,6 +50,7 @@ function deserializePrompt(raw: SerializedPromptRecipe): PromptRecipe {
   };
 }
 
+/** Converts folder timestamps into JSON-safe strings for disk storage. */
 function serializeFolder(folder: Folder): SerializedFolder {
   return {
     ...folder,
@@ -50,6 +59,7 @@ function serializeFolder(folder: Folder): SerializedFolder {
   };
 }
 
+/** Restores folder timestamps after reading from disk. */
 function deserializeFolder(raw: SerializedFolder): Folder {
   return {
     ...raw,
@@ -58,6 +68,7 @@ function deserializeFolder(raw: SerializedFolder): Folder {
   };
 }
 
+/** Converts workspace timestamps into JSON-safe strings for disk storage. */
 function serializeWorkspace(workspace: Workspace): SerializedWorkspace {
   return {
     ...workspace,
@@ -66,6 +77,7 @@ function serializeWorkspace(workspace: Workspace): SerializedWorkspace {
   };
 }
 
+/** Restores workspace timestamps after reading from disk. */
 function deserializeWorkspace(raw: SerializedWorkspace): Workspace {
   return {
     ...raw,

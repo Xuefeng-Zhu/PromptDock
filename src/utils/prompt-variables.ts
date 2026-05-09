@@ -11,6 +11,10 @@ export const PROMPT_VARIABLE_INPUT_TYPES: PromptVariableInputType[] = [
   'dropdown',
 ];
 
+/**
+ * Runtime type guard for persisted or imported variable input types.
+ * Keeps invalid external values from flowing into prompt editor controls.
+ */
 export function isPromptVariableInputType(
   value: unknown,
 ): value is PromptVariableInputType {
@@ -20,6 +24,10 @@ export function isPromptVariableInputType(
   );
 }
 
+/**
+ * Creates the baseline metadata for a placeholder discovered in a prompt body.
+ * Callers can later enrich this with descriptions, defaults, or dropdown options.
+ */
 export function createDefaultPromptVariable(name: string): PromptVariable {
   return {
     name,
@@ -30,6 +38,11 @@ export function createDefaultPromptVariable(name: string): PromptVariable {
   };
 }
 
+/**
+ * Normalizes option arrays from forms, imports, and storage.
+ * Trims labels, drops non-string or empty values, removes exact duplicates,
+ * and preserves the user's first-seen ordering and casing.
+ */
 export function normalizePromptVariableOptions(options: unknown): string[] {
   if (!Array.isArray(options)) return [];
 
@@ -47,6 +60,10 @@ export function normalizePromptVariableOptions(options: unknown): string[] {
   return normalized;
 }
 
+/**
+ * Parses the textarea representation used by the editor into dropdown options.
+ * Both comma-separated and newline-separated input are accepted.
+ */
 export function parsePromptVariableOptions(text: string): string[] {
   return normalizePromptVariableOptions(text.split(/\r?\n|,/));
 }
@@ -55,6 +72,11 @@ export function formatPromptVariableOptions(options: string[]): string {
   return options.join('\n');
 }
 
+/**
+ * Coerces partial variable metadata into a complete PromptVariable.
+ * Invalid or missing fields are replaced with editor-safe defaults while the
+ * provided fallback name keeps template-discovered variables addressable.
+ */
 export function normalizePromptVariableDefinition(
   variable: Partial<PromptVariable> | undefined,
   fallbackName: string,
@@ -79,6 +101,11 @@ function isPartialPromptVariable(value: unknown): value is Partial<PromptVariabl
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Reconciles variable definitions with the placeholders currently in a prompt body.
+ * The template controls the returned order and membership: stale definitions are
+ * dropped, repeated placeholders are deduped, and missing metadata is defaulted.
+ */
 export function resolvePromptVariables(
   body: string,
   variableDefinitions: unknown = [],
@@ -109,6 +136,10 @@ export function resolvePromptRecipeVariables(prompt: PromptRecipe): PromptVariab
   return resolvePromptVariables(prompt.body, prompt.variables);
 }
 
+/**
+ * Finds the first dropdown variable whose default no longer appears in its options.
+ * Useful after option edits or JSON imports where defaults can become stale.
+ */
 export function findDropdownWithInvalidDefault(
   variables: PromptVariable[],
 ): PromptVariable | undefined {
@@ -120,6 +151,10 @@ export function findDropdownWithInvalidDefault(
   );
 }
 
+/**
+ * Compares variable definitions by ordered field values, including option order.
+ * The prompt body determines variable order, so reordering is treated as a change.
+ */
 export function arePromptVariablesEqual(
   left: PromptVariable[],
   right: PromptVariable[],

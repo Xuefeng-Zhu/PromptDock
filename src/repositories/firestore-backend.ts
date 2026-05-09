@@ -193,6 +193,10 @@ export function firestoreDocToWorkspace(id: string, doc: FirestoreWorkspaceDoc):
   };
 }
 
+/**
+ * Convert a Folder object to the Firestore document shape.
+ * Stores a normalized name alongside the display name for duplicate checks.
+ */
 export function folderToFirestoreDoc(folder: Folder): FirestoreFolderDoc {
   return {
     name: folder.name,
@@ -202,6 +206,10 @@ export function folderToFirestoreDoc(folder: Folder): FirestoreFolderDoc {
   };
 }
 
+/**
+ * Convert a Firestore folder document back to the app model.
+ * The normalizedName field is storage-only and is intentionally not exposed.
+ */
 export function firestoreDocToFolder(id: string, doc: FirestoreFolderDoc): Folder {
   return {
     id,

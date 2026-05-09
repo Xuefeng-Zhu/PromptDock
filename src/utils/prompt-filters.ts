@@ -20,6 +20,7 @@ export type FilterType = 'all' | 'favorites' | 'recent' | PromptFilters;
 export const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Builds the canonical empty filter object used by the library screen. */
 export function createDefaultPromptFilters(): PromptFilters {
   return {
     sortBy: 'lastUsed',
@@ -31,6 +32,10 @@ export function createDefaultPromptFilters(): PromptFilters {
   };
 }
 
+/**
+ * Converts legacy sidebar filters and partial filter objects into the full shape.
+ * Array fields are always materialized so downstream filtering can stay simple.
+ */
 export function normalizePromptFilters(filter: FilterType): PromptFilters {
   if (filter === 'all') {
     return createDefaultPromptFilters();
@@ -59,6 +64,10 @@ export function normalizePromptFilters(filter: FilterType): PromptFilters {
   };
 }
 
+/**
+ * Counts only user-visible narrowing filters for badges and reset controls.
+ * The sort option is intentionally excluded because it reorders rather than filters.
+ */
 export function countActivePromptFilters(filter: FilterType): number {
   const normalized = normalizePromptFilters(filter);
 
@@ -71,15 +80,25 @@ export function countActivePromptFilters(filter: FilterType): number {
   );
 }
 
+/** Returns true when archived prompts are explicitly selected in the filter. */
 export function hasArchivedPromptFilter(filter: FilterType): boolean {
   return normalizePromptFilters(filter).statuses.includes('archived');
 }
 
+/**
+ * Checks whether a prompt was used inside the rolling "recent" window.
+ * Prompts that have never been used are not considered recent.
+ */
 export function isRecentPrompt(prompt: PromptRecipe, referenceDate: Date = new Date()): boolean {
   if (!prompt.lastUsedAt) return false;
   return prompt.lastUsedAt.getTime() > referenceDate.getTime() - RECENT_WINDOW_MS;
 }
 
+/**
+ * Detects template placeholders for filtering purposes.
+ * This intentionally accepts a broader syntax than the renderer so older or
+ * manually edited prompts with whitespace, dots, or dashes still surface.
+ */
 export function hasPromptVariables(prompt: PromptRecipe): boolean {
   return /{{\s*[\w.-]+\s*}}/.test(prompt.body);
 }
@@ -95,6 +114,11 @@ function normalizeLegacyFolderKey(folderId: string): string {
   return normalizeToken(folderId.replace(/^folder-/, '').replace(/-\d{10,}$/, ''));
 }
 
+/**
+ * Matches both current folder ids and legacy generated keys.
+ * Older seed data encoded names and timestamp suffixes in folder ids, so the
+ * comparison normalizes those variants without changing stored prompt data.
+ */
 function matchesFolder(prompt: PromptRecipe, folders: FolderFilter[]): boolean {
   if (!prompt.folderId) return false;
 
@@ -110,6 +134,10 @@ function matchesFolder(prompt: PromptRecipe, folders: FolderFilter[]): boolean {
   });
 }
 
+/**
+ * Matches selected tags case-insensitively, with a small singular/plural affordance.
+ * This keeps common choices like "template" matching prompts tagged "templates".
+ */
 function matchesTag(prompt: PromptRecipe, tags: TagFilter[]): boolean {
   const promptTags = prompt.tags.map(normalizeToken);
   return tags.some((tag) => {
@@ -163,6 +191,10 @@ function matchesLastUsedRange(
   return lastUsedTime > referenceTime - THIRTY_DAYS_MS;
 }
 
+/**
+ * Returns a sorted copy of prompts for the selected library ordering.
+ * "Last used" falls back to updated time and then title for stable scan order.
+ */
 export function sortPromptsByFilter(prompts: PromptRecipe[], sortBy: SortFilter): PromptRecipe[] {
   return [...prompts].sort((a, b) => {
     if (sortBy === 'az') {
@@ -187,6 +219,11 @@ export function sortPromptsByFilter(prompts: PromptRecipe[], sortBy: SortFilter)
   });
 }
 
+/**
+ * Applies all active library filter dimensions and returns the sorted result.
+ * The input list is not mutated; callers decide whether archived prompts are in
+ * scope by the provided filter and by the prompt collection they pass in.
+ */
 export function applyPromptFilters(
   prompts: PromptRecipe[],
   filter: FilterType,

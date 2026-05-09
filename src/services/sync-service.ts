@@ -186,6 +186,12 @@ export class SyncService {
     ]);
   }
 
+  /**
+   * Subscribes to remote prompt changes and forwards them into the app store.
+   * Snapshot data uses estimated server timestamps so pending writes can render
+   * immediately, and each update is compared against the latest local snapshot
+   * before replacing it.
+   */
   private async startPromptSnapshotListener(workspaceId: string): Promise<void> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, query, where, onSnapshot } = await import('firebase/firestore');
@@ -232,6 +238,11 @@ export class SyncService {
     );
   }
 
+  /**
+   * Subscribes to workspace folder changes.
+   * Folder updates are independent from prompt snapshots because folder edits can
+   * arrive without any prompt document changing.
+   */
   private async startFolderSnapshotListener(workspaceId: string): Promise<void> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, onSnapshot } = await import('firebase/firestore');
@@ -310,7 +321,9 @@ export class SyncService {
   // ─── Migration ─────────────────────────────────────────────────────────────
 
   /**
-   * Migrate local prompts to Firestore.
+   * Copies local prompts into Firestore during first sync without overwriting
+   * existing remote prompt ids. Per-prompt failures are logged and skipped so one
+   * bad record does not abort the whole sign-in migration.
    *
    * Requirement: 2.3
    */
@@ -357,6 +370,11 @@ export class SyncService {
     }
   }
 
+  /**
+   * Copies local folders into Firestore while avoiding cross-device duplicates.
+   * Duplicate checks use normalized names so casing or spacing differences do
+   * not create multiple folders that look identical in the UI.
+   */
   private async migrateLocalFolders(localFolders: Folder[]): Promise<void> {
     if (!this.firestoreBackend || !this.currentWorkspaceId) return;
 

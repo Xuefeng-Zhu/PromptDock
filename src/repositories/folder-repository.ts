@@ -2,6 +2,21 @@ import type { Folder } from '../types/index';
 import { cleanFolderName, createFolderId, normalizeFolderName } from '../utils/folder-names';
 import type { IFolderRepository, IStorageBackend } from './interfaces';
 
+function createUniqueFolderId(name: string, folders: Folder[]): string {
+  const baseId = createFolderId(name);
+  const existingIds = new Set(folders.map((folder) => folder.id));
+  if (!existingIds.has(baseId)) return baseId;
+
+  let suffix = 2;
+  let candidate = `${baseId}-${suffix}`;
+  while (existingIds.has(candidate)) {
+    suffix += 1;
+    candidate = `${baseId}-${suffix}`;
+  }
+
+  return candidate;
+}
+
 export class FolderRepository implements IFolderRepository {
   private folders: Folder[] = [];
   private loaded = false;
@@ -69,7 +84,7 @@ export class FolderRepository implements IFolderRepository {
 
     const now = new Date();
     const folder: Folder = {
-      id: createFolderId(cleanedName),
+      id: createUniqueFolderId(cleanedName, this.folders),
       name: cleanedName,
       createdAt: now,
       updatedAt: now,

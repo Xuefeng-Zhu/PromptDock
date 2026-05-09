@@ -283,10 +283,39 @@ describe('useAppShellController', () => {
     expect(promptRepo.update).toHaveBeenCalledWith('prompt-foldered', { folderId: null });
     expect(folderRepo.deleteFolder).toHaveBeenCalledWith('folder-client', 'local');
     expect(
-      vi.mocked(folderRepo.deleteFolder).mock.invocationCallOrder[0],
-    ).toBeLessThan(vi.mocked(promptRepo.update).mock.invocationCallOrder[0]);
+      vi.mocked(promptRepo.update).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(folderRepo.deleteFolder).mock.invocationCallOrder[0]);
     expect(result.current.prompts.find((item) => item.id === 'prompt-foldered')?.folderId).toBeNull();
     expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client')).toBe(false);
+
+    unmount();
+  });
+
+  it('keeps the folder record when moving prompts out of the folder fails', async () => {
+    const folder: Folder = {
+      id: 'folder-client',
+      name: 'Client',
+      createdAt: new Date('2024-01-04T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-04T00:00:00.000Z'),
+    };
+    const prompt = makePrompt({ id: 'prompt-foldered', folderId: folder.id });
+    const { folderRepo, promptRepo } = await setupStores([prompt], [folder]);
+    vi.mocked(promptRepo.update).mockRejectedValueOnce(new Error('Offline'));
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    act(() => {
+      result.current.handleDeleteFolder(folder);
+    });
+
+    await act(async () => {
+      await result.current.handleFolderDeleteConfirm();
+    });
+
+    expect(promptRepo.update).toHaveBeenCalledWith('prompt-foldered', { folderId: null });
+    expect(folderRepo.deleteFolder).not.toHaveBeenCalled();
+    expect(result.current.libraryData.derivedFolders.some((item) => item.id === 'folder-client')).toBe(true);
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts[toasts.length - 1]?.message).toBe('Failed to delete folder: Offline');
 
     unmount();
   });

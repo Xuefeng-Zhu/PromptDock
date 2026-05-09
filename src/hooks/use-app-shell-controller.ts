@@ -204,12 +204,12 @@ export function useAppShellController({
       setFolderDeleteConfirmation(null);
 
       try {
+        const movedPromptCount = await clearFolderAssignments(folder.id);
         const isPersistedFolder = userFolders.some((item) => item.id === folder.id);
         if (isPersistedFolder) {
           await deleteFolder(folder.id);
         }
 
-        const movedPromptCount = await clearFolderAssignments(folder.id);
         handleFolderDeleted(folder.id);
 
         const movedSummary = movedPromptCount > 0

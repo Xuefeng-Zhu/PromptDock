@@ -74,6 +74,23 @@ describe('FolderRepository', () => {
     expect(backend.writeFolders).not.toHaveBeenCalled();
   });
 
+  it('creates a unique folder id when distinct folder names slug to the same value', async () => {
+    const existing = makeFolder({ id: 'folder-a-b', name: 'A+B' });
+    const backend = createMockBackend([existing]);
+    const repo = new FolderRepository(backend);
+
+    const folder = await repo.createFolder('A B', 'local');
+
+    expect(folder).toEqual(expect.objectContaining({
+      id: 'folder-a-b-2',
+      name: 'A B',
+    }));
+    expect(backend.writeFolders).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'folder-a-b', name: 'A+B' }),
+      expect.objectContaining({ id: 'folder-a-b-2', name: 'A B' }),
+    ]);
+  });
+
   it('reloads folders from the backend', async () => {
     const backend = createMockBackend([makeFolder({ id: 'folder-a', name: 'A' })]);
     const repo = new FolderRepository(backend);

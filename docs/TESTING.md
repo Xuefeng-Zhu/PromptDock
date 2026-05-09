@@ -7,7 +7,7 @@ PromptDock uses Vitest for TypeScript tests, Testing Library for React component
 | Test type | Location | Purpose |
 |---|---|---|
 | Unit tests | `src/services/__tests__/`, `src/repositories/__tests__/`, `src/stores/__tests__/`, `src/utils/__tests__/` | Validate pure business logic, data access behavior, state actions, and utility fallbacks. |
-| Component tests | `src/components/__tests__/`, `src/components/ui/__tests__/`, `src/screens/__tests__/` | Validate rendering, accessibility roles, keyboard behavior, and user events. |
+| Component tests | `src/components/__tests__/`, `src/components/ui/__tests__/`, `src/screens/__tests__` | Validate rendering, accessibility roles, keyboard behavior, and user events. |
 | Integration tests | `*.integration.test.tsx` | Validate cross-module flows such as sync wiring, folder/tag behavior, and conflict UI. |
 | Property tests | `*.property.test.ts` | Validate invariants over generated data. |
 | Setup sanity tests | `src/setup.test.ts` | Confirms Vitest and fast-check are operational. |
@@ -90,7 +90,7 @@ Result:
 - Firebase emulator integration tests that create a user, bootstrap a workspace, write prompts, and verify rules.
 - Firestore security rules tests.
 - Tests for migration from local prompts to synced prompts, including workspace ID consistency.
-- Tests for folder persistence through a future repository/store once folder storage is moved out of the localStorage utility.
+- More coverage for local and synced folder edge cases, especially duplicate handling, workspace transitions, and migration behavior.
 - Tests for Tauri Store file corruption recovery with realistic malformed store files.
 - Accessibility-focused tests for dialog focus trapping and restore behavior.
 - Visual or screenshot regression tests for the dense desktop UI.

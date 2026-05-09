@@ -460,6 +460,38 @@ describe('PromptEditor', () => {
       expect(onCopy).toHaveBeenCalledWith('Draft body in progress');
     });
 
+    it('calls onCopy with the rendered live preview when Copy preview result is clicked', () => {
+      const onCopy = vi.fn();
+      render(
+        <PromptEditor
+          {...defaultProps}
+          promptId="prompt-summarize"
+          prompt={MOCK_PROMPTS[0]}
+          onCopy={onCopy}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText('Preview value for audience'), {
+        target: { value: 'executive' },
+      });
+      fireEvent.change(screen.getByLabelText('Preview value for text'), {
+        target: { value: 'Quarterly planning notes' },
+      });
+      fireEvent.change(screen.getByLabelText('Preview value for format'), {
+        target: { value: 'Bullets' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Copy preview result' }));
+
+      expect(onCopy).toHaveBeenCalledWith(
+        `Summarize the following text for a executive audience. Be clear, accurate, and concise.
+
+Text:
+Quarterly planning notes
+
+Output format: Bullets`,
+      );
+    });
+
     it('hides unavailable actions when callbacks are not provided', () => {
       render(
         <PromptEditor

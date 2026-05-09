@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { LivePreviewVariableControl } from '../prompt-editor/LivePreviewVariableControl';
+import { PromptVariableValueControl } from '../prompt-variables/PromptVariableValueControl';
 import type { PromptVariable } from '../../types/index';
 
 function makeVariable(overrides: Partial<PromptVariable> = {}): PromptVariable {
@@ -15,11 +15,11 @@ function makeVariable(overrides: Partial<PromptVariable> = {}): PromptVariable {
   };
 }
 
-describe('LivePreviewVariableControl', () => {
+describe('PromptVariableValueControl', () => {
   it('renders a text input and reports changes', () => {
     const onValueChange = vi.fn();
     render(
-      <LivePreviewVariableControl
+      <PromptVariableValueControl
         variable={makeVariable()}
         value=""
         onValueChange={onValueChange}
@@ -36,7 +36,7 @@ describe('LivePreviewVariableControl', () => {
   it('renders textarea and dropdown variants', () => {
     const onValueChange = vi.fn();
     const { rerender } = render(
-      <LivePreviewVariableControl
+      <PromptVariableValueControl
         variable={makeVariable({ inputType: 'textarea', name: 'context' })}
         value=""
         onValueChange={onValueChange}
@@ -46,7 +46,7 @@ describe('LivePreviewVariableControl', () => {
     expect(screen.getByLabelText('Preview value for context').tagName).toBe('TEXTAREA');
 
     rerender(
-      <LivePreviewVariableControl
+      <PromptVariableValueControl
         variable={makeVariable({
           inputType: 'dropdown',
           options: ['Friendly', 'Professional'],
@@ -66,7 +66,7 @@ describe('LivePreviewVariableControl', () => {
   it('clears the current value', () => {
     const onValueChange = vi.fn();
     render(
-      <LivePreviewVariableControl
+      <PromptVariableValueControl
         variable={makeVariable()}
         value="Friendly"
         onValueChange={onValueChange}

@@ -1,9 +1,15 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PromptRecipe, Folder } from '../../types/index';
 import { PromptBodySection } from './PromptBodySection';
 import { PromptInspectorHeader } from './PromptInspectorHeader';
 import { PromptFolderSection, PromptMetadataSection } from './PromptMetadataSection';
 import { PromptTagsSection } from './PromptTagsSection';
 import { PromptVariablesSection } from './PromptVariablesSection';
+import { renderPromptTemplate } from '../../utils/prompt-template';
+import {
+  createDefaultPromptVariable,
+  resolvePromptRecipeVariables,
+} from '../../utils/prompt-variables';
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
@@ -48,6 +54,34 @@ export function PromptInspector({
   onUpdateFolder,
   onUpdateTags,
 }: PromptInspectorProps) {
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setVariableValues({});
+  }, [prompt.id]);
+
+  const promptVariables = useMemo(() => {
+    const resolvedVariables = resolvePromptRecipeVariables(prompt);
+    if (resolvedVariables.length > 0) return resolvedVariables;
+
+    return variables.map((variable) => createDefaultPromptVariable(variable));
+  }, [prompt, variables]);
+
+  const renderedPrompt = useMemo(() => {
+    const values = Object.fromEntries(
+      promptVariables.map((variable) => [
+        variable.name,
+        variableValues[variable.name] ?? variable.defaultValue,
+      ]),
+    );
+
+    return renderPromptTemplate(prompt.body, values);
+  }, [prompt.body, promptVariables, variableValues]);
+
+  const handleVariableValueChange = useCallback((name: string, value: string) => {
+    setVariableValues((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
   return (
     <aside
       className="flex flex-col h-full border-l border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden"
@@ -78,8 +112,16 @@ export function PromptInspector({
           onUpdateTags={onUpdateTags}
         />
         <PromptMetadataSection prompt={prompt} />
-        <PromptBodySection prompt={prompt} onCopyBody={onCopyBody} />
-        <PromptVariablesSection variables={variables} />
+        <PromptVariablesSection
+          values={variableValues}
+          variables={promptVariables}
+          onVariableValueChange={handleVariableValueChange}
+        />
+        <PromptBodySection
+          prompt={prompt}
+          renderedBody={renderedPrompt}
+          onCopyBody={onCopyBody}
+        />
       </div>
     </aside>
   );

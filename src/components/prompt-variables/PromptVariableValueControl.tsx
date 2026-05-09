@@ -2,7 +2,7 @@ import type { ChangeEvent } from 'react';
 import { X } from 'lucide-react';
 import type { PromptVariable } from '../../types/index';
 
-interface LivePreviewVariableControlProps {
+interface PromptVariableValueControlProps {
   variable: PromptVariable;
   value: string;
   onValueChange: (name: string, value: string) => void;
@@ -14,11 +14,11 @@ function formatVariableLabel(variableName: string): string {
   return variableName.charAt(0).toUpperCase() + variableName.slice(1);
 }
 
-export function LivePreviewVariableControl({
+export function PromptVariableValueControl({
   variable,
   value,
   onValueChange,
-}: LivePreviewVariableControlProps) {
+}: PromptVariableValueControlProps) {
   const handleChange = (event: ChangeEvent<PreviewInputElement>) => {
     onValueChange(variable.name, event.target.value);
   };

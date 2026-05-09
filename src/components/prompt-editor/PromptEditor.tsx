@@ -128,6 +128,7 @@ export function PromptEditor({
             promptVariables={form.promptVariables}
             renderedPreview={form.renderedPreview}
             variableValues={form.variableValues}
+            onCopyPreview={onCopy}
             onResetPreview={form.handleResetPreview}
             onVariableValueChange={form.handleVariableValueChange}
           />

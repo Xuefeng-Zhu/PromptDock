@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import type { PromptVariable } from '../../types/index';
+import { PromptVariableValueControl } from '../prompt-variables/PromptVariableValueControl';
 
 interface PromptVariablesSectionProps {
-  variables: string[];
+  onVariableValueChange: (name: string, value: string) => void;
+  values: Record<string, string>;
+  variables: PromptVariable[];
 }
 
-export function PromptVariablesSection({ variables }: PromptVariablesSectionProps) {
-  const [expanded, setExpanded] = useState(false);
+export function PromptVariablesSection({
+  onVariableValueChange,
+  values,
+  variables,
+}: PromptVariablesSectionProps) {
+  const [expanded, setExpanded] = useState(true);
 
   if (variables.length === 0) return null;
 
@@ -29,12 +37,12 @@ export function PromptVariablesSection({ variables }: PromptVariablesSectionProp
       {expanded && (
         <div className="mt-2 space-y-2">
           {variables.map((variable) => (
-            <div
-              key={variable}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
-            >
-              <span className="text-xs font-mono text-[var(--color-primary)]">{`{{${variable}}}`}</span>
-            </div>
+            <PromptVariableValueControl
+              key={variable.name}
+              variable={variable}
+              value={values[variable.name] ?? variable.defaultValue}
+              onValueChange={onVariableValueChange}
+            />
           ))}
         </div>
       )}

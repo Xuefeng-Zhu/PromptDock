@@ -1,12 +1,13 @@
-import { Lightbulb } from 'lucide-react';
+import { Copy, Lightbulb } from 'lucide-react';
 import type { PromptVariable } from '../../types/index';
-import { LivePreviewVariableControl } from './LivePreviewVariableControl';
+import { PromptVariableValueControl } from '../prompt-variables/PromptVariableValueControl';
 
 interface LivePreviewPanelProps {
   body: string;
   promptVariables: PromptVariable[];
   renderedPreview: string;
   variableValues: Record<string, string>;
+  onCopyPreview?: (renderedPreview: string) => void;
   onResetPreview: () => void;
   onVariableValueChange: (name: string, value: string) => void;
 }
@@ -16,6 +17,7 @@ export function LivePreviewPanel({
   promptVariables,
   renderedPreview,
   variableValues,
+  onCopyPreview,
   onResetPreview,
   onVariableValueChange,
 }: LivePreviewPanelProps) {
@@ -40,7 +42,7 @@ export function LivePreviewPanel({
       <div className="px-5 py-4 space-y-3">
         <p className="text-xs text-[var(--color-text-muted)]">Preview with example values</p>
         {promptVariables.map((variable) => (
-          <LivePreviewVariableControl
+          <PromptVariableValueControl
             key={variable.name}
             variable={variable}
             value={variableValues[variable.name] ?? variable.defaultValue}
@@ -55,7 +57,21 @@ export function LivePreviewPanel({
       </div>
 
       <div className="border-t border-[var(--color-border)] px-5 py-4">
-        <h3 className="mb-3 text-sm font-semibold text-[var(--color-text-main)]">Preview Result</h3>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-[var(--color-text-main)]">Preview Result</h3>
+          {onCopyPreview && (
+            <button
+              type="button"
+              aria-label="Copy preview result"
+              disabled={!body}
+              onClick={() => onCopyPreview(renderedPreview)}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)] disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Copy className="h-3 w-3" />
+              Copy
+            </button>
+          )}
+        </div>
         {body ? (
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
             <pre className="whitespace-pre-wrap font-[var(--font-mono)] text-xs leading-relaxed text-[var(--color-text-main)]">

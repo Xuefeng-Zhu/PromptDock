@@ -5,9 +5,16 @@ import { PromptHighlightedBody } from './PromptHighlightedBody';
 interface PromptBodySectionProps {
   onCopyBody?: (body: string, promptId?: string) => void;
   prompt: PromptRecipe;
+  renderedBody?: string;
 }
 
-export function PromptBodySection({ onCopyBody, prompt }: PromptBodySectionProps) {
+export function PromptBodySection({
+  onCopyBody,
+  prompt,
+  renderedBody,
+}: PromptBodySectionProps) {
+  const bodyText = renderedBody ?? prompt.body;
+
   return (
     <div className="px-5 pb-4">
       <div className="flex items-center justify-between mb-2">
@@ -18,14 +25,14 @@ export function PromptBodySection({ onCopyBody, prompt }: PromptBodySectionProps
           type="button"
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-gray-100 hover:text-[var(--color-text-main)] transition-colors"
           aria-label="Copy prompt body"
-          onClick={() => onCopyBody?.(prompt.body, prompt.id)}
+          onClick={() => onCopyBody?.(bodyText, prompt.id)}
         >
           <Copy className="h-3 w-3" />
           Copy
         </button>
       </div>
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3 max-h-64 overflow-y-auto">
-        <PromptHighlightedBody text={prompt.body} />
+        <PromptHighlightedBody text={bodyText} />
       </div>
     </div>
   );

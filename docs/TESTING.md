@@ -81,7 +81,7 @@ Result:
 - 773 passed.
 - 0 failed.
 - 0 skipped.
-- Rust/Tauri compiled with 4 Rust unit tests currently present.
+- Rust/Tauri compiled with 5 Rust unit tests currently present.
 
 ## Recommended Missing Tests
 
@@ -90,7 +90,7 @@ Result:
 - Firebase emulator integration tests that create a user, bootstrap a workspace, write prompts, and verify rules.
 - Firestore security rules tests.
 - Tests for migration from local prompts to synced prompts, including workspace ID consistency.
-- Tests for folder persistence through a future repository/store once folder storage is moved out of the localStorage utility.
+- More coverage for local and synced folder edge cases, especially duplicate handling, workspace transitions, and migration behavior.
 - Tests for Tauri Store file corruption recovery with realistic malformed store files.
 - Accessibility-focused tests for dialog focus trapping and restore behavior.
 - Visual or screenshot regression tests for the dense desktop UI.

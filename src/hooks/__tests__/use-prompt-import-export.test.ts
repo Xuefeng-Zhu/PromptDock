@@ -9,7 +9,7 @@ import {
   type CreatePromptData,
   type PromptStore,
 } from '../../stores/prompt-store';
-import type { PromptRecipe } from '../../types/index';
+import type { PromptRecipe, PromptVariable } from '../../types/index';
 import { usePromptImportExport } from '../use-prompt-import-export';
 
 const mockSaveFile = vi.fn();
@@ -54,6 +54,7 @@ function createImportJson(
     folderId?: string | null;
     tags?: string[];
     title: string;
+    variables?: PromptVariable[];
   }>,
 ): string {
   return JSON.stringify({
@@ -184,6 +185,61 @@ describe('usePromptImportExport', () => {
     expect(result.current.successMessage).toBe('Imported 1 prompt(s) successfully.');
   });
 
+  it('preserves typed variable metadata when importing new prompts', async () => {
+    const { repo } = setupStores();
+    mockOpenFile.mockResolvedValue(
+      createImportJson([
+        {
+          title: 'Typed prompt',
+          body: 'Write in {{tone}} about {{context}}',
+          variables: [
+            {
+              name: 'tone',
+              defaultValue: 'Friendly',
+              description: 'Voice to use',
+              inputType: 'dropdown',
+              options: ['Friendly', 'Professional'],
+            },
+            {
+              name: 'context',
+              defaultValue: '',
+              description: 'Background material',
+              inputType: 'textarea',
+              options: [],
+            },
+          ],
+        },
+      ]),
+    );
+    const { result } = renderHook(() => usePromptImportExport());
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Typed prompt',
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: 'Friendly',
+            description: 'Voice to use',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+          {
+            name: 'context',
+            defaultValue: '',
+            description: 'Background material',
+            inputType: 'textarea',
+            options: [],
+          },
+        ],
+      }),
+    );
+  });
+
   it('pauses duplicate imports and can skip duplicates while importing new prompts', async () => {
     const existing = makePrompt({
       id: 'existing',
@@ -274,6 +330,64 @@ describe('usePromptImportExport', () => {
     );
     expect(result.current.successMessage).toBe(
       'Imported 2 prompt(s), overwrote 1 duplicate(s).',
+    );
+  });
+
+  it('preserves typed variable metadata when overwriting duplicates', async () => {
+    const existing = makePrompt({
+      id: 'existing',
+      title: 'Existing prompt',
+      body: 'Write in {{tone}}',
+      variables: [
+        {
+          name: 'tone',
+          defaultValue: '',
+          description: '',
+          inputType: 'text',
+          options: [],
+        },
+      ],
+    });
+    const { repo } = setupStores([existing]);
+    mockOpenFile.mockResolvedValue(
+      createImportJson([
+        {
+          title: 'Existing prompt',
+          body: 'Write in {{tone}}',
+          variables: [
+            {
+              name: 'tone',
+              defaultValue: 'Professional',
+              description: 'Voice to use',
+              inputType: 'dropdown',
+              options: ['Friendly', 'Professional'],
+            },
+          ],
+        },
+      ]),
+    );
+    const { result } = renderHook(() => usePromptImportExport());
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+    await act(async () => {
+      await result.current.handleOverwriteAll();
+    });
+
+    expect(repo.update).toHaveBeenCalledWith(
+      'existing',
+      expect.objectContaining({
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: 'Professional',
+            description: 'Voice to use',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+        ],
+      }),
     );
   });
 });

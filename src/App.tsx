@@ -12,8 +12,12 @@ import { initSettingsStore, useSettingsStore } from './stores/settings-store';
 import { seedDefaultPrompts } from './services/seed-data';
 import { registerHotkey } from './utils/hotkey';
 import { AuthService } from './services/auth-service';
-import { SyncService } from './services/sync-service';
 import type { MigrationChoice } from './services/sync-service';
+import {
+  AppSyncLifecycle,
+  restoreAppAuthSession,
+  type SyncLifecycleService,
+} from './services/app-sync-lifecycle';
 import { ConflictService } from './services/conflict-service';
 import { initializeAnalyticsTracking } from './services/analytics-service';
 import { AppModeProvider } from './contexts/AppModeProvider';
@@ -26,7 +30,8 @@ import { isTauriRuntime } from './utils/runtime';
 
 let initialized = false;
 let initializationPromise: Promise<void> | null = null;
-let syncServiceInstance: SyncService | null = null;
+let syncLifecycleInstance: AppSyncLifecycle | null = null;
+let syncServiceInstance: SyncLifecycleService | null = null;
 let conflictServiceInstance: ConflictService | null = null;
 let authServiceInstance: AuthService | null = null;
 
@@ -59,7 +64,7 @@ export function getConflictService(): ConflictService | null {
 }
 
 /** Get the shared SyncService instance (available after sync mode activation). */
-export function getSyncService(): SyncService | null {
+export function getSyncService(): SyncLifecycleService | null {
   return syncServiceInstance;
 }
 
@@ -162,108 +167,31 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
   // actually signs in or a session restore is requested.
   authServiceInstance = new AuthService();
 
-  // 8. Subscribe to AppModeStore mode changes to instantiate/teardown SyncService
+  // 8. Start sync lifecycle orchestration for auth restore and mode changes.
   if (enableBackgroundServices) {
-    appModeStore.subscribe((state, prevState) => {
-      const modeChanged = state.mode !== prevState.mode;
-      if (!modeChanged) return;
-
-      if (state.mode === 'synced' && !syncServiceInstance) {
-        const userId = state.userId ?? '';
-        const workspaceId = userId; // default workspace = user ID
-
-        if (!userId) {
-          appModeStore.getState().setMode('local');
-          appModeStore.getState().setSyncStatus('local');
-          return;
-        }
-
-        promptStore.getState().setActiveWorkspaceId(workspaceId);
-        folderStore.getState().setActiveWorkspaceId(workspaceId);
-        void settingsStore.getState().updateSettings({ activeWorkspaceId: workspaceId }).catch((err) => {
-          console.error('Failed to persist active workspace after sign-in:', err);
-        });
-
-        // Instantiate SyncService when transitioning to synced mode
-        syncServiceInstance = new SyncService({
-          appModeStore: appModeStore.getState(),
-          onRemotePromptsChanged: (prompts) => {
-            // 7.2: Update PromptStore with remote prompt list
-            promptStore.setState({ prompts });
-          },
-          onRemoteFoldersChanged: (folders) => {
-            folderStore.getState().setFolders(folders);
-          },
-          onConflictDetected: (local, remote) => {
-            // 7.3: Delegate conflict detection to ConflictService
-            conflictServiceInstance?.processConflict(local, remote);
-          },
-        });
-
-        // 7.4: Configure PromptRepository to delegate to FirestoreBackend
-        const firestoreBackend = syncServiceInstance.getFirestoreBackend();
-        if (firestoreBackend) {
-          promptRepo.setFirestoreDelegate(firestoreBackend);
-          folderRepo.setFirestoreDelegate(firestoreBackend);
-        }
-
-        // Trigger the sync transition: migrate local prompts and start snapshot listeners
-        const currentPrompts = promptStore.getState().prompts;
-        const currentFolders = folderStore.getState().folders;
-        syncServiceInstance.transitionToSynced(
-          userId,
-          workspaceId,
-          currentPrompts,
-          syncMigrationChoice,
-          currentFolders,
-        ).then(() => {
-          // Wire PromptRepository to FirestoreBackend after transition completes
-          const fb = syncServiceInstance?.getFirestoreBackend();
-          if (fb) {
-            promptRepo.setFirestoreDelegate(fb);
-            folderRepo.setFirestoreDelegate(fb);
-          }
-        }).catch((err) => {
-          console.error('Failed to transition to synced mode:', err);
-        });
-      } else if (state.mode === 'local' && syncServiceInstance) {
-        // Teardown SyncService when transitioning back to local mode
-        syncServiceInstance.dispose();
-        syncServiceInstance = null;
-        // Revert PromptRepository to local-only mode
-        promptRepo.setFirestoreDelegate(null);
-        folderRepo.setFirestoreDelegate(null);
-        promptStore.getState().setActiveWorkspaceId('local');
-        folderStore.getState().setActiveWorkspaceId('local');
-        void settingsStore.getState().updateSettings({ activeWorkspaceId: 'local' }).catch((err) => {
-          console.error('Failed to persist active workspace after sign-out:', err);
-        });
-        conflictServiceInstance?.clearAll();
-        void promptStore.getState().loadPrompts().catch((err) => {
-          console.error('Failed to reload local prompts after leaving synced mode:', err);
-        });
-        void folderStore.getState().loadFolders().catch((err) => {
-          console.error('Failed to reload local folders after leaving synced mode:', err);
-        });
-      }
+    syncLifecycleInstance = new AppSyncLifecycle({
+      appModeStore,
+      promptStore,
+      folderStore,
+      settingsStore,
+      promptRepository: promptRepo,
+      folderRepository: folderRepo,
+      authService: authServiceInstance,
+      conflictService: conflictServiceInstance,
+      syncMigrationChoice,
+      onSyncServiceChange: (service) => {
+        syncServiceInstance = service;
+      },
     });
+    syncLifecycleInstance.start();
   }
 
   // 9. Restore auth session — if a valid user exists, transition to synced mode
   if (restoreAuthSession) {
-    const applyRestoredAuth = (result: Awaited<ReturnType<AuthService['restoreSession']>>) => {
-      if (result && result.success) {
-        const appMode = appModeStore.getState();
-        appMode.setUserId(result.user.uid);
-        appMode.setMode('synced');
-      }
-    };
-
-    try {
-      const result = await authServiceInstance.restoreSession(applyRestoredAuth);
-      applyRestoredAuth(result);
-    } catch {
-      // Session restore failure is non-fatal — stay in local mode
+    if (syncLifecycleInstance) {
+      await syncLifecycleInstance.restoreAuthSession();
+    } else {
+      await restoreAppAuthSession(authServiceInstance, appModeStore);
     }
   }
 }

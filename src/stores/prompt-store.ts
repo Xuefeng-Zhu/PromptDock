@@ -30,6 +30,7 @@ export interface PromptStore {
   updatePrompt: (id: string, changes: Partial<PromptRecipe>) => Promise<void>;
   deletePrompt: (id: string) => Promise<void>;
   duplicatePrompt: (id: string) => Promise<void>;
+  clearFolderAssignments: (folderId: string) => Promise<number>;
   toggleFavorite: (id: string) => Promise<void>;
   markPromptUsed: (id: string) => Promise<void>;
   archivePrompt: (id: string) => Promise<void>;
@@ -95,6 +96,23 @@ export function createPromptStore(repo: IPromptRepository) {
     async duplicatePrompt(id: string) {
       const duplicated = await repo.duplicate(id);
       set((state) => ({ prompts: [...state.prompts, duplicated] }));
+    },
+
+    async clearFolderAssignments(folderId: string) {
+      const affectedPrompts = get().prompts.filter((prompt) => prompt.folderId === folderId);
+      if (affectedPrompts.length === 0) return 0;
+
+      const updatedPrompts = await Promise.all(
+        affectedPrompts.map((prompt) => repo.update(prompt.id, { folderId: null })),
+      );
+      const updatedById = new Map(updatedPrompts.map((prompt) => [prompt.id, prompt]));
+
+      set((state) => ({
+        prompts: state.prompts.map((prompt) => updatedById.get(prompt.id) ?? prompt),
+        folderFilter: state.folderFilter === folderId ? null : state.folderFilter,
+      }));
+
+      return affectedPrompts.length;
     },
 
     async toggleFavorite(id: string) {

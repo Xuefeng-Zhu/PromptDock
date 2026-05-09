@@ -1,10 +1,12 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { getConflictService } from '../App';
 import type { AppShellProps } from '../components/app-shell/types';
 import { useAppModeStore } from '../stores/app-mode-store';
+import { useFolderStore } from '../stores/folder-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
+import type { Folder } from '../types/index';
 import { isTauriRuntime } from '../utils/runtime';
 import { hideMainWindow } from '../utils/window';
 import { useLibraryData } from './use-library-data';
@@ -17,6 +19,15 @@ import {
   useSelectedPromptVisibility,
   useShellNavigation,
 } from './app-shell/use-shell-navigation';
+
+function formatPromptCount(count: number): string {
+  return `${count} prompt${count === 1 ? '' : 's'}`;
+}
+
+interface FolderDeleteConfirmation {
+  folder: Folder;
+  promptCount: number;
+}
 
 export function useAppShellController({
   authService,
@@ -31,10 +42,15 @@ export function useAppShellController({
   const updatePrompt = usePromptStore((s) => s.updatePrompt);
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const archivePrompt = usePromptStore((s) => s.archivePrompt);
+  const restorePrompt = usePromptStore((s) => s.restorePrompt);
   const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
+  const clearFolderAssignments = usePromptStore((s) => s.clearFolderAssignments);
   const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
+  const userFolders = useFolderStore((s) => s.folders);
+  const createFolder = useFolderStore((s) => s.createFolder);
+  const deleteFolder = useFolderStore((s) => s.deleteFolder);
 
   const theme = useSettingsStore((s) => s.settings.theme);
   const storedDefaultAction = useSettingsStore((s) => s.settings.defaultAction);
@@ -45,20 +61,22 @@ export function useAppShellController({
   const setUserId = useAppModeStore((s) => s.setUserId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
   const addToast = useToastStore((s) => s.addToast);
+  const [folderDeleteConfirmation, setFolderDeleteConfirmation] = useState<FolderDeleteConfirmation | null>(null);
 
   const navigation = useShellNavigation({ addToast });
   const {
     activeFilter,
     activeSidebarItem,
+    blockIfEditorHasUnsavedChanges,
     commandPaletteOpen,
     screen,
     selectedPromptId,
     setCommandPaletteOpen,
     setEditorHasUnsavedChanges,
+    handleFolderDeleted,
     setScreen,
     setSelectedPromptId,
     setVariableFillPromptId,
-    userFolders,
     variableFillPromptId,
   } = navigation;
   const defaultAction = isTauriRuntime() ? storedDefaultAction : 'copy';
@@ -97,6 +115,7 @@ export function useAppShellController({
     activeWorkspaceId,
     addToast,
     archivePrompt,
+    restorePrompt,
     copyText,
     createPrompt,
     deletePrompt,
@@ -149,6 +168,68 @@ export function useAppShellController({
     });
   }, [addToast, theme, updateSettings]);
 
+  const handleCreateFolder = useCallback(
+    async (name: string) => {
+      try {
+        return await createFolder(name);
+      } catch (err) {
+        addToast(`Failed to create folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        return undefined;
+      }
+    },
+    [addToast, createFolder],
+  );
+
+  const handleDeleteFolder = useCallback(
+    (folder: Folder) => {
+      if (blockIfEditorHasUnsavedChanges()) return;
+
+      setFolderDeleteConfirmation({
+        folder,
+        promptCount: prompts.filter((prompt) => prompt.folderId === folder.id).length,
+      });
+    },
+    [blockIfEditorHasUnsavedChanges, prompts],
+  );
+
+  const handleFolderDeleteCancel = useCallback(() => {
+    setFolderDeleteConfirmation(null);
+  }, []);
+
+  const handleFolderDeleteConfirm = useCallback(
+    async () => {
+      const folder = folderDeleteConfirmation?.folder;
+      if (!folder) return;
+
+      setFolderDeleteConfirmation(null);
+
+      try {
+        const movedPromptCount = await clearFolderAssignments(folder.id);
+        const isPersistedFolder = userFolders.some((item) => item.id === folder.id);
+        if (isPersistedFolder) {
+          await deleteFolder(folder.id);
+        }
+
+        handleFolderDeleted(folder.id);
+
+        const movedSummary = movedPromptCount > 0
+          ? ` and moved ${formatPromptCount(movedPromptCount)} to No folder`
+          : '';
+        addToast(`Deleted folder "${folder.name}"${movedSummary}.`, 'success');
+      } catch (err) {
+        addToast(`Failed to delete folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      }
+    },
+    [
+      addToast,
+      clearFolderAssignments,
+      deleteFolder,
+      folderDeleteConfirmation,
+      handleFolderDeleted,
+      userFolders,
+    ],
+  );
+
   const showInspector = screen.name === 'library' && libraryData.selectedPrompt !== null;
 
   return {
@@ -169,8 +250,9 @@ export function useAppShellController({
     handleConflictBadgeClick: navigation.handleConflictBadgeClick,
     handleConflictResolve: conflict.handleConflictResolve,
     handleCopyPromptBody: promptCrud.handleCopyPromptBody,
-    handleCreateFolder: navigation.handleCreateFolder,
+    handleCreateFolder,
     handleDeletePrompt: promptCrud.handleDeletePrompt,
+    handleDeleteFolder,
     handleDuplicatePrompt: promptCrud.handleDuplicatePrompt,
     handleEditPrompt: promptCrud.handleEditPrompt,
     handleEditorArchive: promptCrud.handleEditorArchive,
@@ -179,8 +261,11 @@ export function useAppShellController({
     handleEditorDuplicate: promptCrud.handleEditorDuplicate,
     handleEditorSave: promptCrud.handleEditorSave,
     handleFilterChange: navigation.handleFilterChange,
+    handleFolderDeleteCancel,
+    handleFolderDeleteConfirm,
     handleNewPrompt: navigation.handleNewPrompt,
     handleOnboardingComplete: navigation.handleOnboardingComplete,
+    handleRestorePrompt: promptCrud.handleRestorePrompt,
     handleSearchChange,
     handleSelectPrompt: navigation.handleSelectPrompt,
     handleSettingsBack: navigation.handleSettingsBack,
@@ -196,6 +281,7 @@ export function useAppShellController({
     handleVariableFillPaste: promptLaunchFlow.handleVariableFillPaste,
     libraryData,
     mode,
+    folderDeleteConfirmation,
     prompts,
     screen,
     searchQuery,

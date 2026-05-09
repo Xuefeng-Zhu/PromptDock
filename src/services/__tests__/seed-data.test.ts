@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { PromptRecipe } from '../../types/index';
 import type { IPromptRepository } from '../../repositories/interfaces';
 import { seedDefaultPrompts, SEED_RECIPES } from '../seed-data';
+import { VariableParser } from '../variable-parser';
 
 // ─── Mock Repository ───────────────────────────────────────────────────────────
 
@@ -34,8 +35,8 @@ function createMockRepo(existingPrompts: PromptRecipe[] = []): IPromptRepository
 
 describe('Seed Data Service', () => {
   describe('SEED_RECIPES', () => {
-    it('should contain exactly 6 seed recipes', () => {
-      expect(SEED_RECIPES).toHaveLength(6);
+    it('should contain exactly 4 seed recipes', () => {
+      expect(SEED_RECIPES).toHaveLength(4);
     });
 
     it('should include all expected recipe titles', () => {
@@ -43,10 +44,8 @@ describe('Seed Data Service', () => {
       expect(titles).toEqual([
         'Summarize Text',
         'Rewrite in Clear English',
-        'Generate Product Ideas',
-        'Code Review Assistant',
         'Email Draft',
-        'Meeting Notes Extractor',
+        'PromptDock JSON Recipe Generator',
       ]);
     });
 
@@ -83,16 +82,25 @@ describe('Seed Data Service', () => {
         expect(recipe.favorite).toBe(false);
       }
     });
+
+    it('should only expose prompt_goal in the JSON recipe generator', () => {
+      const recipe = SEED_RECIPES.find(
+        (item) => item.title === 'PromptDock JSON Recipe Generator',
+      );
+      const variables = new VariableParser().parse(recipe?.body ?? '');
+
+      expect(variables).toEqual(['prompt_goal']);
+    });
   });
 
   describe('seedDefaultPrompts', () => {
-    it('should create all 6 seed recipes when workspace is empty', async () => {
+    it('should create all 4 seed recipes when workspace is empty', async () => {
       const repo = createMockRepo();
 
       await seedDefaultPrompts(repo);
 
       expect(repo.getAll).toHaveBeenCalledWith('local');
-      expect(repo.create).toHaveBeenCalledTimes(6);
+      expect(repo.create).toHaveBeenCalledTimes(4);
     });
 
     it('should not create any recipes when workspace already has prompts', async () => {

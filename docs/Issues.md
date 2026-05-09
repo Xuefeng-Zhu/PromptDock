@@ -13,15 +13,3 @@ The sign-in path now sets the active workspace to the Firebase user ID and route
 **Impact:** Future workspace switching could drift if a caller updates only one store.
 
 **Suggested Fix:** Introduce one workspace state owner and route all create/reload/import operations through that value.
-
-## Issue: Folder Persistence Is Not Workspace-Aware
-
-**Severity:** Medium
-**Category:** Architecture / Correctness
-**Location:** `src/utils/folder-storage.ts`, `src/components/AppShell.tsx`
-
-User-created folders are stored directly in browser `localStorage`, outside the repository/storage abstraction and outside Firestore sync.
-
-**Impact:** Folder data can diverge between browser, Tauri local storage, and synced mode. Folders are also not scoped to a workspace.
-
-**Suggested Fix:** Add a folder repository/store backed by `IStorageBackend`, then make folder persistence workspace-scoped before adding sync support.

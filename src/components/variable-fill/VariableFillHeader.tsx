@@ -8,11 +8,11 @@ interface VariableFillHeaderProps {
 export function VariableFillHeader({ onCancel, title }: VariableFillHeaderProps) {
   return (
     <div
-      className="flex items-center justify-between border-b px-5 py-4"
+      className="flex items-start justify-between gap-3 border-b px-4 py-4 sm:px-5"
       style={{ borderColor: 'var(--color-border)' }}
     >
-      <div>
-        <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-main)' }}>
+      <div className="min-w-0">
+        <h2 className="truncate text-base font-semibold" style={{ color: 'var(--color-text-main)' }}>
           {title}
         </h2>
         <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
@@ -22,7 +22,7 @@ export function VariableFillHeader({ onCancel, title }: VariableFillHeaderProps)
       <button
         type="button"
         onClick={onCancel}
-        className="rounded-lg p-1.5 transition-colors hover:bg-gray-100"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-100"
         style={{ color: 'var(--color-text-muted)' }}
         aria-label="Close variable fill modal"
       >

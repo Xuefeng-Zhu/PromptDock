@@ -63,6 +63,34 @@ describe('TopBar', () => {
     expect(accountBtn).toBeDefined();
   });
 
+  it('renders a mobile navigation trigger when provided', () => {
+    const onMobileNavToggle = vi.fn();
+    render(
+      <TopBar
+        {...defaultProps}
+        mobileNavOpen={false}
+        onMobileNavToggle={onMobileNavToggle}
+      />,
+    );
+
+    const menuButton = screen.getByRole('button', { name: 'Open navigation' });
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(menuButton);
+    expect(onMobileNavToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('reflects the mobile navigation expanded state', () => {
+    render(
+      <TopBar
+        {...defaultProps}
+        mobileNavOpen
+        onMobileNavToggle={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('opens a signed-out account form in the dropdown', () => {
     render(<TopBar {...defaultProps} authService={createMockAuthService()} syncStatus="local" />);
 

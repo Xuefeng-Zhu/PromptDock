@@ -1,15 +1,19 @@
-import { Archive, Files, Pencil, Star, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Archive, Files, Pencil, Star, Trash2, X } from 'lucide-react';
 import {
   PromptActionsMenu,
   type PromptActionMenuItem,
 } from '../prompt-actions';
 import type { PromptRecipe } from '../../types/index';
+import { PromptDeleteConfirmationDialog } from './PromptDeleteConfirmationDialog';
 
 interface PromptInspectorHeaderProps {
   onArchive?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onRestore?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onEdit?: (id: string) => void;
+  onClose?: () => void;
   onToggleFavorite?: (id: string) => void;
   prompt: PromptRecipe;
 }
@@ -17,11 +21,42 @@ interface PromptInspectorHeaderProps {
 export function PromptInspectorHeader({
   onArchive,
   onDelete,
+  onRestore,
   onDuplicate,
   onEdit,
+  onClose,
   onToggleFavorite,
   prompt,
 }: PromptInspectorHeaderProps) {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const handleDeleteRequest = () => {
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+  };
+
+  const handleDeleteConfirm = () => {
+    setDeleteConfirmOpen(false);
+    onDelete?.(prompt.id);
+  };
+
+  const archiveAction: PromptActionMenuItem = prompt.archived
+    ? {
+        type: 'item',
+        icon: <Archive className="h-4 w-4" />,
+        label: 'Restore',
+        onSelect: () => onRestore?.(prompt.id),
+      }
+    : {
+        type: 'item',
+        icon: <Archive className="h-4 w-4" />,
+        label: 'Archive',
+        onSelect: () => onArchive?.(prompt.id),
+      };
+
   const actionItems: PromptActionMenuItem[] = [
     {
       type: 'item',
@@ -35,19 +70,14 @@ export function PromptInspectorHeader({
       label: 'Duplicate',
       onSelect: () => onDuplicate?.(prompt.id),
     },
-    {
-      type: 'item',
-      icon: <Archive className="h-4 w-4" />,
-      label: 'Archive',
-      onSelect: () => onArchive?.(prompt.id),
-    },
+    archiveAction,
     { type: 'separator' },
     {
       type: 'item',
       danger: true,
       icon: <Trash2 className="h-4 w-4" />,
       label: 'Delete',
-      onSelect: () => onDelete?.(prompt.id),
+      onSelect: handleDeleteRequest,
     },
   ];
 
@@ -60,7 +90,7 @@ export function PromptInspectorHeader({
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-gray-100 md:h-auto md:w-auto md:p-1"
             aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
             onClick={() => onToggleFavorite?.(prompt.id)}
           >
@@ -75,12 +105,31 @@ export function PromptInspectorHeader({
           </button>
 
           <PromptActionsMenu items={actionItems} />
+
+          {onClose && (
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)] md:hidden"
+              aria-label="Close prompt details"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
       {prompt.description && (
         <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
           {prompt.description}
         </p>
+      )}
+
+      {deleteConfirmOpen && (
+        <PromptDeleteConfirmationDialog
+          onCancel={handleDeleteCancel}
+          onConfirm={handleDeleteConfirm}
+          promptTitle={prompt.title}
+        />
       )}
     </div>
   );

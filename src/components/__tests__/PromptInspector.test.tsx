@@ -73,6 +73,7 @@ describe('PromptInspector', () => {
       <PromptInspector prompt={mockPrompt} folder={mockFolder} variables={['audience', 'text', 'format']} />
     );
     expect(screen.getByText('Variables (3)')).toBeDefined();
+    expect(screen.getByLabelText('Preview value for audience')).toBeDefined();
   });
 
   it('renders favorite star and more options buttons', () => {
@@ -81,6 +82,21 @@ describe('PromptInspector', () => {
     );
     expect(screen.getByRole('button', { name: /favorites/i })).toBeDefined();
     expect(screen.getByRole('button', { name: 'More options' })).toBeDefined();
+  });
+
+  it('renders a close control when onClose is provided', () => {
+    const onClose = vi.fn();
+    render(
+      <PromptInspector
+        prompt={mockPrompt}
+        folder={mockFolder}
+        variables={[]}
+        onClose={onClose}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close prompt details' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   describe('action callbacks', () => {
@@ -114,6 +130,40 @@ describe('PromptInspector', () => {
       fireEvent.click(copyBtn);
       expect(onCopyBody).toHaveBeenCalledTimes(1);
       expect(onCopyBody).toHaveBeenCalledWith(mockPrompt.body, mockPrompt.id);
+    });
+
+    it('calls onCopyBody with the rendered prompt after variables are filled', () => {
+      const onCopyBody = vi.fn();
+      render(
+        <PromptInspector
+          prompt={mockPrompt}
+          folder={mockFolder}
+          variables={['audience', 'text', 'format']}
+          onCopyBody={onCopyBody}
+        />
+      );
+
+      fireEvent.change(screen.getByLabelText('Preview value for audience'), {
+        target: { value: 'executive' },
+      });
+      fireEvent.change(screen.getByLabelText('Preview value for text'), {
+        target: { value: 'Quarterly planning notes' },
+      });
+      fireEvent.change(screen.getByLabelText('Preview value for format'), {
+        target: { value: 'Bullets' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt body' }));
+
+      expect(onCopyBody).toHaveBeenCalledTimes(1);
+      expect(onCopyBody).toHaveBeenCalledWith(
+        `Summarize the following text for a executive audience. Be clear, accurate, and concise.
+
+Text:
+Quarterly planning notes
+
+Output format: Bullets`,
+        mockPrompt.id,
+      );
     });
 
     it('calls onUpdateTags with a new tag when a tag is added inline', () => {
@@ -302,7 +352,7 @@ describe('PromptInspector', () => {
       expect(screen.queryByRole('menu')).toBeNull();
     });
 
-    it('calls onDelete with prompt id and closes dropdown when "Delete" is clicked', () => {
+    it('confirms before calling onDelete from the actions menu', () => {
       const onDelete = vi.fn();
       render(
         <PromptInspector
@@ -318,10 +368,14 @@ describe('PromptInspector', () => {
 
       // Click "Delete"
       fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
-      expect(onDelete).toHaveBeenCalledTimes(1);
-      expect(onDelete).toHaveBeenCalledWith(mockPrompt.id);
+      expect(onDelete).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: /Delete/i })).toBeDefined();
       // Dropdown should be closed
       expect(screen.queryByRole('menu')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(onDelete).toHaveBeenCalledWith(mockPrompt.id);
     });
 
     it('does not throw when callbacks are not provided and buttons are clicked', () => {

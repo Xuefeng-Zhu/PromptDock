@@ -1,13 +1,14 @@
-import { FolderOpen, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { Folder } from '../../types/index';
-import { SidebarItem } from './SidebarItem';
+import { SidebarFolderItem } from './SidebarFolderItem';
 import { SidebarSection } from './SidebarSection';
 import { useInlineFolderCreate } from './use-inline-folder-create';
 
 interface SidebarFolderSectionProps {
   activeItem: string;
   folders: Folder[];
-  onCreateFolder?: (name: string) => void;
+  onCreateFolder?: (name: string) => void | Promise<unknown>;
+  onDeleteFolder?: (folder: Folder) => void | Promise<unknown>;
   onItemSelect: (item: string) => void;
   promptCountByFolder: Record<string, number>;
 }
@@ -16,6 +17,7 @@ export function SidebarFolderSection({
   activeItem,
   folders,
   onCreateFolder,
+  onDeleteFolder,
   onItemSelect,
   promptCountByFolder,
 }: SidebarFolderSectionProps) {
@@ -28,14 +30,12 @@ export function SidebarFolderSection({
       onActionClick={() => folderCreate.setShowFolderInput(true)}
     >
       {folders.map((folder) => (
-        <SidebarItem
+        <SidebarFolderItem
           key={folder.id}
-          icon={<FolderOpen className="h-4 w-4" />}
-          iconColor="text-[var(--color-text-muted)]"
-          label={folder.name}
-          itemKey={folder.id}
+          folder={folder}
           isActive={activeItem === folder.id}
-          onSelect={onItemSelect}
+          onDeleteFolder={onDeleteFolder}
+          onItemSelect={onItemSelect}
           count={promptCountByFolder[folder.id]}
         />
       ))}

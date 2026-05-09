@@ -5,8 +5,15 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
-import type { Folder, PromptRecipe } from '../types/index';
+import type { Folder, PromptRecipe, PromptVariable } from '../types/index';
+import type { PromptJsonDraft } from '../services/prompt-json';
 import { extractVariables } from '../utils/prompt-template';
+import {
+  arePromptVariablesEqual,
+  createDefaultPromptVariable,
+  findDropdownWithInvalidDefault,
+  resolvePromptVariables,
+} from '../utils/prompt-variables';
 import { normalizeTag, resolveExistingTagName } from '../utils/tag-options';
 import { countChars, countWords } from '../utils/text-counts';
 
@@ -22,6 +29,21 @@ interface UsePromptEditorFormOptions {
 function areTagsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((tag, index) => tag === right[index]);
+}
+
+function resolveTagList(availableTags: string[], tagValues: string[]): string[] {
+  const tagsByKey = new Map<string, string>();
+
+  for (const tag of tagValues) {
+    const resolvedTag = resolveExistingTagName(availableTags, tag);
+    const key = normalizeTag(resolvedTag);
+
+    if (key && !tagsByKey.has(key)) {
+      tagsByKey.set(key, resolvedTag);
+    }
+  }
+
+  return Array.from(tagsByKey.values());
 }
 
 export function usePromptEditorForm({
@@ -45,6 +67,9 @@ export function usePromptEditorForm({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [variableDefinitions, setVariableDefinitions] = useState(() =>
+    resolvePromptVariables(prompt?.body ?? '', prompt?.variables),
+  );
 
   useEffect(() => {
     if (prompt) {
@@ -54,10 +79,28 @@ export function usePromptEditorForm({
       setTags([...prompt.tags]);
       setFolderId(prompt.folderId);
       setFavorite(prompt.favorite);
+      setVariableDefinitions(resolvePromptVariables(prompt.body, prompt.variables));
+      return;
     }
+
+    setTitle('');
+    setDescription('');
+    setBody('');
+    setTags([]);
+    setFolderId(null);
+    setFavorite(false);
+    setVariableDefinitions([]);
   }, [prompt]);
 
   const variables = useMemo(() => extractVariables(body), [body]);
+  const promptVariables = useMemo(
+    () => resolvePromptVariables(body, variableDefinitions),
+    [body, variableDefinitions],
+  );
+  const initialPromptVariables = useMemo(
+    () => resolvePromptVariables(prompt?.body ?? '', prompt?.variables),
+    [prompt],
+  );
   const wordCount = useMemo(() => countWords(body), [body]);
   const charCount = useMemo(() => countChars(body), [body]);
   const lineCount = useMemo(() => Math.max(body.split('\n').length, 1), [body]);
@@ -83,9 +126,21 @@ export function usePromptEditorForm({
       folderId !== (prompt?.folderId ?? null) ||
       favorite !== (prompt?.favorite ?? false) ||
       !areTagsEqual(tags, initialTags) ||
+      !arePromptVariablesEqual(promptVariables, initialPromptVariables) ||
       tagInput.trim().length > 0
     );
-  }, [body, description, favorite, folderId, prompt, tagInput, tags, title]);
+  }, [
+    body,
+    description,
+    favorite,
+    folderId,
+    initialPromptVariables,
+    prompt,
+    promptVariables,
+    tagInput,
+    tags,
+    title,
+  ]);
 
   useEffect(() => {
     onDirtyChange?.(hasUnsavedChanges);
@@ -138,9 +193,47 @@ export function usePromptEditorForm({
     setBody((prev) => prev + '{{variable_name}}');
   }, []);
 
+  const handleVariableDefinitionChange = useCallback(
+    (
+      name: string,
+      changes: Partial<Pick<
+        PromptVariable,
+        'defaultValue' | 'description' | 'inputType' | 'options'
+      >>,
+    ) => {
+      setVariableDefinitions((prev) => {
+        const existing = prev.find((variable) => variable.name === name)
+          ?? createDefaultPromptVariable(name);
+        const updated = { ...existing, ...changes };
+        return [...prev.filter((variable) => variable.name !== name), updated];
+      });
+    },
+    [],
+  );
+
+  const applyJsonDraft = useCallback((data: PromptJsonDraft) => {
+    setTitle(data.title);
+    setDescription(data.description);
+    setBody(data.body);
+    setVariableDefinitions(resolvePromptVariables(data.body));
+    setTags(resolveTagList(availableTags, data.tags));
+    setFolderId(data.folderId);
+    setFavorite(data.favorite);
+    setTagInput('');
+    setShowTagInput(false);
+    setValidationError(null);
+    setVariableValues({});
+  }, [availableTags]);
+
   const savePrompt = useCallback(async () => {
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
+    const dropdownWithoutOptions = promptVariables.find(
+      (variable) =>
+        variable.inputType === 'dropdown' && variable.options.length === 0,
+    );
+    const dropdownWithInvalidDefault =
+      findDropdownWithInvalidDefault(promptVariables);
 
     if (!trimmedTitle) {
       setValidationError('Title is required.');
@@ -148,6 +241,18 @@ export function usePromptEditorForm({
     }
     if (!trimmedBody) {
       setValidationError('Body is required.');
+      return;
+    }
+    if (dropdownWithoutOptions) {
+      setValidationError(
+        `Add at least one dropdown option for ${dropdownWithoutOptions.name}.`,
+      );
+      return;
+    }
+    if (dropdownWithInvalidDefault) {
+      setValidationError(
+        `Default value for ${dropdownWithInvalidDefault.name} must match one of its dropdown options.`,
+      );
       return;
     }
 
@@ -158,6 +263,7 @@ export function usePromptEditorForm({
         title: trimmedTitle,
         description: description.trim(),
         body,
+        variables: promptVariables,
         tags,
         folderId,
         favorite,
@@ -169,7 +275,7 @@ export function usePromptEditorForm({
     } finally {
       setIsSaving(false);
     }
-  }, [body, description, favorite, folderId, onSave, tags, title]);
+  }, [body, description, favorite, folderId, onSave, promptVariables, tags, title]);
 
   const handleVariableValueChange = useCallback((name: string, value: string) => {
     setVariableValues((prev) => ({ ...prev, [name]: value }));
@@ -182,16 +288,17 @@ export function usePromptEditorForm({
   const renderedPreview = useMemo(() => {
     if (!body) return '';
     let result = body;
-    for (const variable of variables) {
-      const value = variableValues[variable];
+    for (const variable of promptVariables) {
+      const value = variableValues[variable.name] ?? variable.defaultValue;
       if (value) {
-        result = result.replaceAll(`{{${variable}}}`, value);
+        result = result.replaceAll(`{{${variable.name}}}`, value);
       }
     }
     return result;
-  }, [body, variableValues, variables]);
+  }, [body, promptVariables, variableValues]);
 
   return {
+    applyJsonDraft,
     body,
     charCount,
     currentFolder,
@@ -205,6 +312,7 @@ export function usePromptEditorForm({
     handleResetPreview,
     handleSelectTag,
     handleTagKeyDown,
+    handleVariableDefinitionChange,
     handleVariableValueChange,
     isEditing,
     isEditorExpanded,
@@ -228,6 +336,7 @@ export function usePromptEditorForm({
     title,
     validationError,
     variableValues,
+    promptVariables,
     variables,
     wordCount,
   };

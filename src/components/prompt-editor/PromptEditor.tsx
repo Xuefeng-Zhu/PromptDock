@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import type { Folder, PromptRecipe } from '../../types/index';
 import { usePromptEditorForm } from '../../hooks/use-prompt-editor-form';
 import { BodyTemplateEditor } from './BodyTemplateEditor';
 import { LivePreviewPanel } from './LivePreviewPanel';
 import { PromptBasicsFields } from './PromptBasicsFields';
 import { PromptEditorHeader } from './PromptEditorHeader';
+import { PromptJsonImportModal } from './PromptJsonImportModal';
 import { PromptMetadataFooter } from './PromptMetadataFooter';
+import { VariableDefinitionEditor } from './VariableDefinitionEditor';
 
 export { extractVariables } from '../../utils/prompt-template';
 export { countChars, countWords } from '../../utils/text-counts';
@@ -14,7 +17,7 @@ export interface PromptEditorProps {
   prompt?: PromptRecipe;
   availableTags?: string[];
   folders: Folder[];
-  onCreateFolder?: (name: string) => Folder | void;
+  onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onSave: (data: Partial<PromptRecipe>) => void | Promise<void>;
   onCancel: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
@@ -36,6 +39,7 @@ export function PromptEditor({
   onArchive,
   onCopy,
 }: PromptEditorProps) {
+  const [isJsonImportOpen, setIsJsonImportOpen] = useState(false);
   const form = usePromptEditorForm({
     availableTags,
     folders,
@@ -46,7 +50,7 @@ export function PromptEditor({
   });
 
   return (
-    <div className="flex h-full overflow-hidden bg-[var(--color-background)]">
+    <div className="flex h-full min-h-0 overflow-hidden bg-[var(--color-background)]">
       <div className="min-w-0 flex-1 overflow-y-auto">
         <div className={form.isEditorExpanded ? 'mx-auto w-full px-4 py-6 sm:px-8' : 'mx-auto w-full max-w-4xl px-4 py-6 sm:px-8'}>
           <PromptEditorHeader
@@ -56,6 +60,9 @@ export function PromptEditor({
             onArchive={onArchive}
             onCancel={onCancel}
             onDuplicate={onDuplicate}
+            onFillFromJson={
+              !form.isEditing ? () => setIsJsonImportOpen(true) : undefined
+            }
             onSave={() => void form.savePrompt()}
             promptTitle={prompt?.title}
           />
@@ -105,21 +112,38 @@ export function PromptEditor({
             onToggleFormattingHelp={() => form.setShowFormattingHelp((prev) => !prev)}
           />
 
+          <VariableDefinitionEditor
+            variables={form.promptVariables}
+            onVariableChange={form.handleVariableDefinitionChange}
+          />
+
           {form.isEditing && prompt && <PromptMetadataFooter prompt={prompt} />}
         </div>
       </div>
 
       {!form.isEditorExpanded && (
-        <div className="hidden shrink-0 lg:block">
+        <div className="hidden h-full min-h-0 shrink-0 lg:block">
           <LivePreviewPanel
             body={form.body}
+            promptVariables={form.promptVariables}
             renderedPreview={form.renderedPreview}
             variableValues={form.variableValues}
-            variables={form.variables}
+            onCopyPreview={onCopy}
             onResetPreview={form.handleResetPreview}
             onVariableValueChange={form.handleVariableValueChange}
           />
         </div>
+      )}
+
+      {isJsonImportOpen && (
+        <PromptJsonImportModal
+          folders={folders}
+          onCancel={() => setIsJsonImportOpen(false)}
+          onApply={(data) => {
+            form.applyJsonDraft(data);
+            setIsJsonImportOpen(false);
+          }}
+        />
       )}
     </div>
   );

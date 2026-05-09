@@ -3,8 +3,10 @@ import { LocalStorageBackend } from './repositories/local-storage-backend';
 import { BrowserStorageBackend } from './repositories/browser-storage-backend';
 import type { IStorageBackend } from './repositories/interfaces';
 import { PromptRepository } from './repositories/prompt-repository';
+import { FolderRepository } from './repositories/folder-repository';
 import { SettingsRepository } from './repositories/settings-repository';
 import { initPromptStore } from './stores/prompt-store';
+import { initFolderStore } from './stores/folder-store';
 import { initAppModeStore } from './stores/app-mode-store';
 import { initSettingsStore, useSettingsStore } from './stores/settings-store';
 import { seedDefaultPrompts } from './services/seed-data';
@@ -105,11 +107,13 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
 
   // 2. Create repositories
   const promptRepo = new PromptRepository(backend);
+  const folderRepo = new FolderRepository(backend);
   const settingsRepo = new SettingsRepository(backend);
 
   // 3. Initialize Zustand stores with real repositories
   const appModeStore = initAppModeStore();
   const promptStore = initPromptStore(promptRepo);
+  const folderStore = initFolderStore(folderRepo);
   const settingsStore = initSettingsStore(settingsRepo);
 
   // 4. Seed default prompts on first launch
@@ -119,6 +123,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
 
   // 5. Load initial data into stores
   await promptStore.getState().loadPrompts();
+  await folderStore.getState().loadFolders();
   await settingsStore.getState().loadSettings();
 
   // 6. Register global hotkey from settings (best-effort — ignore failures at startup)
@@ -158,6 +163,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         }
 
         promptStore.getState().setActiveWorkspaceId(workspaceId);
+        folderStore.getState().setActiveWorkspaceId(workspaceId);
         void settingsStore.getState().updateSettings({ activeWorkspaceId: workspaceId }).catch((err) => {
           console.error('Failed to persist active workspace after sign-in:', err);
         });
@@ -169,6 +175,9 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
             // 7.2: Update PromptStore with remote prompt list
             promptStore.setState({ prompts });
           },
+          onRemoteFoldersChanged: (folders) => {
+            folderStore.getState().setFolders(folders);
+          },
           onConflictDetected: (local, remote) => {
             // 7.3: Delegate conflict detection to ConflictService
             conflictServiceInstance?.processConflict(local, remote);
@@ -179,20 +188,24 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         const firestoreBackend = syncServiceInstance.getFirestoreBackend();
         if (firestoreBackend) {
           promptRepo.setFirestoreDelegate(firestoreBackend);
+          folderRepo.setFirestoreDelegate(firestoreBackend);
         }
 
         // Trigger the sync transition: migrate local prompts and start snapshot listeners
         const currentPrompts = promptStore.getState().prompts;
+        const currentFolders = folderStore.getState().folders;
         syncServiceInstance.transitionToSynced(
           userId,
           workspaceId,
           currentPrompts,
           syncMigrationChoice,
+          currentFolders,
         ).then(() => {
           // Wire PromptRepository to FirestoreBackend after transition completes
           const fb = syncServiceInstance?.getFirestoreBackend();
           if (fb) {
             promptRepo.setFirestoreDelegate(fb);
+            folderRepo.setFirestoreDelegate(fb);
           }
         }).catch((err) => {
           console.error('Failed to transition to synced mode:', err);
@@ -203,13 +216,18 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
         syncServiceInstance = null;
         // Revert PromptRepository to local-only mode
         promptRepo.setFirestoreDelegate(null);
+        folderRepo.setFirestoreDelegate(null);
         promptStore.getState().setActiveWorkspaceId('local');
+        folderStore.getState().setActiveWorkspaceId('local');
         void settingsStore.getState().updateSettings({ activeWorkspaceId: 'local' }).catch((err) => {
           console.error('Failed to persist active workspace after sign-out:', err);
         });
         conflictServiceInstance?.clearAll();
         void promptStore.getState().loadPrompts().catch((err) => {
           console.error('Failed to reload local prompts after leaving synced mode:', err);
+        });
+        void folderStore.getState().loadFolders().catch((err) => {
+          console.error('Failed to reload local folders after leaving synced mode:', err);
         });
       }
     });

@@ -246,12 +246,12 @@ flowchart TD
 Currently synced:
 
 - prompt recipes in `workspaces/{workspaceId}/prompts`
+- user-created folders in `workspaces/{workspaceId}/folders`
 - auth session state through Firebase Auth
 - the default personal workspace and owner membership bootstrap
 
 Not fully synced today:
 
-- user-created folders, which are currently bridged through localStorage in the UI layer
 - settings, despite the Firestore rules including a `/settings/{userId}` path
 - conflict records, which are tracked in memory by `ConflictService`
 - multiple workspace selection beyond the current default of `workspaceId = userId`

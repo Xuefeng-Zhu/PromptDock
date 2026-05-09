@@ -27,7 +27,7 @@ export function PromptSearchShortcutHints({ variant }: PromptSearchShortcutHints
 
   return (
     <div
-      className="flex items-center gap-4 border-t px-4 py-2 text-xs"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-2 text-xs"
       style={{
         borderColor: 'var(--color-border)',
         color: 'var(--color-text-muted)',

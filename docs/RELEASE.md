@@ -94,12 +94,21 @@ Required GitHub Actions secret:
 |---|---|
 | `FIREBASE_SERVICE_ACCOUNT_PROMPTDOCK_95E31` | Firebase service account JSON used by the Hosting deploy action. |
 
-Optional GitHub Actions config for browser sync:
+Optional GitHub Actions config for browser and desktop sync/Analytics:
 
 | Name | Type | Description |
 |---|---|---|
 | `VITE_FIREBASE_API_KEY` | Secret | Firebase web API key baked into the Vite bundle. |
 | `VITE_FIREBASE_AUTH_DOMAIN` | Variable | Firebase Auth domain. Defaults to `promptdock-95e31.firebaseapp.com` in the workflow. |
+| `VITE_FIREBASE_APP_ID` | Variable | Firebase web app ID, required for Analytics. |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Variable | Google Analytics measurement ID, required for Analytics. |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Variable | Optional Firebase web app config field. |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Variable | Optional Firebase web app config field. |
+| `VITE_FIREBASE_ANALYTICS_ENABLED` | Variable | Set to `false` to disable Analytics even when configured. Defaults to `true`. |
+
+The Firebase Hosting and desktop release build jobs use the `firebase-hosting`
+environment so the same production Firebase secret and variables can be shared
+by the browser bundle and signed desktop bundles.
 
 Manual deploy from a local machine:
 

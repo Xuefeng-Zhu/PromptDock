@@ -178,6 +178,34 @@ describe('PromptEditor', () => {
     expect(screen.getByRole('option', { name: 'Engineering' })).toBeDefined();
   });
 
+  it('matches existing folders when input contains repeated whitespace', () => {
+    const onCreateFolder = vi.fn();
+    const folders = [
+      {
+        id: 'folder-client-work',
+        name: 'Client Work',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      },
+    ];
+
+    render(
+      <PromptEditor
+        {...defaultProps}
+        folders={folders}
+        onCreateFolder={onCreateFolder}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Folder' }), {
+      target: { value: 'Client   Work' },
+    });
+
+    expect(screen.queryByRole('option', { name: /Create/ })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Client Work' })).toBeDefined();
+  });
+
   it('opens formatting help when Formatting help is clicked', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.queryByText('Template formatting')).toBeNull();

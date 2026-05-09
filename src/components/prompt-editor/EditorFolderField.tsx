@@ -9,6 +9,7 @@ import {
 import { ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import type { Folder } from '../../types/index';
+import { normalizeFolderName } from '../../utils/folder-names';
 
 interface SelectOption {
   label: string;
@@ -26,10 +27,6 @@ type FolderQuickOption =
   | { id: string; kind: 'none'; label: string }
   | { id: string; kind: 'folder'; label: string; value: string }
   | { id: string; kind: 'create'; label: string; value: string };
-
-function normalizeFolderName(name: string): string {
-  return name.trim().toLowerCase();
-}
 
 export function EditorFolderField({
   folderId,

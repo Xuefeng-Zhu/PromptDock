@@ -199,6 +199,63 @@ describe('usePromptEditorForm', () => {
     expect(result.current.tags).toEqual(['Writing', 'Product']);
   });
 
+  it('applies imported JSON variable metadata to the editor draft', () => {
+    const onSave = vi.fn();
+    const { result } = renderHook(() =>
+      usePromptEditorForm({
+        folders,
+        onSave,
+      }),
+    );
+
+    act(() => {
+      result.current.applyJsonDraft({
+        title: 'Typed import',
+        description: '',
+        body: 'Write in {{tone}} about {{context}}',
+        variables: [
+          {
+            name: 'tone',
+            defaultValue: 'Friendly',
+            description: 'Voice',
+            inputType: 'dropdown',
+            options: ['Friendly', 'Professional'],
+          },
+          {
+            name: 'context',
+            defaultValue: '',
+            description: 'Background',
+            inputType: 'textarea',
+            options: [],
+          },
+        ],
+        tags: [],
+        folderId: null,
+        favorite: false,
+      });
+    });
+
+    expect(result.current.promptVariables).toEqual([
+      {
+        name: 'tone',
+        defaultValue: 'Friendly',
+        description: 'Voice',
+        inputType: 'dropdown',
+        options: ['Friendly', 'Professional'],
+      },
+      {
+        name: 'context',
+        defaultValue: '',
+        description: 'Background',
+        inputType: 'textarea',
+        options: [],
+      },
+    ]);
+    expect(result.current.renderedPreview).toBe(
+      'Write in Friendly about {{context}}',
+    );
+  });
+
   it('renders and resets live preview variable values', () => {
     const onSave = vi.fn();
     const prompt = makePrompt();

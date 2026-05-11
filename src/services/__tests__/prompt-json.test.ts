@@ -60,6 +60,47 @@ describe('parsePromptJson', () => {
     });
   });
 
+  it('accepts variable input metadata and resolves it in body order', () => {
+    const result = parsePromptJson(JSON.stringify({
+      title: 'Typed prompt',
+      body: 'Write in {{tone}} about {{context}}.',
+      variables: [
+        {
+          name: 'context',
+          description: 'Background details',
+          inputType: 'textarea',
+        },
+        {
+          name: 'tone',
+          description: 'Voice',
+          defaultValue: 'Friendly',
+          inputType: 'dropdown',
+          options: ['Friendly', 'Professional', 'Friendly'],
+        },
+      ],
+    }));
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.variables).toEqual([
+      {
+        name: 'tone',
+        defaultValue: 'Friendly',
+        description: 'Voice',
+        inputType: 'dropdown',
+        options: ['Friendly', 'Professional'],
+      },
+      {
+        name: 'context',
+        defaultValue: '',
+        description: 'Background details',
+        inputType: 'textarea',
+        options: [],
+      },
+    ]);
+  });
+
   it('accepts folderId only when it matches an existing folder', () => {
     const result = parsePromptJson(
       JSON.stringify({
@@ -111,6 +152,33 @@ describe('parsePromptJson', () => {
       expect(result.errors).toContain('tags must be an array of strings.');
       expect(result.errors).toContain('favorite must be a boolean.');
       expect(result.errors).toContain('folder must match an existing folder name or id.');
+    }
+  });
+
+  it('returns field errors for invalid variable metadata', () => {
+    const result = parsePromptJson(JSON.stringify({
+      title: 'Bad variables',
+      body: 'Write in {{tone}}.',
+      variables: [
+        { name: 'tone', inputType: 'dropdown', options: [] },
+        { name: '', inputType: 'slider' },
+        { name: 'context', description: false, options: ['ok', 123] },
+      ],
+    }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors).toContain(
+        'variables[0].options must include at least one value for dropdown variables.',
+      );
+      expect(result.errors).toContain(
+        'variables[1].name is required and must be a non-empty string.',
+      );
+      expect(result.errors).toContain(
+        'variables[1].inputType must be text, textarea, or dropdown.',
+      );
+      expect(result.errors).toContain('variables[2].description must be a string.');
+      expect(result.errors).toContain('variables[2].options must be an array of strings.');
     }
   });
 

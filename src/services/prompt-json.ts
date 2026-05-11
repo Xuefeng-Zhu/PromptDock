@@ -1,8 +1,13 @@
-import type { Folder, PromptRecipe } from '../types/index';
+import type { Folder, PromptRecipe, PromptVariable } from '../types/index';
+import {
+  isPromptVariableInputType,
+  normalizePromptVariableOptions,
+  resolvePromptVariables,
+} from '../utils/prompt-variables';
 
 export type PromptJsonDraft = Pick<
   PromptRecipe,
-  'title' | 'description' | 'body' | 'tags' | 'folderId' | 'favorite'
+  'title' | 'description' | 'body' | 'variables' | 'tags' | 'folderId' | 'favorite'
 >;
 
 export type PromptJsonParseResult =
@@ -79,10 +84,81 @@ function parseTags(value: unknown): { tags: string[]; error?: string } {
   return { tags: Array.from(tagsByKey.values()) };
 }
 
+function parseVariables(
+  value: unknown,
+  body: string,
+): { variables?: PromptVariable[]; errors: string[] } {
+  if (value === undefined) return { errors: [] };
+
+  if (!Array.isArray(value)) {
+    return { errors: ['variables must be an array.'] };
+  }
+
+  const errors: string[] = [];
+
+  value.forEach((item, index) => {
+    const prefix = `variables[${index}]`;
+
+    if (!isRecord(item)) {
+      errors.push(`${prefix} must be an object.`);
+      return;
+    }
+
+    if (typeof item.name !== 'string' || item.name.trim().length === 0) {
+      errors.push(`${prefix}.name is required and must be a non-empty string.`);
+    }
+
+    if ('defaultValue' in item && typeof item.defaultValue !== 'string') {
+      errors.push(`${prefix}.defaultValue must be a string.`);
+    }
+
+    if ('description' in item && typeof item.description !== 'string') {
+      errors.push(`${prefix}.description must be a string.`);
+    }
+
+    if ('inputType' in item && !isPromptVariableInputType(item.inputType)) {
+      errors.push(`${prefix}.inputType must be text, textarea, or dropdown.`);
+    }
+
+    if ('options' in item && !Array.isArray(item.options)) {
+      errors.push(`${prefix}.options must be an array of strings.`);
+    } else if (
+      Array.isArray(item.options)
+      && item.options.some((option) => typeof option !== 'string')
+    ) {
+      errors.push(`${prefix}.options must be an array of strings.`);
+    }
+
+    const options = normalizePromptVariableOptions(item.options);
+
+    if (item.inputType === 'dropdown' && options.length === 0) {
+      errors.push(`${prefix}.options must include at least one value for dropdown variables.`);
+    }
+
+    if (
+      item.inputType === 'dropdown'
+      && typeof item.defaultValue === 'string'
+      && item.defaultValue.length > 0
+      && !options.includes(item.defaultValue)
+    ) {
+      errors.push(`${prefix}.defaultValue must match one of the dropdown options.`);
+    }
+  });
+
+  if (errors.length > 0) return { errors };
+
+  const variables = resolvePromptVariables(body, value);
+  return {
+    errors: [],
+    ...(variables.length > 0 ? { variables } : {}),
+  };
+}
+
 /**
  * Parses a user-supplied prompt JSON snippet into an editor-ready draft.
- * Validates required fields, dedupes tags, resolves folder/folderId against
- * known folders, and returns accumulated errors without throwing for bad input.
+ * Validates required fields and variable metadata, dedupes tags, resolves
+ * folder/folderId against known folders, and returns accumulated errors
+ * without throwing for bad input.
  */
 export function parsePromptJson(
   json: string,
@@ -125,6 +201,9 @@ export function parsePromptJson(
   const { tags, error: tagsError } = parseTags(parsed.tags);
   if (tagsError) errors.push(tagsError);
 
+  const { variables, errors: variableErrors } = parseVariables(parsed.variables, body);
+  errors.push(...variableErrors);
+
   if (parsed.folder !== undefined && parsed.folderId !== undefined) {
     errors.push('Use either folder or folderId, not both.');
   }
@@ -158,6 +237,7 @@ export function parsePromptJson(
       title,
       description: description ?? '',
       body,
+      ...(variables && variables.length > 0 ? { variables } : {}),
       tags,
       folderId,
       favorite: favorite ?? false,

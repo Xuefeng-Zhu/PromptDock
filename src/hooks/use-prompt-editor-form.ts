@@ -224,7 +224,7 @@ export function usePromptEditorForm({
     setTitle(data.title);
     setDescription(data.description);
     setBody(data.body);
-    setVariableDefinitions(resolvePromptVariables(data.body));
+    setVariableDefinitions(resolvePromptVariables(data.body, data.variables));
     setTags(resolveTagList(availableTags, data.tags));
     setFolderId(data.folderId);
     setFavorite(data.favorite);

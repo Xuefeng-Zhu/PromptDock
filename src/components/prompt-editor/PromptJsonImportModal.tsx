@@ -19,6 +19,15 @@ interface PromptJsonImportModalProps {
 const JSON_PLACEHOLDER = `{
   "title": "Release notes",
   "body": "Summarize these changes for {{audience}}.",
+  "variables": [
+    {
+      "name": "audience",
+      "description": "Target reader",
+      "defaultValue": "Customers",
+      "inputType": "dropdown",
+      "options": ["Customers", "Internal team"]
+    }
+  ],
   "tags": ["writing"],
   "favorite": true
 }`;

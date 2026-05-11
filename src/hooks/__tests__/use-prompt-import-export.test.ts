@@ -390,4 +390,41 @@ describe('usePromptImportExport', () => {
       }),
     );
   });
+
+  it('does not erase existing variable metadata when overwriting from older imports', async () => {
+    const existing = makePrompt({
+      id: 'existing',
+      title: 'Existing prompt',
+      body: 'Write in {{tone}}',
+      variables: [
+        {
+          name: 'tone',
+          defaultValue: 'Friendly',
+          description: 'Voice to use',
+          inputType: 'dropdown',
+          options: ['Friendly', 'Professional'],
+        },
+      ],
+    });
+    const { repo } = setupStores([existing]);
+    mockOpenFile.mockResolvedValue(
+      createImportJson([
+        {
+          title: 'Existing prompt',
+          body: 'Write in {{tone}}',
+        },
+      ]),
+    );
+    const { result } = renderHook(() => usePromptImportExport());
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+    await act(async () => {
+      await result.current.handleOverwriteAll();
+    });
+
+    expect(repo.update).toHaveBeenCalledTimes(1);
+    expect(repo.update.mock.calls[0][1]).not.toHaveProperty('variables');
+  });
 });

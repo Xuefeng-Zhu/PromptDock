@@ -153,15 +153,18 @@ export function usePromptImportExport() {
   const handleOverwriteAll = useCallback(async () => {
     try {
       for (const dupe of duplicates) {
-        await updatePrompt(dupe.existing.id, {
+        const changes: Partial<PromptRecipe> = {
           title: dupe.incoming.title,
           description: dupe.incoming.description,
           body: dupe.incoming.body,
-          variables: dupe.incoming.variables,
           tags: dupe.incoming.tags,
           folderId: dupe.incoming.folderId,
           favorite: dupe.incoming.favorite,
-        });
+        };
+        if (dupe.incoming.variables !== undefined) {
+          changes.variables = dupe.incoming.variables;
+        }
+        await updatePrompt(dupe.existing.id, changes);
       }
       await importPrompts(pendingNonDuplicates);
       const total = duplicates.length + pendingNonDuplicates.length;

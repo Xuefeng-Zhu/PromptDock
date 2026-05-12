@@ -12,6 +12,8 @@ export function AccountSettingsCard({ authService }: AccountSettingsCardProps) {
   const userId = useAppModeStore((s) => s.userId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
   const setMode = useAppModeStore((s) => s.setMode);
+  const setSyncStatus = useAppModeStore((s) => s.setSyncStatus);
+  const setUser = useAppModeStore((s) => s.setUser);
   const setUserId = useAppModeStore((s) => s.setUserId);
 
   return (
@@ -22,11 +24,13 @@ export function AccountSettingsCard({ authService }: AccountSettingsCardProps) {
         userId={userId}
         syncStatus={syncStatus}
         onAuthSuccess={(user) => {
-          setUserId(user.uid);
+          setUser(user);
+          setSyncStatus('syncing');
           setMode('synced');
         }}
         onSignOutSuccess={() => {
           setUserId(null);
+          setSyncStatus('local');
           setMode('local');
         }}
       />

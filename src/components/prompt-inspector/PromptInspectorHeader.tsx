@@ -16,6 +16,7 @@ interface PromptInspectorHeaderProps {
   onClose?: () => void;
   onToggleFavorite?: (id: string) => void;
   prompt: PromptRecipe;
+  readOnly?: boolean;
 }
 
 export function PromptInspectorHeader({
@@ -27,6 +28,7 @@ export function PromptInspectorHeader({
   onClose,
   onToggleFavorite,
   prompt,
+  readOnly = false,
 }: PromptInspectorHeaderProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -43,7 +45,9 @@ export function PromptInspectorHeader({
     onDelete?.(prompt.id);
   };
 
-  const archiveAction: PromptActionMenuItem = prompt.archived
+  const archiveAction: PromptActionMenuItem | null = readOnly
+    ? null
+    : prompt.archived
     ? {
         type: 'item',
         icon: <Archive className="h-4 w-4" />,
@@ -58,28 +62,28 @@ export function PromptInspectorHeader({
       };
 
   const actionItems: PromptActionMenuItem[] = [
-    {
+    !readOnly && {
       type: 'item',
       icon: <Pencil className="h-4 w-4" />,
       label: 'Edit prompt',
       onSelect: () => onEdit?.(prompt.id),
     },
-    {
+    !readOnly && {
       type: 'item',
       icon: <Files className="h-4 w-4" />,
       label: 'Duplicate',
       onSelect: () => onDuplicate?.(prompt.id),
     },
     archiveAction,
-    { type: 'separator' },
-    {
+    !readOnly && { type: 'separator' },
+    !readOnly && {
       type: 'item',
       danger: true,
       icon: <Trash2 className="h-4 w-4" />,
       label: 'Delete',
       onSelect: handleDeleteRequest,
     },
-  ];
+  ].filter((item): item is PromptActionMenuItem => Boolean(item));
 
   return (
     <div className="px-5 pt-5 pb-4">
@@ -92,6 +96,7 @@ export function PromptInspectorHeader({
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-gray-100 md:h-auto md:w-auto md:p-1"
             aria-label={prompt.favorite ? 'Remove from favorites' : 'Add to favorites'}
+            disabled={readOnly}
             onClick={() => onToggleFavorite?.(prompt.id)}
           >
             <Star
@@ -104,7 +109,7 @@ export function PromptInspectorHeader({
             />
           </button>
 
-          <PromptActionsMenu items={actionItems} />
+          {actionItems.length > 0 && <PromptActionsMenu items={actionItems} />}
 
           {onClose && (
             <button

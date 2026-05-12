@@ -17,6 +17,7 @@ const firebaseAuthMocks = vi.hoisted(() => ({
 const firebaseFirestoreMocks = vi.hoisted(() => ({
   doc: vi.fn((...path: string[]) => path.join('/')),
   serverTimestamp: vi.fn(() => 'server-timestamp'),
+  setDoc: vi.fn(async () => undefined),
   writeBatch: vi.fn(() => ({
     set: vi.fn(),
     commit: vi.fn(async () => undefined),
@@ -38,6 +39,8 @@ beforeEach(() => {
   firebaseAuthMocks.onAuthStateChanged.mockReset();
   firebaseFirestoreMocks.doc.mockImplementation((...path: string[]) => path.join('/'));
   firebaseFirestoreMocks.serverTimestamp.mockReturnValue('server-timestamp');
+  firebaseFirestoreMocks.setDoc.mockReset();
+  firebaseFirestoreMocks.setDoc.mockResolvedValue(undefined);
   firebaseFirestoreMocks.writeBatch.mockReturnValue({
     set: vi.fn(),
     commit: vi.fn(async () => undefined),
@@ -59,7 +62,7 @@ describe('AuthService', () => {
     expect(new AuthService().isConfigured()).toBe(false);
   });
 
-  it('returns a network error and signs out if sign-in workspace bootstrap times out', async () => {
+  it('returns sign-in success even if workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     firebaseAuthMocks.signInWithEmailAndPassword.mockResolvedValue({
@@ -69,25 +72,25 @@ describe('AuthService', () => {
         displayName: 'Test User',
       },
     });
-    firebaseFirestoreMocks.writeBatch.mockReturnValue({
-      set: vi.fn(),
-      commit: vi.fn(() => new Promise(() => {})),
-    });
+    firebaseFirestoreMocks.setDoc.mockReturnValue(new Promise(() => {}));
 
     const result = new AuthService().signIn('user@example.com', 'password123');
 
     await vi.dynamicImportSettled();
-    await vi.advanceTimersByTimeAsync(3000);
-
     await expect(result).resolves.toEqual({
-      success: false,
-      error: 'network',
+      success: true,
+      user: {
+        uid: 'user-123',
+        email: 'user@example.com',
+        displayName: 'Test User',
+      },
     });
-    expect(firebaseAuthMocks.signOut).toHaveBeenCalledWith({ name: 'auth' });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(firebaseAuthMocks.signOut).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });
 
-  it('returns a network error and signs out if sign-up workspace bootstrap times out', async () => {
+  it('returns sign-up success even if workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     firebaseAuthMocks.createUserWithEmailAndPassword.mockResolvedValue({
@@ -97,21 +100,21 @@ describe('AuthService', () => {
         displayName: null,
       },
     });
-    firebaseFirestoreMocks.writeBatch.mockReturnValue({
-      set: vi.fn(),
-      commit: vi.fn(() => new Promise(() => {})),
-    });
+    firebaseFirestoreMocks.setDoc.mockReturnValue(new Promise(() => {}));
 
     const result = new AuthService().signUp('new@example.com', 'password123');
 
     await vi.dynamicImportSettled();
-    await vi.advanceTimersByTimeAsync(3000);
-
     await expect(result).resolves.toEqual({
-      success: false,
-      error: 'network',
+      success: true,
+      user: {
+        uid: 'new-user',
+        email: 'new@example.com',
+        displayName: null,
+      },
     });
-    expect(firebaseAuthMocks.signOut).toHaveBeenCalledWith({ name: 'auth' });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(firebaseAuthMocks.signOut).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });
 

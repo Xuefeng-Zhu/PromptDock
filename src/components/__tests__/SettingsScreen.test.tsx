@@ -2,8 +2,20 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { StoreApi } from 'zustand';
-import type { UserSettings, PromptRecipe } from '../../types/index';
-import type { ISettingsRepository, IPromptRepository } from '../../repositories/interfaces';
+import type {
+  AuthUser,
+  PromptRecipe,
+  UserSettings,
+  Workspace,
+  WorkspaceInvite,
+  WorkspaceMember,
+  WorkspaceMembership,
+} from '../../types/index';
+import type {
+  IPromptRepository,
+  ISettingsRepository,
+  IWorkspaceRepository,
+} from '../../repositories/interfaces';
 import {
   createSettingsStore,
   DEFAULT_SETTINGS,
@@ -17,6 +29,7 @@ import {
   createPromptStore,
   type PromptStore,
 } from '../../stores/prompt-store';
+import { initWorkspaceStore } from '../../stores/workspace-store';
 import { SettingsScreen } from '../settings';
 
 // ─── Mock SettingsStore module ─────────────────────────────────────────────────
@@ -27,6 +40,75 @@ let testAppModeStore: StoreApi<AppModeStore>;
 let testPromptStore: StoreApi<PromptStore>;
 let mockRepo: ISettingsRepository;
 let mockPromptRepo: IPromptRepository;
+
+function makeWorkspace(user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' }): Workspace {
+  return {
+    id: user.uid,
+    name: 'Personal Workspace',
+    ownerId: user.uid,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
+}
+
+function makeWorkspaceMembership(
+  workspace: Workspace,
+  user: AuthUser,
+  role: WorkspaceMembership['role'],
+): WorkspaceMembership {
+  return {
+    id: `${workspace.id}_${user.uid}`,
+    workspaceId: workspace.id,
+    userId: user.uid,
+    role,
+    email: user.email,
+    displayName: user.displayName,
+    workspaceName: workspace.name,
+    ownerId: workspace.ownerId,
+    joinedAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+}
+
+function createMockWorkspaceRepo(): IWorkspaceRepository {
+  const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+  const workspace = makeWorkspace(user);
+  const membership = makeWorkspaceMembership(workspace, user, 'owner');
+  const member: WorkspaceMember = {
+    id: user.uid,
+    workspaceId: workspace.id,
+    userId: user.uid,
+    role: 'owner',
+    email: user.email,
+    displayName: user.displayName,
+    joinedAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+
+  return {
+    create: vi.fn(async () => workspace),
+    getById: vi.fn(async () => workspace),
+    listForUser: vi.fn(async () => [workspace]),
+    listSyncedWorkspacesForUser: vi.fn(async () => [workspace]),
+    update: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
+    bootstrapPersonalWorkspace: vi.fn(async () => workspace),
+    listMembershipsForUser: vi.fn(async () => [membership]),
+    listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
+    listMembers: vi.fn(async () => [member]),
+    listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
+    createSyncedWorkspace: vi.fn(async () => ({ workspace, membership })),
+    createInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    acceptInvite: vi.fn(async () => member),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => member),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
 
 function createMockRepo(
   initial: UserSettings = { ...DEFAULT_SETTINGS },
@@ -181,6 +263,7 @@ beforeEach(() => {
   testAppModeStore = createAppModeStore();
   mockPromptRepo = createMockPromptRepo();
   testPromptStore = createPromptStore(mockPromptRepo);
+  initWorkspaceStore(createMockWorkspaceRepo());
   mockRegisterHotkey.mockResolvedValue(undefined);
   mockSaveFile.mockResolvedValue(true);
   mockOpenFile.mockResolvedValue(null);
@@ -262,6 +345,17 @@ describe('SettingsScreen', () => {
     expect(aboutNavButton!.getAttribute('aria-selected')).toBe('true');
   });
 
+  it('can open directly to the workspaces sharing section', () => {
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+    const nav = screen.getByRole('navigation', { name: 'Settings navigation' });
+    const workspacesNavButton = Array.from(nav.querySelectorAll('button')).find(btn =>
+      btn.textContent?.includes('Workspaces & Sharing'),
+    );
+
+    expect(workspacesNavButton).toBeDefined();
+    expect(workspacesNavButton!.getAttribute('aria-selected')).toBe('true');
+  });
+
   it('scrolls the settings content pane when a nav section is clicked', () => {
     const scrollToSpy = vi.spyOn(HTMLElement.prototype, 'scrollTo');
     render(<SettingsScreen onBack={() => {}} />);
@@ -274,6 +368,82 @@ describe('SettingsScreen', () => {
     fireEvent.click(aboutNavButton!);
 
     expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+  });
+
+  it('allows owners to delete a non-personal workspace from sharing settings', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const personalWorkspace = makeWorkspace(user);
+    const teamWorkspace: Workspace = {
+      id: 'team-workspace',
+      name: 'Design Team',
+      ownerId: user.uid,
+      createdAt: new Date('2024-01-02'),
+      updatedAt: new Date('2024-01-02'),
+    };
+    const repo = createMockWorkspaceRepo();
+    const workspaceStore = initWorkspaceStore(repo);
+    workspaceStore.setState({
+      activeWorkspaceId: personalWorkspace.id,
+      currentRole: 'owner',
+      currentUser: user,
+      memberships: [
+        makeWorkspaceMembership(personalWorkspace, user, 'owner'),
+        makeWorkspaceMembership(teamWorkspace, user, 'owner'),
+      ],
+      workspaces: [personalWorkspace, teamWorkspace],
+    });
+    testAppModeStore.getState().setUserId(user.uid);
+    testAppModeStore.getState().setMode('synced');
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(screen.getByRole('dialog').textContent).toContain('Delete "Design Team" workspace?');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete workspace' }));
+    });
+
+    expect(repo.deleteSyncedWorkspace).toHaveBeenCalledWith(teamWorkspace.id);
+    expect(screen.queryByText('Design Team')).toBeNull();
+  });
+
+  it('allows members to leave a shared workspace from sharing settings', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const personalWorkspace = makeWorkspace(user);
+    const sharedWorkspace: Workspace = {
+      id: 'shared-workspace',
+      name: 'Shared Ops',
+      ownerId: 'owner-2',
+      createdAt: new Date('2024-01-03'),
+      updatedAt: new Date('2024-01-03'),
+    };
+    const repo = createMockWorkspaceRepo();
+    const workspaceStore = initWorkspaceStore(repo);
+    workspaceStore.setState({
+      activeWorkspaceId: personalWorkspace.id,
+      currentRole: 'owner',
+      currentUser: user,
+      memberships: [
+        makeWorkspaceMembership(personalWorkspace, user, 'owner'),
+        makeWorkspaceMembership(sharedWorkspace, user, 'editor'),
+      ],
+      workspaces: [personalWorkspace, sharedWorkspace],
+    });
+    testAppModeStore.getState().setUserId(user.uid);
+    testAppModeStore.getState().setMode('synced');
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }));
+    expect(screen.getByRole('dialog').textContent).toContain('Leave "Shared Ops"?');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Leave workspace' }));
+    });
+
+    expect(repo.leaveSyncedWorkspace).toHaveBeenCalledWith(sharedWorkspace.id, user.uid);
+    expect(screen.queryByText('Shared Ops')).toBeNull();
   });
 
   it('keeps settings content in a dedicated scroll pane', () => {

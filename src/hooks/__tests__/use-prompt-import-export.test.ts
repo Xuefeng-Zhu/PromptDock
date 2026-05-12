@@ -2,14 +2,15 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { StoreApi } from 'zustand';
-import type { IPromptRepository } from '../../repositories/interfaces';
+import type { IPromptRepository, IWorkspaceRepository } from '../../repositories/interfaces';
 import { initAppModeStore, type AppModeStore } from '../../stores/app-mode-store';
 import {
   initPromptStore,
   type CreatePromptData,
   type PromptStore,
 } from '../../stores/prompt-store';
-import type { PromptRecipe, PromptVariable } from '../../types/index';
+import { initWorkspaceStore, type WorkspaceStore } from '../../stores/workspace-store';
+import type { PromptRecipe, PromptVariable, Workspace, WorkspaceInvite } from '../../types/index';
 import { usePromptImportExport } from '../use-prompt-import-export';
 
 const mockSaveFile = vi.fn();
@@ -111,15 +112,57 @@ function createMockPromptRepo(seedPrompts: PromptRecipe[] = []): MockPromptRepo 
   return repo;
 }
 
+function createMockWorkspaceRepo(): IWorkspaceRepository {
+  const workspace: Workspace = {
+    id: 'local',
+    name: 'My Prompts',
+    ownerId: 'local',
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+  };
+
+  return {
+    create: vi.fn(async () => workspace),
+    getById: vi.fn(async () => workspace),
+    listForUser: vi.fn(async () => [workspace]),
+    listSyncedWorkspacesForUser: vi.fn(async () => [workspace]),
+    update: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
+    bootstrapPersonalWorkspace: vi.fn(async () => workspace),
+    listMembershipsForUser: vi.fn(async () => []),
+    listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
+    listMembers: vi.fn(async () => []),
+    listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
+    createSyncedWorkspace: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    createInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    acceptInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
+
 function setupStores(seedPrompts: PromptRecipe[] = []) {
   const repo = createMockPromptRepo(seedPrompts);
   const promptStore: StoreApi<PromptStore> = initPromptStore(repo);
   const appModeStore: StoreApi<AppModeStore> = initAppModeStore();
+  const workspaceStore: StoreApi<WorkspaceStore> = initWorkspaceStore(createMockWorkspaceRepo());
   promptStore.setState({
     activeWorkspaceId: 'local',
     prompts: seedPrompts,
   });
-  return { appModeStore, promptStore, repo };
+  workspaceStore.setState({ activeWorkspaceId: 'local', currentRole: 'owner' });
+  return { appModeStore, promptStore, repo, workspaceStore };
 }
 
 describe('usePromptImportExport', () => {
@@ -155,9 +198,10 @@ describe('usePromptImportExport', () => {
   });
 
   it('imports prompts into the active synced workspace when signed in', async () => {
-    const { appModeStore, promptStore, repo } = setupStores();
+    const { appModeStore, promptStore, repo, workspaceStore } = setupStores();
     appModeStore.setState({ mode: 'synced', userId: 'user-1' });
     promptStore.setState({ activeWorkspaceId: 'workspace-1' });
+    workspaceStore.setState({ activeWorkspaceId: 'workspace-1', currentRole: 'editor' });
     mockOpenFile.mockResolvedValue(
       createImportJson([
         {

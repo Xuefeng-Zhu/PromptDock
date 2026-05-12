@@ -1,4 +1,15 @@
-import type { PromptRecipe, Folder, Workspace, UserSettings } from '../types/index';
+import type {
+  AuthUser,
+  Folder,
+  PromptRecipe,
+  UserSettings,
+  Workspace,
+  WorkspaceInvite,
+  WorkspaceInviteRole,
+  WorkspaceMember,
+  WorkspaceMembership,
+  WorkspaceRole,
+} from '../types/index';
 
 // ─── Storage Backend Interface ─────────────────────────────────────────────────
 
@@ -45,7 +56,34 @@ export interface IWorkspaceRepository {
   create(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace>;
   getById(id: string): Promise<Workspace | null>;
   listForUser(userId: string): Promise<Workspace[]>;
+  listSyncedWorkspacesForUser(userId: string): Promise<Workspace[]>;
   update(id: string, changes: Partial<Workspace>): Promise<Workspace>;
+  updateSyncedWorkspace(id: string, changes: Partial<Workspace>): Promise<Workspace>;
+  bootstrapPersonalWorkspace(user: AuthUser): Promise<Workspace>;
+  listMembershipsForUser(userId: string): Promise<WorkspaceMembership[]>;
+  listPendingInvitesForEmail(email: string): Promise<WorkspaceInvite[]>;
+  listMembers(workspaceId: string): Promise<WorkspaceMember[]>;
+  listInvites(workspaceId: string): Promise<WorkspaceInvite[]>;
+  createSyncedWorkspace(name: string, owner: AuthUser): Promise<{
+    workspace: Workspace;
+    membership: WorkspaceMembership;
+  }>;
+  createInvite(
+    workspace: Workspace,
+    email: string,
+    role: WorkspaceInviteRole,
+    invitedBy: string,
+  ): Promise<WorkspaceInvite>;
+  acceptInvite(invite: WorkspaceInvite, user: AuthUser): Promise<WorkspaceMember>;
+  deleteSyncedWorkspace(workspaceId: string): Promise<void>;
+  leaveSyncedWorkspace(workspaceId: string, userId: string): Promise<void>;
+  updateMemberRole(
+    workspaceId: string,
+    memberUserId: string,
+    role: WorkspaceRole,
+  ): Promise<WorkspaceMember>;
+  removeMember(workspaceId: string, memberUserId: string): Promise<void>;
+  revokeInvite(inviteId: string): Promise<void>;
 }
 
 export interface ISettingsRepository {

@@ -61,7 +61,18 @@ export function createSettingsStore(repo: ISettingsRepository) {
 // For production use, call `initSettingsStore` once at app startup with the real
 // repository, then use `useSettingsStore` in components.
 
-let _store: StoreApi<SettingsStore> | null = null;
+interface SettingsStoreHotData {
+  settingsStore?: StoreApi<SettingsStore> | null;
+}
+
+const hotData = import.meta.hot?.data as SettingsStoreHotData | undefined;
+let _store: StoreApi<SettingsStore> | null = hotData?.settingsStore ?? null;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data: SettingsStoreHotData) => {
+    data.settingsStore = _store;
+  });
+}
 
 /** Initializes the singleton settings store used by components. */
 export function initSettingsStore(repo: ISettingsRepository): StoreApi<SettingsStore> {

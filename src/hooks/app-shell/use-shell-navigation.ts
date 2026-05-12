@@ -8,6 +8,7 @@ import {
   type FilterType,
 } from '../../utils/prompt-filters';
 import type { Screen } from '../../components/app-shell/types';
+import type { SettingsSectionId } from '../../components/settings/settings-data';
 
 interface UseShellNavigationOptions {
   addToast: ToastStore['addToast'];
@@ -113,10 +114,18 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     setScreen({ name: 'library' });
   }, []);
 
-  const handleSettingsOpen = useCallback(() => {
+  const openSettings = useCallback((section?: SettingsSectionId) => {
     if (blockIfEditorHasUnsavedChanges()) return;
-    setScreen({ name: 'settings' });
+    setScreen({ name: 'settings', section });
   }, [blockIfEditorHasUnsavedChanges]);
+
+  const handleSettingsOpen = useCallback(() => {
+    openSettings();
+  }, [openSettings]);
+
+  const handleWorkspaceSettingsOpen = useCallback(() => {
+    openSettings('workspaces-sharing');
+  }, [openSettings]);
 
   const handleConflictBadgeClick = useCallback(() => {
     if (blockIfEditorHasUnsavedChanges()) return;
@@ -144,6 +153,7 @@ export function useShellNavigation({ addToast }: UseShellNavigationOptions) {
     handleSelectPrompt,
     handleSettingsBack,
     handleSettingsOpen,
+    handleWorkspaceSettingsOpen,
     handleSidebarItemSelect,
     screen,
     selectedPromptId,

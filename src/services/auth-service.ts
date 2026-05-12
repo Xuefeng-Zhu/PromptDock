@@ -86,83 +86,101 @@ export class AuthService implements IAuthService {
   }
 
   /**
-   * Ensure the signed-in user has the Firestore documents required by sync.
+   * Best-effort Firestore bootstrap for the user's personal workspace.
    *
-   * The app uses the user id as the default workspace id. Prompt reads/writes
-   * require `/workspaces/{uid}/members/{uid}`, so auth success must be followed
-   * by this bootstrap before synced mode starts listening to prompt data.
+   * Firebase Auth is the source of truth for whether login succeeded. Workspace
+   * metadata can fail independently because rules may still be propagating, the
+   * user may be offline, or an existing self-owner member doc may be protected
+   * from mutation. Those failures should degrade sync, not undo authentication.
    */
   private async bootstrapUserWorkspace(user: AuthUser): Promise<void> {
     const { getFirebaseFirestore } = await import('../firebase/config');
-    const { doc, serverTimestamp, writeBatch } = await import('firebase/firestore');
+    const { doc, serverTimestamp, setDoc } = await import('firebase/firestore');
 
     const firestore = await getFirebaseFirestore();
     const userRef = doc(firestore, 'users', user.uid);
     const workspaceRef = doc(firestore, 'workspaces', user.uid);
     const memberRef = doc(firestore, 'workspaces', user.uid, 'members', user.uid);
+    const membershipRef = doc(firestore, 'workspaceMemberships', `${user.uid}_${user.uid}`);
     const timestamp = serverTimestamp();
+    const workspaceName = 'Personal Workspace';
+    const memberData = {
+      id: user.uid,
+      userId: user.uid,
+      workspaceId: user.uid,
+      role: 'owner',
+      email: user.email.trim().toLowerCase(),
+      displayName: user.displayName,
+      joinedAt: timestamp,
+      updatedAt: timestamp,
+    };
 
-    const batch = writeBatch(firestore);
-    batch.set(
-      userRef,
-      {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        lastSignedInAt: timestamp,
-      },
-      { merge: true },
-    );
-    batch.set(
-      workspaceRef,
-      {
-        name: 'Personal Workspace',
-        ownerId: user.uid,
-        updatedAt: timestamp,
-      },
-      { merge: true },
-    );
-    batch.set(
-      memberRef,
-      {
-        id: user.uid,
-        userId: user.uid,
-        workspaceId: user.uid,
-        role: 'owner',
-        joinedAt: timestamp,
-      },
-      { merge: true },
-    );
+    await Promise.allSettled([
+      setDoc(
+        userRef,
+        {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          lastSignedInAt: timestamp,
+        },
+        { merge: true },
+      ),
+      setDoc(
+        workspaceRef,
+        {
+          name: workspaceName,
+          ownerId: user.uid,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+        { merge: true },
+      ),
+    ]);
 
-    await batch.commit();
+    const metadataResults = await Promise.allSettled([
+      setDoc(memberRef, memberData, { merge: true }),
+      setDoc(
+        membershipRef,
+        {
+          ...memberData,
+          workspaceName,
+          ownerId: user.uid,
+        },
+        { merge: true },
+      ),
+    ]);
+
+    metadataResults.forEach((result) => {
+      if (result.status === 'rejected') {
+        console.error('Failed to write Firebase workspace metadata:', result.reason);
+      }
+    });
   }
 
-  private async finishAuth(credentialUser: {
+  private queueWorkspaceBootstrap(user: AuthUser): void {
+    void withTimeout(
+      this.bootstrapUserWorkspace(user),
+      WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
+      'Firebase workspace bootstrap timed out.',
+    ).catch((error) => {
+      console.error('Failed to bootstrap Firebase user workspace:', error);
+    });
+  }
+
+  private finishAuth(credentialUser: {
     uid: string;
     email: string | null;
     displayName: string | null;
-  }): Promise<AuthResult> {
+  }): AuthResult {
     const user = toAuthUser(credentialUser);
-
-    try {
-      await withTimeout(
-        this.bootstrapUserWorkspace(user),
-        WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
-        'Firebase workspace bootstrap timed out.',
-      );
-      return { success: true, user };
-    } catch (error) {
-      console.error('Failed to bootstrap Firebase user workspace:', error);
-      await this.signOut().catch((signOutError) => {
-        console.error('Failed to sign out after workspace bootstrap failure:', signOutError);
-      });
-      return { success: false, error: mapFirebaseAuthError(error) };
-    }
+    this.queueWorkspaceBootstrap(user);
+    return { success: true, user };
   }
 
   /**
    * Create a new account with email and password.
-   * On success, bootstraps the user's Firestore profile and default workspace.
+   * On success, queues best-effort Firestore workspace bootstrap.
    */
   async signUp(email: string, password: string): Promise<AuthResult> {
     try {
@@ -175,7 +193,7 @@ export class AuthService implements IAuthService {
         AUTH_REQUEST_TIMEOUT_MS,
         'Firebase auth request timed out.',
       );
-      return await this.finishAuth(credential.user);
+      return this.finishAuth(credential.user);
     } catch (error: unknown) {
       return { success: false, error: mapFirebaseAuthError(error) };
     }
@@ -196,7 +214,7 @@ export class AuthService implements IAuthService {
         AUTH_REQUEST_TIMEOUT_MS,
         'Firebase auth request timed out.',
       );
-      return await this.finishAuth(credential.user);
+      return this.finishAuth(credential.user);
     } catch (error: unknown) {
       return { success: false, error: mapFirebaseAuthError(error) };
     }
@@ -219,7 +237,7 @@ export class AuthService implements IAuthService {
         AUTH_REQUEST_TIMEOUT_MS,
         'Firebase auth request timed out.',
       );
-      return await this.finishAuth(credential.user);
+      return this.finishAuth(credential.user);
     } catch (error: unknown) {
       return { success: false, error: mapFirebaseAuthError(error) };
     }
@@ -249,9 +267,9 @@ export class AuthService implements IAuthService {
 
       const auth = await getFirebaseAuth();
 
-      // Wait briefly for auth state plus workspace bootstrap. If Firebase is
-      // slow, let app startup continue in local mode but keep the listener until
-      // the first auth event arrives so a valid session can still recover.
+      // Wait briefly for auth state. If Firebase is slow, let app startup
+      // continue in local mode but keep the listener until the first auth event
+      // arrives so a valid session can still recover.
       return new Promise<AuthResult | null>((resolve) => {
         let initialResolved = false;
         let timedOut = false;
@@ -285,13 +303,8 @@ export class AuthService implements IAuthService {
           void (async () => {
             if (firebaseUser) {
               const user = toAuthUser(firebaseUser);
-              try {
-                await this.bootstrapUserWorkspace(user);
-                finish({ success: true, user });
-              } catch (error) {
-                console.error('Failed to bootstrap restored Firebase user workspace:', error);
-                finish({ success: false, error: mapFirebaseAuthError(error) });
-              }
+              this.queueWorkspaceBootstrap(user);
+              finish({ success: true, user });
             } else {
               finish(null);
             }

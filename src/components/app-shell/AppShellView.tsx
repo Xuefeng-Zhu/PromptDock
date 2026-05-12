@@ -18,6 +18,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
   const {
     activeSidebarItem,
     authService,
+    canEditWorkspace,
     handleAuthSuccess,
     handleArchivePrompt,
     handleCommandPaletteOpen,
@@ -32,6 +33,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     handleRestorePrompt,
     handleSearchChange,
     handleSettingsOpen,
+    handleWorkspaceSettingsOpen,
     handleSelectPrompt,
     handleSidebarItemSelect,
     handleSignOutSuccess,
@@ -102,6 +104,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}
+        onManageWorkspaces={handleWorkspaceSettingsOpen}
         mobileNavOpen={mobileNavOpen}
         onMobileNavToggle={() => setMobileNavOpen(true)}
         authService={authService}
@@ -189,16 +192,17 @@ export function AppShellView({ controller }: AppShellViewProps) {
                 folder={libraryData.selectedPromptFolder}
                 folders={libraryData.derivedFolders}
                 variables={libraryData.selectedPromptVariables}
-                onToggleFavorite={handleToggleFavorite}
-                onEdit={handleEditPrompt}
-                onDuplicate={handleDuplicatePrompt}
-                onArchive={handleArchivePrompt}
-                onDelete={handleDeletePrompt}
-                onRestore={handleRestorePrompt}
+                readOnly={!canEditWorkspace}
+                onToggleFavorite={canEditWorkspace ? handleToggleFavorite : undefined}
+                onEdit={canEditWorkspace ? handleEditPrompt : undefined}
+                onDuplicate={canEditWorkspace ? handleDuplicatePrompt : undefined}
+                onArchive={canEditWorkspace ? handleArchivePrompt : undefined}
+                onDelete={canEditWorkspace ? handleDeletePrompt : undefined}
+                onRestore={canEditWorkspace ? handleRestorePrompt : undefined}
                 onCopyBody={handleCopyPromptBody}
-                onCreateFolder={handleCreateFolder}
-                onUpdateFolder={handleUpdatePromptFolder}
-                onUpdateTags={handleUpdatePromptTags}
+                onCreateFolder={canEditWorkspace ? handleCreateFolder : undefined}
+                onUpdateFolder={canEditWorkspace ? handleUpdatePromptFolder : undefined}
+                onUpdateTags={canEditWorkspace ? handleUpdatePromptTags : undefined}
                 onClose={handleMobileInspectorClose}
               />
             </div>

@@ -1,5 +1,5 @@
 import { create, type StoreApi, useStore } from 'zustand';
-import type { AppMode, SyncStatus } from '../types/index';
+import type { AppMode, AuthUser, SyncStatus } from '../types/index';
 
 // ─── AppModeStore ──────────────────────────────────────────────────────────────
 
@@ -7,6 +7,8 @@ export interface AppModeStore {
   // State
   mode: AppMode;
   userId: string | null;
+  userEmail: string | null;
+  userDisplayName: string | null;
   isOnline: boolean;
   syncStatus: SyncStatus;
   lastSyncedAt: Date | null;
@@ -14,6 +16,7 @@ export interface AppModeStore {
   // Actions
   setMode: (mode: AppMode) => void;
   setUserId: (userId: string | null) => void;
+  setUser: (user: AuthUser | null) => void;
   setOnline: (online: boolean) => void;
   setSyncStatus: (status: SyncStatus) => void;
 }
@@ -30,6 +33,8 @@ export function createAppModeStore() {
     // ── Initial state ────────────────────────────────────────────────────────
     mode: 'local',
     userId: null,
+    userEmail: null,
+    userDisplayName: null,
     isOnline: true,
     syncStatus: 'local',
     lastSyncedAt: null,
@@ -41,7 +46,18 @@ export function createAppModeStore() {
     },
 
     setUserId(userId: string | null) {
-      set({ userId });
+      set({
+        userId,
+        ...(userId === null ? { userEmail: null, userDisplayName: null } : {}),
+      });
+    },
+
+    setUser(user: AuthUser | null) {
+      set({
+        userId: user?.uid ?? null,
+        userEmail: user?.email ?? null,
+        userDisplayName: user?.displayName ?? null,
+      });
     },
 
     setOnline(online: boolean) {
@@ -61,7 +77,18 @@ export function createAppModeStore() {
 // For production use, call `initAppModeStore` once at app startup, then use
 // `useAppModeStore` in components.
 
-let _store: StoreApi<AppModeStore> | null = null;
+interface AppModeStoreHotData {
+  appModeStore?: StoreApi<AppModeStore> | null;
+}
+
+const hotData = import.meta.hot?.data as AppModeStoreHotData | undefined;
+let _store: StoreApi<AppModeStore> | null = hotData?.appModeStore ?? null;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data: AppModeStoreHotData) => {
+    data.appModeStore = _store;
+  });
+}
 
 /** Initializes the singleton app-mode store used by React components. */
 export function initAppModeStore(): StoreApi<AppModeStore> {

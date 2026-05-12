@@ -3,13 +3,28 @@ import { createAppModeStore } from '../../stores/app-mode-store';
 import { createFolderStore } from '../../stores/folder-store';
 import { createPromptStore } from '../../stores/prompt-store';
 import { createSettingsStore, DEFAULT_SETTINGS } from '../../stores/settings-store';
-import type { IFolderRepository, IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
+import { createWorkspaceStore } from '../../stores/workspace-store';
+import type {
+  IFolderRepository,
+  IPromptRepository,
+  ISettingsRepository,
+  IWorkspaceRepository,
+} from '../../repositories/interfaces';
 import { ConflictService } from '../conflict-service';
 import {
   AppSyncLifecycle,
   type SyncLifecycleService,
 } from '../app-sync-lifecycle';
-import type { AuthResult, Folder, PromptRecipe } from '../../types/index';
+import type {
+  AuthResult,
+  AuthUser,
+  Folder,
+  PromptRecipe,
+  Workspace,
+  WorkspaceInvite,
+  WorkspaceMember,
+  WorkspaceMembership,
+} from '../../types/index';
 
 function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
   return {
@@ -105,6 +120,100 @@ function createSettingsRepository(): ISettingsRepository {
   };
 }
 
+function makeWorkspace(user: AuthUser): Workspace {
+  return {
+    id: user.uid,
+    name: 'Personal Workspace',
+    ownerId: user.uid,
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+  };
+}
+
+function makeMembership(user: AuthUser): WorkspaceMembership {
+  return {
+    id: `${user.uid}_${user.uid}`,
+    workspaceId: user.uid,
+    userId: user.uid,
+    role: 'owner',
+    email: user.email,
+    displayName: user.displayName,
+    workspaceName: 'Personal Workspace',
+    ownerId: user.uid,
+    joinedAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+  };
+}
+
+function makeAuthUser(uid: string): AuthUser {
+  return {
+    uid,
+    email: `${uid}@example.com`,
+    displayName: null,
+  };
+}
+
+function createWorkspaceRepository(): IWorkspaceRepository {
+  let currentUser: AuthUser | null = null;
+  return {
+    create: vi.fn(async () => makeWorkspace(currentUser ?? makeAuthUser('local'))),
+    getById: vi.fn(async () => (currentUser ? makeWorkspace(currentUser) : null)),
+    listForUser: vi.fn(async () => []),
+    listSyncedWorkspacesForUser: vi.fn(async () =>
+      currentUser ? [makeWorkspace(currentUser)] : [],
+    ),
+    update: vi.fn(async (_id, changes) => ({
+      ...(currentUser ? makeWorkspace(currentUser) : makeWorkspace(makeAuthUser('user-1'))),
+      ...changes,
+    })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({
+      ...(currentUser ? makeWorkspace(currentUser) : makeWorkspace(makeAuthUser('user-1'))),
+      ...changes,
+    })),
+    bootstrapPersonalWorkspace: vi.fn(async (user) => {
+      currentUser = user;
+      return makeWorkspace(user);
+    }),
+    listMembershipsForUser: vi.fn(async () =>
+      currentUser ? [makeMembership(currentUser)] : [],
+    ),
+    listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
+    listMembers: vi.fn(async () =>
+      currentUser
+        ? [{
+            id: currentUser.uid,
+            workspaceId: currentUser.uid,
+            userId: currentUser.uid,
+            role: 'owner',
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+            joinedAt: new Date('2024-01-01T00:00:00.000Z'),
+            updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+          } satisfies WorkspaceMember]
+        : [],
+    ),
+    listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
+    createSyncedWorkspace: vi.fn(async (name, owner) => {
+      const workspace = { ...makeWorkspace(owner), id: 'workspace-new', name };
+      const membership = { ...makeMembership(owner), id: `workspace-new_${owner.uid}`, workspaceId: workspace.id, workspaceName: name };
+      return { workspace, membership };
+    }),
+    createInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    acceptInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
+
 function createFirestoreDelegate(): IPromptRepository & IFolderRepository {
   return {
     ...createPromptRepository([]),
@@ -143,10 +252,12 @@ function createHarness(options: HarnessOptions = {}) {
   const promptRepository = createPromptRepository(prompts);
   const folderRepository = createFolderRepository(folders);
   const settingsRepository = createSettingsRepository();
+  const workspaceRepository = createWorkspaceRepository();
   const appModeStore = createAppModeStore();
   const promptStore = createPromptStore(promptRepository);
   const folderStore = createFolderStore(folderRepository);
   const settingsStore = createSettingsStore(settingsRepository);
+  const workspaceStore = createWorkspaceStore(workspaceRepository);
   const conflictService = new ConflictService();
   const clearConflicts = vi.spyOn(conflictService, 'clearAll');
   const logger = { error: vi.fn() };
@@ -178,6 +289,7 @@ function createHarness(options: HarnessOptions = {}) {
     promptStore,
     folderStore,
     settingsStore,
+    workspaceStore,
     promptRepository,
     folderRepository,
     authService,
@@ -203,6 +315,8 @@ function createHarness(options: HarnessOptions = {}) {
     settingsRepository,
     settingsStore,
     syncService,
+    workspaceRepository,
+    workspaceStore,
     prompts,
     folders,
   };
@@ -300,13 +414,14 @@ describe('AppSyncLifecycle', () => {
     expect(harness.folderRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(null);
   });
 
-  it('wires Firestore delegates before transition when the sync service already exposes them', () => {
+  it('wires Firestore delegates before transition when the sync service already exposes them', async () => {
     const firestoreDelegate = createFirestoreDelegate();
     const harness = createHarness({ firestoreDelegateBeforeTransition: firestoreDelegate });
     harness.lifecycle.start();
 
     harness.appModeStore.getState().setUserId('user-1');
     harness.appModeStore.getState().setMode('synced');
+    await flushAsync();
 
     expect(harness.promptRepository.setFirestoreDelegate).toHaveBeenCalledWith(firestoreDelegate);
     expect(harness.folderRepository.setFirestoreDelegate).toHaveBeenCalledWith(firestoreDelegate);

@@ -32,6 +32,14 @@ export interface SyncServiceOptions {
 
 export type MigrationChoice = 'migrate' | 'fresh';
 
+function normalizePromptSignaturePart(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function promptSignature(prompt: Pick<PromptRecipe, 'body' | 'title'>): string {
+  return `${normalizePromptSignaturePart(prompt.title)}\n${normalizePromptSignaturePart(prompt.body)}`;
+}
+
 // ─── SyncService ───────────────────────────────────────────────────────────────
 
 export class SyncService {
@@ -333,11 +341,27 @@ export class SyncService {
     if (!this.firestoreBackend || !this.currentWorkspaceId) return;
 
     const { getFirebaseFirestore } = await import('../firebase/config');
-    const { doc, getDoc, setDoc, Timestamp } = await import('firebase/firestore');
+    const { collection, doc, getDoc, getDocs, setDoc, Timestamp } = await import('firebase/firestore');
     const firestore = await getFirebaseFirestore();
+    const promptsCol = collection(firestore, 'workspaces', this.currentWorkspaceId, 'prompts');
+    const remotePrompts = await getDocs(promptsCol);
+    const remoteSignatures = new Set(
+      remotePrompts.docs
+        .map((docSnap) => {
+          const data = docSnap.data() as Partial<Pick<PromptRecipe, 'body' | 'title'>>;
+          if (typeof data.title !== 'string' || typeof data.body !== 'string') return '';
+          return promptSignature({ title: data.title, body: data.body });
+        })
+        .filter(Boolean),
+    );
 
     for (const prompt of localPrompts) {
       try {
+        const signature = promptSignature(prompt);
+        if (remoteSignatures.has(signature)) {
+          continue;
+        }
+
         const promptRef = doc(
           firestore,
           'workspaces',
@@ -371,6 +395,7 @@ export class SyncService {
           version: prompt.version,
           workspaceId: this.currentWorkspaceId,
         });
+        remoteSignatures.add(signature);
       } catch (error) {
         console.error(`Failed to migrate prompt "${prompt.title}":`, error);
       }

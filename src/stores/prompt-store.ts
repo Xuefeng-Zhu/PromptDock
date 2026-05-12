@@ -12,6 +12,13 @@ export type CreatePromptData = Omit<
   'id' | 'createdAt' | 'updatedAt'
 >;
 
+function upsertPrompt(prompts: PromptRecipe[], prompt: PromptRecipe): PromptRecipe[] {
+  const existingIndex = prompts.findIndex((item) => item.id === prompt.id);
+  if (existingIndex === -1) return [...prompts, prompt];
+
+  return prompts.map((item, index) => (index === existingIndex ? prompt : item));
+}
+
 // ─── PromptStore ───────────────────────────────────────────────────────────────
 
 export interface PromptStore {
@@ -79,7 +86,7 @@ export function createPromptStore(repo: IPromptRepository) {
 
     async createPrompt(data: CreatePromptData) {
       const created = await repo.create(data);
-      set((state) => ({ prompts: [...state.prompts, created] }));
+      set((state) => ({ prompts: upsertPrompt(state.prompts, created) }));
     },
 
     async updatePrompt(id: string, changes: Partial<PromptRecipe>) {
@@ -100,7 +107,7 @@ export function createPromptStore(repo: IPromptRepository) {
 
     async duplicatePrompt(id: string) {
       const duplicated = await repo.duplicate(id);
-      set((state) => ({ prompts: [...state.prompts, duplicated] }));
+      set((state) => ({ prompts: upsertPrompt(state.prompts, duplicated) }));
     },
 
     async clearFolderAssignments(folderId: string) {
@@ -176,7 +183,18 @@ export function createPromptStore(repo: IPromptRepository) {
 // For production use, call `initPromptStore` once at app startup with the real
 // repository, then use `usePromptStore` in components.
 
-let _store: StoreApi<PromptStore> | null = null;
+interface PromptStoreHotData {
+  promptStore?: StoreApi<PromptStore> | null;
+}
+
+const hotData = import.meta.hot?.data as PromptStoreHotData | undefined;
+let _store: StoreApi<PromptStore> | null = hotData?.promptStore ?? null;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data: PromptStoreHotData) => {
+    data.promptStore = _store;
+  });
+}
 
 /** Initializes the singleton prompt store used by components. */
 export function initPromptStore(repo: IPromptRepository): StoreApi<PromptStore> {

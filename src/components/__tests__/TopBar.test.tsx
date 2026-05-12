@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TopBar } from '../top-bar';
 import type { IAuthService } from '../../services/interfaces';
-import type { AuthResult } from '../../types/index';
+import type {
+  AuthResult,
+  AuthUser,
+  Workspace,
+  WorkspaceInvite,
+  WorkspaceMember,
+  WorkspaceMembership,
+} from '../../types/index';
+import type { IWorkspaceRepository } from '../../repositories/interfaces';
+import { initWorkspaceStore } from '../../stores/workspace-store';
 
 const defaultProps = {
   searchQuery: '',
@@ -33,7 +42,68 @@ function createMockAuthService(overrides: Partial<IAuthService> = {}): IAuthServ
   };
 }
 
+function createMockWorkspaceRepo(): IWorkspaceRepository {
+  const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+  const workspace: Workspace = {
+    id: user.uid,
+    name: 'Personal Workspace',
+    ownerId: user.uid,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
+  const membership: WorkspaceMembership = {
+    id: `${workspace.id}_${user.uid}`,
+    workspaceId: workspace.id,
+    userId: user.uid,
+    role: 'owner',
+    email: user.email,
+    displayName: user.displayName,
+    workspaceName: workspace.name,
+    ownerId: user.uid,
+    joinedAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+  const member: WorkspaceMember = {
+    id: user.uid,
+    workspaceId: workspace.id,
+    userId: user.uid,
+    role: 'owner',
+    email: user.email,
+    displayName: user.displayName,
+    joinedAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+
+  return {
+    create: vi.fn(async () => workspace),
+    getById: vi.fn(async () => workspace),
+    listForUser: vi.fn(async () => [workspace]),
+    listSyncedWorkspacesForUser: vi.fn(async () => [workspace]),
+    update: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
+    bootstrapPersonalWorkspace: vi.fn(async () => workspace),
+    listMembershipsForUser: vi.fn(async () => [membership]),
+    listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
+    listMembers: vi.fn(async () => [member]),
+    listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
+    createSyncedWorkspace: vi.fn(async () => ({ workspace, membership })),
+    createInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    acceptInvite: vi.fn(async () => member),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => member),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
+
 describe('TopBar', () => {
+  beforeEach(() => {
+    initWorkspaceStore(createMockWorkspaceRepo());
+  });
+
   it('renders "PromptDock" title', () => {
     render(<TopBar {...defaultProps} />);
     expect(screen.getByText('PromptDock')).toBeDefined();
@@ -166,6 +236,43 @@ describe('TopBar', () => {
     await waitFor(() => {
       expect(onSignOutSuccess).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('closes the workspace menu after opening sharing settings', () => {
+    const onManageWorkspaces = vi.fn();
+
+    render(
+      <TopBar
+        {...defaultProps}
+        mode="synced"
+        syncStatus="synced"
+        onManageWorkspaces={onManageWorkspaces}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch workspace' }));
+    expect(screen.getByRole('dialog', { name: 'Workspaces' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /Manage sharing/i }));
+
+    expect(onManageWorkspaces).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog', { name: 'Workspaces' })).toBeNull();
+  });
+
+  it('shows colorful workspace markers in synced workspace controls', () => {
+    render(
+      <TopBar
+        {...defaultProps}
+        mode="synced"
+        syncStatus="synced"
+      />,
+    );
+
+    expect(screen.getByTestId('workspace-color-mark')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Switch workspace' }));
+
+    expect(screen.getAllByTestId('workspace-color-mark').length).toBeGreaterThan(1);
   });
 
   it('closes the account dropdown with Escape', () => {

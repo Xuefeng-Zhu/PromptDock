@@ -5,6 +5,7 @@ import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import { usePromptSearchResults } from '../../hooks/use-prompt-search-results';
 import { usePromptStore } from '../../stores/prompt-store';
 import { useSettingsStore } from '../../stores/settings-store';
+import { canEditWorkspace, useWorkspaceStore } from '../../stores/workspace-store';
 import { extractVariables } from '../../utils/prompt-template';
 import { resolvePromptRecipeVariables } from '../../utils/prompt-variables';
 import type { PromptRecipe } from '../../types/index';
@@ -24,6 +25,7 @@ export function useQuickLauncherController() {
   const loadPrompts = usePromptStore((s) => s.loadPrompts);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
   const defaultAction = useSettingsStore((s) => s.settings.defaultAction);
+  const currentWorkspaceRole = useWorkspaceStore((s) => s.currentRole);
 
   const [query, setQuery] = useState('');
   const [selectedPrompt, setSelectedPrompt] = useState<PromptRecipe | null>(null);
@@ -91,6 +93,7 @@ export function useQuickLauncherController() {
   }, [resetHighlightedIndex]);
 
   const { copyText, pasteText } = usePromptExecution({
+    canMarkPromptUsed: canEditWorkspace(currentWorkspaceRole),
     defaultAction,
     markPromptUsed,
     beforePaste: hideWindow,

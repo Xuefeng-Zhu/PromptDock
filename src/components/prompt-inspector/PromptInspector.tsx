@@ -31,6 +31,7 @@ export interface PromptInspectorProps {
   onClose?: () => void;
   onUpdateFolder?: (id: string, folderId: string | null) => void;
   onUpdateTags?: (id: string, updateTags: (tags: string[]) => string[]) => void;
+  readOnly?: boolean;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ export function PromptInspector({
   onClose,
   onUpdateFolder,
   onUpdateTags,
+  readOnly = false,
 }: PromptInspectorProps) {
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
 
@@ -97,6 +99,7 @@ export function PromptInspector({
           onEdit={onEdit}
           onClose={onClose}
           onToggleFavorite={onToggleFavorite}
+          readOnly={readOnly}
         />
         <PromptFolderSection
           prompt={prompt}

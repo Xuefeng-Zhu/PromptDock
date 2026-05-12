@@ -20,9 +20,11 @@ export interface AppModeProviderProps {
 export function AppModeProvider({ children }: AppModeProviderProps) {
   const mode: AppMode = useAppModeStore((s) => s.mode);
   const userId: string | null = useAppModeStore((s) => s.userId);
+  const userEmail: string | null = useAppModeStore((s) => s.userEmail);
+  const userDisplayName: string | null = useAppModeStore((s) => s.userDisplayName);
   const isOnline: boolean = useAppModeStore((s) => s.isOnline);
 
-  const value: AppModeState = { mode, userId, isOnline };
+  const value: AppModeState = { mode, userId, userEmail, userDisplayName, isOnline };
 
   return (
     <AppModeContext.Provider value={value}>

@@ -197,9 +197,9 @@ describe('SyncService folder migration', () => {
     );
   });
 
-  it('skips local prompts whose normalized title and body already exist remotely', async () => {
+  it('keeps local prompts that share title and body with a different remote prompt id', async () => {
     const service = new SyncService({ appModeStore: createMockAppModeStore() });
-    const existing = makePrompt({
+    const sameContent = makePrompt({
       id: 'local-existing-id',
       title: '  Prompt   with Variables ',
       body: 'Write a {{tone}} reply to {{recipient}}.',
@@ -222,11 +222,15 @@ describe('SyncService folder migration', () => {
     await service.transitionToSynced(
       'user-1',
       'workspace-1',
-      [existing, fresh],
+      [sameContent, fresh],
       'migrate',
     );
 
-    expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(1);
+    expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(2);
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'local-existing-id' }),
+      expect.objectContaining({ title: '  Prompt   with Variables ' }),
+    );
     expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'local-fresh-id' }),
       expect.objectContaining({ title: 'Fresh Prompt' }),

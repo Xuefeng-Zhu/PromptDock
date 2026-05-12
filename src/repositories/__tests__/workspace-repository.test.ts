@@ -3,6 +3,87 @@ import type { Workspace } from '../../types/index';
 import { WorkspaceRepository } from '../workspace-repository';
 import type { LocalStorageBackend } from '../local-storage-backend';
 
+const firestoreMocks = vi.hoisted(() => {
+  type DocSnapshot = {
+    data: () => Record<string, unknown>;
+    id: string;
+    path: string;
+    ref: { id: string; path: string };
+  };
+  const state = {
+    batches: [] as Array<{ commit: ReturnType<typeof vi.fn>; operations: string[] }>,
+    collectionDocs: new Map<string, DocSnapshot[]>(),
+    workspaceExists: false,
+    workspaceData: {
+      name: 'Personal Workspace',
+      ownerId: 'user-1',
+      createdAt: { toDate: () => new Date('2023-01-01T00:00:00.000Z') },
+      updatedAt: { toDate: () => new Date('2023-01-02T00:00:00.000Z') },
+    } as Record<string, unknown>,
+  };
+
+  const lastPathSegment = (path: string) => path.split('/').slice(-1)[0] ?? path;
+  const makeRef = (path: string) => ({
+    id: lastPathSegment(path),
+    path,
+  });
+  const makeDoc = (path: string, data: Record<string, unknown>) => ({
+    data: () => data,
+    id: lastPathSegment(path),
+    path,
+    ref: makeRef(path),
+  });
+
+  return {
+    state,
+    collection: vi.fn((_firestore: unknown, ...path: string[]) => ({ path: path.join('/') })),
+    doc: vi.fn((_firestore: unknown, ...path: string[]) => makeRef(path.join('/'))),
+    getDoc: vi.fn(async (ref: { id?: string; path: string }) => ({
+      data: () => state.workspaceData,
+      exists: () => ref.path === 'workspaces/user-1' && state.workspaceExists,
+      id: ref.id ?? lastPathSegment(ref.path),
+    })),
+    getDocs: vi.fn(async (ref: { path: string }) => ({
+      docs: state.collectionDocs.get(ref.path) ?? [],
+    })),
+    makeDoc,
+    query: vi.fn((collectionRef: unknown) => collectionRef),
+    serverTimestamp: vi.fn(() => 'server-timestamp'),
+    setDoc: vi.fn(async () => undefined),
+    where: vi.fn(() => ({})),
+    writeBatch: vi.fn(() => {
+      const batch = {
+        commit: vi.fn(async () => undefined),
+        delete: vi.fn((ref: { path: string }) => {
+          batch.operations.push(`delete:${ref.path}`);
+        }),
+        operations: [] as string[],
+        update: vi.fn((ref: { path: string }) => {
+          batch.operations.push(`update:${ref.path}`);
+        }),
+      };
+      state.batches.push(batch);
+      return batch;
+    }),
+  };
+});
+
+vi.mock('../../firebase/config', () => ({
+  getFirebaseFirestore: vi.fn(async () => ({})),
+}));
+
+vi.mock('firebase/firestore', () => ({
+  collection: firestoreMocks.collection,
+  doc: firestoreMocks.doc,
+  getDoc: firestoreMocks.getDoc,
+  getDocs: firestoreMocks.getDocs,
+  query: firestoreMocks.query,
+  serverTimestamp: firestoreMocks.serverTimestamp,
+  setDoc: firestoreMocks.setDoc,
+  where: firestoreMocks.where,
+  writeBatch: firestoreMocks.writeBatch,
+}));
+
 // ─── Mock LocalStorageBackend ──────────────────────────────────────────────────
 
 const DEFAULT_WORKSPACE: Workspace = {
@@ -31,6 +112,10 @@ describe('WorkspaceRepository', () => {
   let repo: WorkspaceRepository;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    firestoreMocks.state.batches = [];
+    firestoreMocks.state.collectionDocs = new Map();
+    firestoreMocks.state.workspaceExists = false;
     backend = createMockBackend();
     repo = new WorkspaceRepository(backend);
   });
@@ -152,6 +237,72 @@ describe('WorkspaceRepository', () => {
 
       expect(result.ownerId).toBe('local');
       expect(result.id).toBe('local');
+    });
+  });
+
+  describe('bootstrapPersonalWorkspace', () => {
+    it('does not overwrite createdAt when the personal workspace already exists', async () => {
+      firestoreMocks.state.workspaceExists = true;
+
+      const result = await repo.bootstrapPersonalWorkspace({
+        uid: 'user-1',
+        email: 'user@example.com',
+        displayName: 'User One',
+      });
+
+      expect(result.createdAt.toISOString()).toBe('2023-01-01T00:00:00.000Z');
+      expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'workspaces/user-1' }),
+        expect.not.objectContaining({ createdAt: expect.anything() }),
+        { merge: true },
+      );
+    });
+
+    it('sets createdAt when creating the personal workspace for the first time', async () => {
+      await repo.bootstrapPersonalWorkspace({
+        uid: 'user-1',
+        email: 'user@example.com',
+        displayName: 'User One',
+      });
+
+      expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'workspaces/user-1' }),
+        expect.objectContaining({ createdAt: 'server-timestamp' }),
+        { merge: true },
+      );
+    });
+  });
+
+  describe('deleteSyncedWorkspace', () => {
+    it('chunks large workspace deletions and keeps owner records with the workspace delete', async () => {
+      const promptDocs = Array.from({ length: 451 }, (_, index) =>
+        firestoreMocks.makeDoc(`workspaces/workspace-1/prompts/prompt-${index}`, {}),
+      );
+      firestoreMocks.state.collectionDocs.set('workspaces/workspace-1/members', [
+        firestoreMocks.makeDoc('workspaces/workspace-1/members/user-1', {
+          role: 'owner',
+          userId: 'user-1',
+        }),
+      ]);
+      firestoreMocks.state.collectionDocs.set('workspaces/workspace-1/prompts', promptDocs);
+      firestoreMocks.state.collectionDocs.set('workspaces/workspace-1/folders', []);
+      firestoreMocks.state.collectionDocs.set('workspaces/workspace-1/conflicts', []);
+      firestoreMocks.state.collectionDocs.set('workspaceInvites', []);
+
+      await repo.deleteSyncedWorkspace('workspace-1');
+
+      expect(firestoreMocks.state.batches).toHaveLength(3);
+      expect(firestoreMocks.state.batches[0].operations).toHaveLength(450);
+      expect(firestoreMocks.state.batches[1].operations).toHaveLength(1);
+      expect(firestoreMocks.state.batches[2].operations).toEqual([
+        'delete:workspaces/workspace-1/members/user-1',
+        'delete:workspaceMemberships/workspace-1_user-1',
+        'delete:workspaces/workspace-1',
+      ]);
+      firestoreMocks.state.batches.forEach((batch) => {
+        expect(batch.operations.length).toBeLessThanOrEqual(450);
+        expect(batch.commit).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

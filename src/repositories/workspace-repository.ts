@@ -297,36 +297,49 @@ export class WorkspaceRepository implements IWorkspaceRepository {
 
   async bootstrapPersonalWorkspace(user: AuthUser): Promise<Workspace> {
     const { getFirebaseFirestore } = await import('../firebase/config');
-    const { doc, serverTimestamp, setDoc } = await import('firebase/firestore');
+    const { doc, getDoc, serverTimestamp, setDoc } = await import('firebase/firestore');
 
     const firestore = await getFirebaseFirestore();
     const timestamp = serverTimestamp();
+    const workspaceRef = doc(firestore, 'workspaces', user.uid);
+    const existingWorkspaceSnapshot = await getDoc(workspaceRef).catch((err) => {
+      console.error('Failed to read personal workspace metadata before bootstrap:', err);
+      return null;
+    });
+    const existingWorkspace = existingWorkspaceSnapshot?.exists()
+      ? toWorkspace(
+        existingWorkspaceSnapshot.id,
+        existingWorkspaceSnapshot.data() as FirestoreWorkspaceDoc,
+      )
+      : null;
     const workspace: Workspace = {
       id: user.uid,
       name: 'Personal Workspace',
       ownerId: user.uid,
-      createdAt: new Date(),
+      createdAt: existingWorkspace?.createdAt ?? new Date(),
       updatedAt: new Date(),
     };
     const memberPayload = createMemberPayload(workspace, user, 'owner', timestamp);
     const membershipPayload = createMembershipPayload(workspace, user, 'owner', timestamp);
 
-    const workspaceRef = doc(firestore, 'workspaces', user.uid);
     const memberRef = doc(firestore, 'workspaces', user.uid, 'members', user.uid);
     const membershipRef = doc(
       firestore,
       'workspaceMemberships',
       workspaceMembershipId(user.uid, user.uid),
     );
+    const workspacePayload: Record<string, unknown> = {
+      name: workspace.name,
+      ownerId: workspace.ownerId,
+      updatedAt: timestamp,
+    };
+    if (!existingWorkspace) {
+      workspacePayload.createdAt = timestamp;
+    }
 
     await setDoc(
       workspaceRef,
-      {
-        name: workspace.name,
-        ownerId: workspace.ownerId,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      },
+      workspacePayload,
       { merge: true },
     ).catch((err) => {
       console.error('Failed to bootstrap personal workspace metadata:', err);
@@ -612,6 +625,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     } = await import('firebase/firestore');
 
     const firestore = await getFirebaseFirestore();
+    const maxBatchOperations = 450;
     const workspaceRef = doc(firestore, 'workspaces', workspaceId);
     const membersSnapshot = await getDocs(collection(firestore, 'workspaces', workspaceId, 'members'));
     const promptsSnapshot = await getDocs(collection(firestore, 'workspaces', workspaceId, 'prompts'));
@@ -621,30 +635,72 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       query(collection(firestore, 'workspaceInvites'), where('workspaceId', '==', workspaceId)),
     );
 
-    const batch = writeBatch(firestore);
+    const promptVersionSnapshots = await Promise.all(
+      promptsSnapshot.docs.map((promptDoc) =>
+        getDocs(collection(
+          firestore,
+          'workspaces',
+          workspaceId,
+          'prompts',
+          promptDoc.id,
+          'versions',
+        )),
+      ),
+    );
     const timestamp = serverTimestamp();
+    const writeOperations: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
+    const finalWriteOperations: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
+
+    const commitOperations = async (
+      operations: Array<(batch: ReturnType<typeof writeBatch>) => void>,
+    ) => {
+      for (let index = 0; index < operations.length; index += maxBatchOperations) {
+        const batch = writeBatch(firestore);
+        operations.slice(index, index + maxBatchOperations).forEach((operation) => {
+          operation(batch);
+        });
+        await batch.commit();
+      }
+    };
 
     invitesSnapshot.docs.forEach((inviteDoc) => {
-      batch.update(inviteDoc.ref, {
+      writeOperations.push((batch) => batch.update(inviteDoc.ref, {
         status: 'revoked',
         updatedAt: timestamp,
-      });
+      }));
     });
     membersSnapshot.docs.forEach((memberDoc) => {
       const data = memberDoc.data() as FirestoreWorkspaceMemberDoc;
       const memberUserId = data.userId || memberDoc.id;
-      batch.delete(memberDoc.ref);
-      batch.delete(doc(
+      const operations = data.role === 'owner' ? finalWriteOperations : writeOperations;
+      operations.push((batch) => batch.delete(memberDoc.ref));
+      operations.push((batch) => batch.delete(doc(
         firestore,
         'workspaceMemberships',
         workspaceMembershipId(workspaceId, memberUserId),
-      ));
+      )));
     });
-    promptsSnapshot.docs.forEach((promptDoc) => batch.delete(promptDoc.ref));
-    foldersSnapshot.docs.forEach((folderDoc) => batch.delete(folderDoc.ref));
-    conflictsSnapshot.docs.forEach((conflictDoc) => batch.delete(conflictDoc.ref));
-    batch.delete(workspaceRef);
-    await batch.commit();
+    promptVersionSnapshots.forEach((snapshot) => {
+      snapshot.docs.forEach((versionDoc) => {
+        writeOperations.push((batch) => batch.delete(versionDoc.ref));
+      });
+    });
+    promptsSnapshot.docs.forEach((promptDoc) => {
+      writeOperations.push((batch) => batch.delete(promptDoc.ref));
+    });
+    foldersSnapshot.docs.forEach((folderDoc) => {
+      writeOperations.push((batch) => batch.delete(folderDoc.ref));
+    });
+    conflictsSnapshot.docs.forEach((conflictDoc) => {
+      writeOperations.push((batch) => batch.delete(conflictDoc.ref));
+    });
+    finalWriteOperations.push((batch) => batch.delete(workspaceRef));
+
+    await commitOperations(writeOperations);
+    if (finalWriteOperations.length > maxBatchOperations) {
+      throw new Error('Workspace has too many owner records to delete in a single final batch.');
+    }
+    await commitOperations(finalWriteOperations);
   }
 
   async leaveSyncedWorkspace(workspaceId: string, userId: string): Promise<void> {

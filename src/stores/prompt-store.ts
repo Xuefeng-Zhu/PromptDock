@@ -37,6 +37,11 @@ export interface PromptStore {
   updatePrompt: (id: string, changes: Partial<PromptRecipe>) => Promise<void>;
   deletePrompt: (id: string) => Promise<void>;
   duplicatePrompt: (id: string) => Promise<void>;
+  duplicatePromptToWorkspace: (
+    id: string,
+    targetWorkspaceId: string,
+    createdBy: string,
+  ) => Promise<void>;
   clearFolderAssignments: (folderId: string) => Promise<number>;
   toggleFavorite: (id: string) => Promise<void>;
   markPromptUsed: (id: string) => Promise<void>;
@@ -108,6 +113,21 @@ export function createPromptStore(repo: IPromptRepository) {
     async duplicatePrompt(id: string) {
       const duplicated = await repo.duplicate(id);
       set((state) => ({ prompts: upsertPrompt(state.prompts, duplicated) }));
+    },
+
+    async duplicatePromptToWorkspace(id: string, targetWorkspaceId: string, createdBy: string) {
+      if (!repo.duplicateToWorkspace) {
+        throw new Error('Prompt repository does not support workspace duplication.');
+      }
+      const duplicated = await repo.duplicateToWorkspace(id, {
+        workspaceId: targetWorkspaceId,
+        createdBy,
+      });
+      set((state) => (
+        duplicated.workspaceId === state.activeWorkspaceId
+          ? { prompts: upsertPrompt(state.prompts, duplicated) }
+          : {}
+      ));
     },
 
     async clearFolderAssignments(folderId: string) {

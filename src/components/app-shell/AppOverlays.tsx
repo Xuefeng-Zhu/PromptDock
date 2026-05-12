@@ -1,5 +1,6 @@
 import type { useAppShellController } from '../../hooks/use-app-shell-controller';
 import { ToastContainer } from '../feedback';
+import { DuplicatePromptDialog } from '../prompt-actions';
 import { CommandPalette } from '../prompt-search';
 import { FolderDeleteConfirmationDialog } from '../sidebar/FolderDeleteConfirmationDialog';
 import { VariableFillModal } from '../variable-fill';
@@ -12,9 +13,14 @@ interface AppOverlaysProps {
 
 export function AppOverlays({ controller }: AppOverlaysProps) {
   const {
+    activeWorkspaceId,
     defaultAction,
+    duplicateDialogPrompt,
+    duplicateWorkspaceTargets,
     handleCommandPaletteClose,
     handleCommandPaletteSelect,
+    handleDuplicatePromptCancel,
+    handleDuplicatePromptConfirm,
     handleFolderDeleteCancel,
     handleFolderDeleteConfirm,
     handleVariableFillCancel,
@@ -51,6 +57,16 @@ export function AppOverlays({ controller }: AppOverlaysProps) {
           promptCount={folderDeleteConfirmation.promptCount}
           onCancel={handleFolderDeleteCancel}
           onConfirm={handleFolderDeleteConfirm}
+        />
+      )}
+
+      {duplicateDialogPrompt && duplicateWorkspaceTargets.length > 0 && (
+        <DuplicatePromptDialog
+          activeWorkspaceId={activeWorkspaceId}
+          prompt={duplicateDialogPrompt}
+          targets={duplicateWorkspaceTargets}
+          onCancel={handleDuplicatePromptCancel}
+          onConfirm={handleDuplicatePromptConfirm}
         />
       )}
 

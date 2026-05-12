@@ -50,6 +50,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     unresolvedConflictCount,
     userId,
     showInspector,
+    duplicateWorkspaceTargets,
   } = controller;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -195,7 +196,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
                 readOnly={!canEditWorkspace}
                 onToggleFavorite={canEditWorkspace ? handleToggleFavorite : undefined}
                 onEdit={canEditWorkspace ? handleEditPrompt : undefined}
-                onDuplicate={canEditWorkspace ? handleDuplicatePrompt : undefined}
+                onDuplicate={duplicateWorkspaceTargets.length > 0 ? handleDuplicatePrompt : undefined}
                 onArchive={canEditWorkspace ? handleArchivePrompt : undefined}
                 onDelete={canEditWorkspace ? handleDeletePrompt : undefined}
                 onRestore={canEditWorkspace ? handleRestorePrompt : undefined}

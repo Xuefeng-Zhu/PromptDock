@@ -54,6 +54,31 @@ export class PromptRepository implements IPromptRepository {
     await this.backend.writePrompts(this.prompts);
   }
 
+  private buildDuplicate(
+    original: PromptRecipe,
+    target: { workspaceId: string; createdBy: string },
+  ): PromptRecipe {
+    const now = new Date();
+    return {
+      ...original,
+      id: crypto.randomUUID(),
+      workspaceId: target.workspaceId,
+      title: `Copy of ${original.title}`,
+      variables: original.variables
+        ? resolvePromptVariables(original.body, original.variables)
+        : undefined,
+      folderId: null,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: target.createdBy,
+      version: 1,
+      favorite: false,
+      archived: false,
+      archivedAt: null,
+      lastUsedAt: null,
+    };
+  }
+
   async create(
     recipe: Omit<PromptRecipe, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<PromptRecipe> {
@@ -209,23 +234,35 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
-    const now = new Date();
-    const duplicated: PromptRecipe = {
-      ...original,
-      id: crypto.randomUUID(),
-      title: `Copy of ${original.title}`,
-      variables: original.variables
-        ? resolvePromptVariables(original.body, original.variables)
-        : undefined,
-      createdAt: now,
-      updatedAt: now,
+    const duplicated = this.buildDuplicate(original, {
+      workspaceId: original.workspaceId,
       createdBy: 'local',
-      version: 1,
-      favorite: false,
-      archived: false,
-      archivedAt: null,
-      lastUsedAt: null,
-    };
+    });
+
+    this.prompts.push(duplicated);
+    await this.persist();
+    return duplicated;
+  }
+
+  async duplicateToWorkspace(
+    id: string,
+    target: { workspaceId: string; createdBy: string },
+  ): Promise<PromptRecipe> {
+    if (this.firestoreDelegate) {
+      if (!this.firestoreDelegate.duplicateToWorkspace) {
+        throw new Error('Active prompt repository does not support workspace duplication.');
+      }
+      return this.firestoreDelegate.duplicateToWorkspace(id, target);
+    }
+
+    await this.ensureLoaded();
+
+    const original = this.prompts.find((p) => p.id === id);
+    if (!original) {
+      throw new Error(`Prompt not found: ${id}`);
+    }
+
+    const duplicated = this.buildDuplicate(original, target);
 
     this.prompts.push(duplicated);
     await this.persist();

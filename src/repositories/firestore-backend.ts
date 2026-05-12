@@ -253,6 +253,29 @@ export function firestoreDocToUserSettings(doc: FirestoreUserSettingsDoc): UserS
 export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   constructor(private workspaceId: string) {}
 
+  private buildDuplicateCreateInput(
+    original: PromptRecipe,
+    target: { workspaceId: string; createdBy: string },
+  ): Omit<PromptRecipe, 'id' | 'createdAt' | 'updatedAt'> {
+    return {
+      workspaceId: target.workspaceId,
+      title: `Copy of ${original.title}`,
+      description: original.description,
+      body: original.body,
+      variables: original.variables
+        ? resolvePromptVariables(original.body, original.variables)
+        : undefined,
+      tags: [...original.tags],
+      folderId: null,
+      favorite: false,
+      archived: false,
+      archivedAt: null,
+      lastUsedAt: null,
+      createdBy: target.createdBy,
+      version: 1,
+    };
+  }
+
   private async getPromptsCollection() {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection } = await import('firebase/firestore');
@@ -411,23 +434,26 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
     const original = await this.getById(id);
     if (!original) throw new Error(`Prompt not found: ${id}`);
 
-    return this.create({
-      workspaceId: original.workspaceId,
-      title: `Copy of ${original.title}`,
-      description: original.description,
-      body: original.body,
-      variables: original.variables
-        ? resolvePromptVariables(original.body, original.variables)
-        : undefined,
-      tags: [...original.tags],
-      folderId: original.folderId,
-      favorite: false,
-      archived: false,
-      archivedAt: null,
-      lastUsedAt: null,
-      createdBy: original.createdBy,
-      version: 1,
-    });
+    return this.create(
+      this.buildDuplicateCreateInput(original, {
+        workspaceId: original.workspaceId,
+        createdBy: original.createdBy,
+      }),
+    );
+  }
+
+  async duplicateToWorkspace(
+    id: string,
+    target: { workspaceId: string; createdBy: string },
+  ): Promise<PromptRecipe> {
+    const original = await this.getById(id);
+    if (!original) throw new Error(`Prompt not found: ${id}`);
+
+    const targetBackend = target.workspaceId === this.workspaceId
+      ? this
+      : new FirestoreBackend(target.workspaceId);
+
+    return targetBackend.create(this.buildDuplicateCreateInput(original, target));
   }
 
   async toggleFavorite(id: string): Promise<PromptRecipe> {

@@ -42,6 +42,7 @@ export interface IPromptRepository {
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   duplicate(id: string): Promise<PromptRecipe>;
+  duplicateToWorkspace?(id: string, target: { workspaceId: string; createdBy: string }): Promise<PromptRecipe>;
   toggleFavorite(id: string): Promise<PromptRecipe>;
 }
 

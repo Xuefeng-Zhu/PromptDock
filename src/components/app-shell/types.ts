@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { SettingsSectionId } from '../settings/settings-data';
 import type { ConflictService } from '../../services/conflict-service';
 import type { IAuthService } from '../../services/interfaces';
-import type { Folder, PromptRecipe } from '../../types/index';
+import type { Folder, PromptRecipe, Workspace, WorkspaceRole } from '../../types/index';
 
 export type Screen =
   | { name: 'onboarding' }
@@ -26,4 +26,9 @@ export interface AppShellProps {
   authService?: IAuthService;
   syncService?: AppShellSyncService;
   conflictService?: ConflictService;
+}
+
+export interface DuplicateWorkspaceTarget {
+  role: WorkspaceRole;
+  workspace: Workspace;
 }

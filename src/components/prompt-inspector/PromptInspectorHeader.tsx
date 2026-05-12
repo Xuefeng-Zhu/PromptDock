@@ -68,7 +68,7 @@ export function PromptInspectorHeader({
       label: 'Edit prompt',
       onSelect: () => onEdit?.(prompt.id),
     },
-    !readOnly && {
+    onDuplicate && {
       type: 'item',
       icon: <Files className="h-4 w-4" />,
       label: 'Duplicate',

@@ -65,6 +65,27 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts.push(dup);
       return dup;
     }),
+    duplicateToWorkspace: vi.fn(async (id, target) => {
+      const original = prompts.find((p) => p.id === id);
+      if (!original) throw new Error(`Prompt not found: ${id}`);
+      const dup: PromptRecipe = {
+        ...original,
+        id: crypto.randomUUID(),
+        workspaceId: target.workspaceId,
+        title: `Copy of ${original.title}`,
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        lastUsedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: target.createdBy,
+        version: 1,
+      };
+      prompts.push(dup);
+      return dup;
+    }),
     toggleFavorite: vi.fn(async (id) => {
       const idx = prompts.findIndex((p) => p.id === id);
       if (idx === -1) throw new Error(`Prompt not found: ${id}`);
@@ -303,6 +324,43 @@ describe('PromptStore', () => {
       await store.getState().duplicatePrompt('p1');
 
       expect(store.getState().prompts.filter((prompt) => prompt.id === duplicated.id)).toHaveLength(1);
+    });
+  });
+
+  describe('duplicatePromptToWorkspace', () => {
+    it('adds a duplicated prompt when the target is the active workspace', async () => {
+      await store.getState().loadPrompts();
+      const before = store.getState().prompts.length;
+
+      await store.getState().duplicatePromptToWorkspace('p1', 'local', 'local');
+
+      expect(repo.duplicateToWorkspace).toHaveBeenCalledWith('p1', {
+        workspaceId: 'local',
+        createdBy: 'local',
+      });
+      expect(store.getState().prompts).toHaveLength(before + 1);
+      expect(store.getState().prompts.find((p) => p.title === 'Copy of First Prompt')).toEqual(
+        expect.objectContaining({
+          workspaceId: 'local',
+          folderId: null,
+          favorite: false,
+          archived: false,
+          lastUsedAt: null,
+        }),
+      );
+    });
+
+    it('does not add a duplicated prompt when the target is another workspace', async () => {
+      await store.getState().loadPrompts();
+      const before = store.getState().prompts.length;
+
+      await store.getState().duplicatePromptToWorkspace('p1', 'workspace-2', 'user-1');
+
+      expect(repo.duplicateToWorkspace).toHaveBeenCalledWith('p1', {
+        workspaceId: 'workspace-2',
+        createdBy: 'user-1',
+      });
+      expect(store.getState().prompts).toHaveLength(before);
     });
   });
 

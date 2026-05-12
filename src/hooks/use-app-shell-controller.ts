@@ -6,6 +6,7 @@ import { useFolderStore } from '../stores/folder-store';
 import { usePromptStore } from '../stores/prompt-store';
 import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
+import { canEditWorkspace as canEditRole, useWorkspaceStore } from '../stores/workspace-store';
 import type { Folder } from '../types/index';
 import { isTauriRuntime } from '../utils/runtime';
 import { hideMainWindow } from '../utils/window';
@@ -53,7 +54,8 @@ export function useAppShellController({
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
   const clearFolderAssignments = usePromptStore((s) => s.clearFolderAssignments);
-  const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const currentWorkspaceRole = useWorkspaceStore((s) => s.currentRole);
   const userFolders = useFolderStore((s) => s.folders);
   const createFolder = useFolderStore((s) => s.createFolder);
   const deleteFolder = useFolderStore((s) => s.deleteFolder);
@@ -64,10 +66,13 @@ export function useAppShellController({
   const mode = useAppModeStore((s) => s.mode);
   const userId = useAppModeStore((s) => s.userId);
   const setMode = useAppModeStore((s) => s.setMode);
+  const setSyncStatus = useAppModeStore((s) => s.setSyncStatus);
+  const setUser = useAppModeStore((s) => s.setUser);
   const setUserId = useAppModeStore((s) => s.setUserId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
   const addToast = useToastStore((s) => s.addToast);
   const [folderDeleteConfirmation, setFolderDeleteConfirmation] = useState<FolderDeleteConfirmation | null>(null);
+  const canEditWorkspace = mode === 'local' || canEditRole(currentWorkspaceRole);
 
   const navigation = useShellNavigation({ addToast });
   const {
@@ -91,6 +96,7 @@ export function useAppShellController({
     defaultAction,
     markPromptUsed,
     beforePaste: hideMainWindow,
+    canMarkPromptUsed: canEditWorkspace,
   });
 
   const libraryData = useLibraryData({
@@ -121,6 +127,7 @@ export function useAppShellController({
     activeWorkspaceId,
     addToast,
     archivePrompt,
+    canEditWorkspace,
     restorePrompt,
     copyText,
     createPrompt,
@@ -157,6 +164,8 @@ export function useAppShellController({
 
   const appModeActions = useAppModeActions({
     setMode,
+    setSyncStatus,
+    setUser,
     setUserId,
   });
 
@@ -176,6 +185,10 @@ export function useAppShellController({
 
   const handleCreateFolder = useCallback(
     async (name: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot create folders in this workspace.', 'info');
+        return undefined;
+      }
       try {
         return await createFolder(name);
       } catch (err) {
@@ -183,11 +196,15 @@ export function useAppShellController({
         return undefined;
       }
     },
-    [addToast, createFolder],
+    [addToast, canEditWorkspace, createFolder],
   );
 
   const handleDeleteFolder = useCallback(
     (folder: Folder) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot delete folders in this workspace.', 'info');
+        return;
+      }
       if (blockIfEditorHasUnsavedChanges()) return;
 
       setFolderDeleteConfirmation({
@@ -195,7 +212,7 @@ export function useAppShellController({
         promptCount: prompts.filter((prompt) => prompt.folderId === folder.id).length,
       });
     },
-    [blockIfEditorHasUnsavedChanges, prompts],
+    [addToast, blockIfEditorHasUnsavedChanges, canEditWorkspace, prompts],
   );
 
   const handleFolderDeleteCancel = useCallback(() => {
@@ -266,6 +283,7 @@ export function useAppShellController({
     defaultAction,
     editorPrompt,
     editorPromptId: promptCrud.editorPromptId,
+    canEditWorkspace,
     handleAuthSuccess: appModeActions.handleAuthSuccess,
     handleArchivePrompt: promptCrud.handleArchivePrompt,
     handleCommandPaletteClose: promptLaunchFlow.handleCommandPaletteClose,
@@ -295,6 +313,7 @@ export function useAppShellController({
     handleSelectPrompt: navigation.handleSelectPrompt,
     handleSettingsBack: navigation.handleSettingsBack,
     handleSettingsOpen: navigation.handleSettingsOpen,
+    handleWorkspaceSettingsOpen: navigation.handleWorkspaceSettingsOpen,
     handleSidebarItemSelect: navigation.handleSidebarItemSelect,
     handleSignOutSuccess: appModeActions.handleSignOutSuccess,
     handleToggleFavorite: promptCrud.handleToggleFavorite,

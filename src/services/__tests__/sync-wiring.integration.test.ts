@@ -58,6 +58,8 @@ function createMockAppModeStore(): AppModeStore {
   return {
     mode: 'local',
     userId: null,
+    userEmail: null,
+    userDisplayName: null,
     isOnline: true,
     syncStatus: 'local',
     lastSyncedAt: null,
@@ -66,6 +68,11 @@ function createMockAppModeStore(): AppModeStore {
     }),
     setUserId: vi.fn(function (this: AppModeStore, userId) {
       this.userId = userId;
+    }),
+    setUser: vi.fn(function (this: AppModeStore, user) {
+      this.userId = user?.uid ?? null;
+      this.userEmail = user?.email ?? null;
+      this.userDisplayName = user?.displayName ?? null;
     }),
     setOnline: vi.fn(function (this: AppModeStore, online) {
       this.isOnline = online;

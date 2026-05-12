@@ -6,11 +6,13 @@ import {
   Palette,
   Settings2,
   User,
+  Users,
 } from 'lucide-react';
 import type { UserSettings } from '../../types/index';
 
 export type SettingsSectionId =
   | 'account-sync'
+  | 'workspaces-sharing'
   | 'appearance'
   | 'hotkey'
   | 'default-behavior'
@@ -28,6 +30,7 @@ export type DefaultAction = UserSettings['defaultAction'];
 
 export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'account-sync', label: 'Account & Sync', icon: <User size={18} /> },
+  { id: 'workspaces-sharing', label: 'Workspaces & Sharing', icon: <Users size={18} /> },
   { id: 'appearance', label: 'Appearance', icon: <Palette size={18} /> },
   { id: 'hotkey', label: 'Hotkey', icon: <Keyboard size={18} /> },
   { id: 'default-behavior', label: 'Default Behavior', icon: <Settings2 size={18} /> },

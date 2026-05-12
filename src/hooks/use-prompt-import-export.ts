@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { ImportExportService } from '../services/import-export';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore, type CreatePromptData } from '../stores/prompt-store';
+import { canEditWorkspace, useWorkspaceStore } from '../stores/workspace-store';
 import { openFile, saveFile } from '../utils/file-dialog';
 import type { DuplicateInfo, PromptRecipe } from '../types/index';
 
@@ -45,7 +46,8 @@ function toImportedPromptData(
  */
 export function usePromptImportExport() {
   const prompts = usePromptStore((s) => s.prompts);
-  const activeWorkspaceId = usePromptStore((s) => s.activeWorkspaceId);
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const currentWorkspaceRole = useWorkspaceStore((s) => s.currentRole);
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const updatePrompt = usePromptStore((s) => s.updatePrompt);
   const mode = useAppModeStore((s) => s.mode);
@@ -65,6 +67,7 @@ export function usePromptImportExport() {
 
   const targetWorkspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
   const targetCreatedBy = mode !== 'local' && userId ? userId : 'local';
+  const canImport = mode === 'local' || canEditWorkspace(currentWorkspaceRole);
 
   /**
    * Inserts already-validated prompts into the current workspace one by one.
@@ -72,11 +75,14 @@ export function usePromptImportExport() {
    */
   const importPrompts = useCallback(
     async (incomingPrompts: PromptRecipe[]) => {
+      if (!canImport) {
+        throw new Error('Viewers cannot import prompts into this workspace.');
+      }
       for (const prompt of incomingPrompts) {
         await createPrompt(toImportedPromptData(prompt, targetWorkspaceId, targetCreatedBy));
       }
     },
-    [createPrompt, targetCreatedBy, targetWorkspaceId],
+    [canImport, createPrompt, targetCreatedBy, targetWorkspaceId],
   );
 
   const handleExport = useCallback(async () => {
@@ -177,6 +183,7 @@ export function usePromptImportExport() {
   }, [duplicates, importPrompts, pendingNonDuplicates, updatePrompt]);
 
   return {
+    canImport,
     duplicates,
     importErrors,
     isExporting,

@@ -21,6 +21,7 @@ let _analytics: Analytics | null = null;
 let _analyticsSupported: boolean | null = null;
 let _auth: Auth | null = null;
 let _firestore: Firestore | null = null;
+let _firestoreEmulatorConnected = false;
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
 
@@ -173,19 +174,38 @@ export async function getFirebaseFirestore(): Promise<Firestore> {
   if (_firestore) return _firestore;
 
   const app = await getFirebaseApp();
-  const { initializeFirestore, persistentLocalCache, connectFirestoreEmulator } = await import(
-    'firebase/firestore'
-  );
+  const {
+    connectFirestoreEmulator,
+    getFirestore,
+    initializeFirestore,
+    persistentLocalCache,
+  } = await import('firebase/firestore');
 
-  _firestore = initializeFirestore(app, {
-    localCache: persistentLocalCache(),
-  });
+  try {
+    _firestore = initializeFirestore(app, {
+      localCache: persistentLocalCache(),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes('initializeFirestore() has already been called')) {
+      throw err;
+    }
+    _firestore = getFirestore(app);
+  }
 
-  if (shouldUseEmulator()) {
+  if (shouldUseEmulator() && !_firestoreEmulatorConnected) {
     const { firestoreHost } = getEmulatorConfig();
     const [host, portStr] = firestoreHost.split(':');
     const port = parseInt(portStr, 10) || 8080;
-    connectFirestoreEmulator(_firestore, host, port);
+    try {
+      connectFirestoreEmulator(_firestore, host, port);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes('already been called')) {
+        throw err;
+      }
+    }
+    _firestoreEmulatorConnected = true;
   }
 
   return _firestore;
@@ -202,4 +222,5 @@ export function resetFirebaseInstances(): void {
   _analyticsSupported = null;
   _auth = null;
   _firestore = null;
+  _firestoreEmulatorConnected = false;
 }

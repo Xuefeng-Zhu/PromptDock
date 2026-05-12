@@ -7,7 +7,9 @@ import type { AppModeStore } from '../stores/app-mode-store';
 import type { FolderStore } from '../stores/folder-store';
 import type { PromptStore } from '../stores/prompt-store';
 import type { SettingsStore } from '../stores/settings-store';
+import type { WorkspaceStore } from '../stores/workspace-store';
 import type { IFolderRepository, IPromptRepository } from '../repositories/interfaces';
+import type { AuthUser } from '../types/index';
 
 type FirestoreDelegate = IPromptRepository & IFolderRepository;
 
@@ -36,6 +38,7 @@ export interface AppSyncLifecycleOptions {
   promptStore: StoreApi<PromptStore>;
   folderStore: StoreApi<FolderStore>;
   settingsStore: StoreApi<SettingsStore>;
+  workspaceStore: StoreApi<WorkspaceStore>;
   promptRepository: PromptRepositoryDelegateTarget;
   folderRepository: FolderRepositoryDelegateTarget;
   authService: Pick<IAuthService, 'restoreSession'>;
@@ -57,7 +60,8 @@ export async function restoreAppAuthSession(
   const applyRestoredAuth = (result: Awaited<ReturnType<IAuthService['restoreSession']>>) => {
     if (result?.success) {
       const appMode = appModeStore.getState();
-      appMode.setUserId(result.user.uid);
+      appMode.setUser(result.user);
+      appMode.setSyncStatus('syncing');
       appMode.setMode('synced');
     }
   };
@@ -79,8 +83,10 @@ export async function restoreAppAuthSession(
 export class AppSyncLifecycle {
   private syncService: SyncLifecycleService | null = null;
   private unsubscribeAppMode: (() => void) | null = null;
+  private unsubscribeWorkspace: (() => void) | null = null;
   private readonly createSyncService: (options: SyncServiceOptions) => SyncLifecycleService;
   private readonly logger: Pick<Console, 'error'>;
+  private isApplyingWorkspace = false;
 
   constructor(private readonly options: AppSyncLifecycleOptions) {
     this.createSyncService = options.createSyncService ?? ((syncOptions) => new SyncService(syncOptions));
@@ -98,16 +104,26 @@ export class AppSyncLifecycle {
       if (state.mode === prevState.mode) return;
 
       if (state.mode === 'synced' && !this.syncService) {
-        this.startSyncedMode(state.userId);
+        void this.startSyncedMode();
       } else if (state.mode === 'local' && this.syncService) {
         this.teardownSyncedMode();
       }
+    });
+
+    this.unsubscribeWorkspace = this.options.workspaceStore.subscribe((state, prevState) => {
+      if (state.activeWorkspaceId === prevState.activeWorkspaceId) return;
+      if (this.isApplyingWorkspace || !this.syncService) return;
+      if (this.options.appModeStore.getState().mode === 'local') return;
+
+      void this.transitionActiveWorkspace(state.activeWorkspaceId);
     });
   }
 
   stop(): void {
     this.unsubscribeAppMode?.();
     this.unsubscribeAppMode = null;
+    this.unsubscribeWorkspace?.();
+    this.unsubscribeWorkspace = null;
     this.teardownSyncedMode();
   }
 
@@ -115,7 +131,18 @@ export class AppSyncLifecycle {
     await restoreAppAuthSession(this.options.authService, this.options.appModeStore);
   }
 
-  private startSyncedMode(userId: string | null): void {
+  private getCurrentAuthUser(): AuthUser | null {
+    const { userDisplayName, userEmail, userId } = this.options.appModeStore.getState();
+    if (!userId) return null;
+
+    return {
+      uid: userId,
+      email: userEmail ?? '',
+      displayName: userDisplayName,
+    };
+  }
+
+  private async startSyncedMode(): Promise<void> {
     const {
       appModeStore,
       conflictService,
@@ -123,22 +150,29 @@ export class AppSyncLifecycle {
       onSyncServiceChange,
       promptStore,
       settingsStore,
+      workspaceStore,
       syncMigrationChoice,
     } = this.options;
+    const user = this.getCurrentAuthUser();
 
-    if (!userId) {
+    if (!user) {
       const appMode = appModeStore.getState();
       appMode.setMode('local');
       appMode.setSyncStatus('local');
       return;
     }
 
-    const workspaceId = userId;
-    promptStore.getState().setActiveWorkspaceId(workspaceId);
-    folderStore.getState().setActiveWorkspaceId(workspaceId);
-    void settingsStore.getState().updateSettings({ activeWorkspaceId: workspaceId }).catch((err) => {
-      this.logger.error('Failed to persist active workspace after sign-in:', err);
-    });
+    const preferredWorkspaceId = settingsStore.getState().settings.activeWorkspaceId;
+    let workspaceId: string;
+    try {
+      workspaceId = await workspaceStore.getState().loadForUser(user, preferredWorkspaceId);
+    } catch (err) {
+      this.logger.error('Failed to load workspaces after sign-in:', err);
+      const appMode = appModeStore.getState();
+      appMode.setMode('local');
+      appMode.setSyncStatus('local');
+      return;
+    }
 
     const service = this.createSyncService({
       appModeStore: appModeStore.getState(),
@@ -157,14 +191,16 @@ export class AppSyncLifecycle {
     onSyncServiceChange?.(service);
     this.wireFirestoreDelegates(service.getFirestoreBackend());
 
+    this.applyWorkspaceTarget(workspaceId);
     const currentPrompts = promptStore.getState().prompts;
     const currentFolders = folderStore.getState().folders;
+    const migrationChoice = workspaceId === user.uid ? syncMigrationChoice : 'fresh';
     void service
       .transitionToSynced(
-        userId,
+        user.uid,
         workspaceId,
         currentPrompts,
-        syncMigrationChoice,
+        migrationChoice,
         currentFolders,
       )
       .then(() => {
@@ -181,6 +217,39 @@ export class AppSyncLifecycle {
           appMode.setSyncStatus('local');
         }
       });
+  }
+
+  private applyWorkspaceTarget(workspaceId: string): void {
+    this.isApplyingWorkspace = true;
+    try {
+      this.options.promptStore.getState().setActiveWorkspaceId(workspaceId);
+      this.options.folderStore.getState().setActiveWorkspaceId(workspaceId);
+    } finally {
+      this.isApplyingWorkspace = false;
+    }
+    void this.options.settingsStore.getState().updateSettings({ activeWorkspaceId: workspaceId }).catch((err) => {
+      this.logger.error('Failed to persist active workspace:', err);
+    });
+  }
+
+  private async transitionActiveWorkspace(workspaceId: string): Promise<void> {
+    const user = this.getCurrentAuthUser();
+    const service = this.syncService;
+    if (!user || !service) return;
+
+    this.applyWorkspaceTarget(workspaceId);
+    this.options.conflictService?.clearAll();
+    this.options.promptStore.setState({ prompts: [], selectedPromptId: null });
+    this.options.folderStore.getState().setFolders([]);
+
+    try {
+      await service.transitionToSynced(user.uid, workspaceId, [], 'fresh', []);
+      if (this.syncService === service) {
+        this.wireFirestoreDelegates(service.getFirestoreBackend());
+      }
+    } catch (err) {
+      this.logger.error('Failed to switch workspace:', err);
+    }
   }
 
   private wireFirestoreDelegates(delegate: FirestoreDelegate | null): void {
@@ -200,6 +269,7 @@ export class AppSyncLifecycle {
     this.options.folderRepository.setFirestoreDelegate(null);
     this.options.promptStore.getState().setActiveWorkspaceId('local');
     this.options.folderStore.getState().setActiveWorkspaceId('local');
+    this.options.workspaceStore.getState().resetLocal();
     void this.options.settingsStore.getState().updateSettings({ activeWorkspaceId: 'local' }).catch((err) => {
       this.logger.error('Failed to persist active workspace after sign-out:', err);
     });

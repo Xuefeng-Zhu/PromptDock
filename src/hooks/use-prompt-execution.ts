@@ -17,6 +17,7 @@ export interface PromptExecutionResult {
 }
 
 interface UsePromptExecutionOptions {
+  canMarkPromptUsed?: boolean;
   defaultAction: PromptExecutionAction;
   markPromptUsed: (promptId: string) => Promise<unknown>;
   beforePaste?: () => Promise<void>;
@@ -45,19 +46,20 @@ function getExecutionResult(pasted: boolean): PromptExecutionResult {
  * browser paste fallbacks may report "copied" when native paste is unavailable.
  */
 export function usePromptExecution({
+  canMarkPromptUsed = true,
   defaultAction,
   markPromptUsed,
   beforePaste,
 }: UsePromptExecutionOptions) {
   const markUsed = useCallback(
     (promptId?: string) => {
-      if (!promptId) return;
+      if (!promptId || !canMarkPromptUsed) return;
 
       void markPromptUsed(promptId).catch((err: unknown) => {
         console.error('Failed to update last used timestamp:', err);
       });
     },
-    [markPromptUsed],
+    [canMarkPromptUsed, markPromptUsed],
   );
 
   const copyText = useCallback(

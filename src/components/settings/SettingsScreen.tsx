@@ -8,6 +8,7 @@ import {
   DefaultBehaviorSettingsCard,
   HotkeySettingsCard,
   ImportExportSettingsCard,
+  WorkspaceSharingSettingsCard,
 } from './SettingsCards';
 import { SettingsNav } from './SettingsNav';
 import { SettingsSkeleton } from './SettingsSkeleton';
@@ -19,6 +20,7 @@ import type { SettingsSectionId } from './settings-data';
 export interface SettingsScreenProps {
   onBack: () => void;
   authService?: IAuthService;
+  initialSection?: SettingsSectionId;
   loading?: boolean;
 }
 
@@ -52,6 +54,7 @@ function SettingsSection({
 export function SettingsScreen({
   onBack,
   authService,
+  initialSection = 'account-sync',
   loading = false,
 }: SettingsScreenProps) {
   const {
@@ -71,12 +74,24 @@ export function SettingsScreen({
     contentScrollRef,
     scrollToSection,
     setSectionRef,
-  } = useSettingsScrollSpy(visibleNavItems, 'account-sync');
+  } = useSettingsScrollSpy(visibleNavItems, initialSection);
 
   useEffect(() => {
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
   }, []);
+
+  useEffect(() => {
+    if (typeof window.requestAnimationFrame !== 'function') {
+      scrollToSection(initialSection);
+      return undefined;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      scrollToSection(initialSection);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialSection, scrollToSection]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)]">
@@ -125,6 +140,15 @@ export function SettingsScreen({
                 setSectionRef={setSectionRef}
               >
                 <AccountSettingsCard authService={authService} />
+              </SettingsSection>
+
+              <SettingsSection
+                id="workspaces-sharing"
+                domId="settings-workspaces-sharing"
+                ariaLabel="Workspaces and Sharing settings"
+                setSectionRef={setSectionRef}
+              >
+                <WorkspaceSharingSettingsCard />
               </SettingsSection>
 
               <SettingsSection

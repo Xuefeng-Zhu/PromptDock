@@ -4,6 +4,8 @@ import type { AuthUser } from '../../types/index';
 
 interface UseAppModeActionsOptions {
   setMode: AppModeStore['setMode'];
+  setSyncStatus: AppModeStore['setSyncStatus'];
+  setUser: AppModeStore['setUser'];
   setUserId: AppModeStore['setUserId'];
 }
 
@@ -14,20 +16,24 @@ interface UseAppModeActionsOptions {
  */
 export function useAppModeActions({
   setMode,
+  setSyncStatus,
+  setUser,
   setUserId,
 }: UseAppModeActionsOptions) {
   const handleAuthSuccess = useCallback(
     (user: AuthUser) => {
-      setUserId(user.uid);
+      setUser(user);
+      setSyncStatus('syncing');
       setMode('synced');
     },
-    [setMode, setUserId],
+    [setMode, setSyncStatus, setUser],
   );
 
   const handleSignOutSuccess = useCallback(() => {
     setUserId(null);
+    setSyncStatus('local');
     setMode('local');
-  }, [setMode, setUserId]);
+  }, [setMode, setSyncStatus, setUserId]);
 
   return {
     handleAuthSuccess,

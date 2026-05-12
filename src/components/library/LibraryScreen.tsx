@@ -21,6 +21,7 @@ export interface LibraryScreenProps {
   folders?: Folder[];
   selectedPromptId: string | null;
   activeFilter: FilterType;
+  canCreatePrompt?: boolean;
   onSelectPrompt: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onFilterChange: (filter: FilterType) => void;
@@ -38,6 +39,7 @@ export function LibraryScreen({
   folders,
   selectedPromptId,
   activeFilter,
+  canCreatePrompt = true,
   onSelectPrompt,
   onToggleFavorite,
   onFilterChange,
@@ -68,6 +70,7 @@ export function LibraryScreen({
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col p-4 md:p-6">
         <LibraryHeader
+          canCreatePrompt={canCreatePrompt}
           displayCount={displayCount}
           onNewPrompt={onNewPrompt}
           onViewModeChange={setViewMode}

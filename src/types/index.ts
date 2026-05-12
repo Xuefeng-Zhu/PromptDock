@@ -36,6 +36,8 @@ export interface PromptVariable {
 
 export type PromptVariableInputType = 'text' | 'textarea' | 'dropdown';
 
+export type WorkspaceRole = 'owner' | 'editor' | 'viewer';
+
 export interface Workspace {
   id: string;
   name: string;
@@ -48,8 +50,42 @@ export interface WorkspaceMember {
   id: string;
   workspaceId: string;
   userId: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: WorkspaceRole;
+  email: string;
+  displayName: string | null;
   joinedAt: Date;
+  updatedAt: Date;
+  acceptedInviteId?: string;
+}
+
+export interface WorkspaceMembership {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: WorkspaceRole;
+  email: string;
+  displayName: string | null;
+  workspaceName: string;
+  ownerId: string;
+  joinedAt: Date;
+  updatedAt: Date;
+}
+
+export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'revoked';
+export type WorkspaceInviteRole = Exclude<WorkspaceRole, 'owner'>;
+
+export interface WorkspaceInvite {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  email: string;
+  role: WorkspaceInviteRole;
+  status: WorkspaceInviteStatus;
+  invitedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  acceptedAt: Date | null;
+  acceptedBy: string | null;
 }
 
 export interface UserSettings {
@@ -75,6 +111,8 @@ export type AppMode = 'local' | 'synced' | 'offline-synced';
 export interface AppModeState {
   mode: AppMode;
   userId: string | null;
+  userEmail: string | null;
+  userDisplayName: string | null;
   isOnline: boolean;
 }
 

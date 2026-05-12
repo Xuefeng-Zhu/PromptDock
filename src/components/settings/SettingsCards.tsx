@@ -4,3 +4,4 @@ export { AppearanceSettingsCard } from './cards/AppearanceSettingsCard';
 export { DefaultBehaviorSettingsCard } from './cards/DefaultBehaviorSettingsCard';
 export { HotkeySettingsCard } from './cards/HotkeySettingsCard';
 export { ImportExportSettingsCard } from './cards/ImportExportSettingsCard';
+export { WorkspaceSharingSettingsCard } from './cards/WorkspaceSharingSettingsCard';

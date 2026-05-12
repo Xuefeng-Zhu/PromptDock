@@ -60,6 +60,7 @@ interface UsePromptCrudActionsOptions {
   activeWorkspaceId: string;
   addToast: ToastStore['addToast'];
   archivePrompt: PromptStore['archivePrompt'];
+  canEditWorkspace: boolean;
   restorePrompt: PromptStore['restorePrompt'];
   copyText: ExecuteText;
   createPrompt: PromptStore['createPrompt'];
@@ -86,6 +87,7 @@ export function usePromptCrudActions({
   activeWorkspaceId,
   addToast,
   archivePrompt,
+  canEditWorkspace,
   restorePrompt,
   copyText,
   createPrompt,
@@ -107,15 +109,23 @@ export function usePromptCrudActions({
 
   const handleToggleFavorite = useCallback(
     (id: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers can copy prompts, but cannot change favorites.', 'info');
+        return;
+      }
       toggleFavorite(id).catch((err: unknown) => {
         addToast(`Failed to toggle favorite: ${err instanceof Error ? err.message : String(err)}`, 'error');
       });
     },
-    [addToast, toggleFavorite],
+    [addToast, canEditWorkspace, toggleFavorite],
   );
 
   const handleEditorSave = useCallback(
     async (data: Partial<PromptRecipe>) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot edit prompts in this workspace.', 'info');
+        throw new Error('Workspace is read-only for viewers.');
+      }
       try {
         if (screen.name === 'editor' && screen.promptId) {
           await updatePrompt(screen.promptId, data);
@@ -136,6 +146,7 @@ export function usePromptCrudActions({
     [
       activeWorkspaceId,
       addToast,
+      canEditWorkspace,
       createPrompt,
       mode,
       screen,
@@ -148,6 +159,10 @@ export function usePromptCrudActions({
 
   const handleArchivePrompt = useCallback(
     (id: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot archive prompts in this workspace.', 'info');
+        return;
+      }
       archivePrompt(id)
         .then(() => trackPromptAction('archived'))
         .catch((err: unknown) => {
@@ -157,11 +172,15 @@ export function usePromptCrudActions({
         setSelectedPromptId(null);
       }
     },
-    [addToast, archivePrompt, selectedPromptId, setSelectedPromptId],
+    [addToast, archivePrompt, canEditWorkspace, selectedPromptId, setSelectedPromptId],
   );
 
   const handleRestorePrompt = useCallback(
     (id: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot restore prompts in this workspace.', 'info');
+        return;
+      }
       restorePrompt(id)
         .then(() => trackPromptAction('restored'))
         .catch((err: unknown) => {
@@ -171,22 +190,30 @@ export function usePromptCrudActions({
         setSelectedPromptId(null);
       }
     },
-    [addToast, restorePrompt, selectedPromptId, setSelectedPromptId],
+    [addToast, canEditWorkspace, restorePrompt, selectedPromptId, setSelectedPromptId],
   );
 
   const handleDuplicatePrompt = useCallback(
     (id: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot duplicate prompts in this workspace.', 'info');
+        return;
+      }
       duplicatePrompt(id)
         .then(() => trackPromptAction('duplicated'))
         .catch((err: unknown) => {
           addToast(`Failed to duplicate prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
         });
     },
-    [addToast, duplicatePrompt],
+    [addToast, canEditWorkspace, duplicatePrompt],
   );
 
   const handleDeletePrompt = useCallback(
     (id: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot delete prompts in this workspace.', 'info');
+        return;
+      }
       deletePrompt(id)
         .then(() => trackPromptAction('deleted'))
         .catch((err: unknown) => {
@@ -196,18 +223,27 @@ export function usePromptCrudActions({
         setSelectedPromptId(null);
       }
     },
-    [addToast, deletePrompt, selectedPromptId, setSelectedPromptId],
+    [addToast, canEditWorkspace, deletePrompt, selectedPromptId, setSelectedPromptId],
   );
 
   const handleEditPrompt = useCallback(
     (id: string) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot edit prompts in this workspace.', 'info');
+        return;
+      }
       setScreen({ name: 'editor', promptId: id });
     },
-    [setScreen],
+    [addToast, canEditWorkspace, setScreen],
   );
 
   const handleUpdatePromptTags = useCallback(
     (id: string, updateTags: TagUpdate) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot edit tags in this workspace.', 'info');
+        return;
+      }
+
       const baseTags =
         tagDraftsRef.current.get(id)
         ?? prompts.find((prompt) => prompt.id === id)?.tags
@@ -241,18 +277,22 @@ export function usePromptCrudActions({
 
       pendingTagUpdatesRef.current.set(id, queuedUpdate);
     },
-    [addToast, prompts, updatePrompt],
+    [addToast, canEditWorkspace, prompts, updatePrompt],
   );
 
   const handleUpdatePromptFolder = useCallback(
     (id: string, folderId: string | null) => {
+      if (!canEditWorkspace) {
+        addToast('Viewers cannot move prompts in this workspace.', 'info');
+        return;
+      }
       updatePrompt(id, { folderId })
         .then(() => trackPromptAction('updated'))
         .catch((err: unknown) => {
           addToast(`Failed to update folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
         });
     },
-    [addToast, updatePrompt],
+    [addToast, canEditWorkspace, updatePrompt],
   );
 
   const handleCopyPromptBody = useCallback(

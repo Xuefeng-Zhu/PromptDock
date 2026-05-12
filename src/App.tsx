@@ -5,10 +5,12 @@ import type { IStorageBackend } from './repositories/interfaces';
 import { PromptRepository } from './repositories/prompt-repository';
 import { FolderRepository } from './repositories/folder-repository';
 import { SettingsRepository } from './repositories/settings-repository';
+import { WorkspaceRepository } from './repositories/workspace-repository';
 import { initPromptStore } from './stores/prompt-store';
 import { initFolderStore } from './stores/folder-store';
 import { initAppModeStore } from './stores/app-mode-store';
 import { initSettingsStore, useSettingsStore } from './stores/settings-store';
+import { initWorkspaceStore } from './stores/workspace-store';
 import { seedDefaultPrompts } from './services/seed-data';
 import { registerHotkey } from './utils/hotkey';
 import { AuthService } from './services/auth-service';
@@ -130,12 +132,14 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
   const promptRepo = new PromptRepository(backend);
   const folderRepo = new FolderRepository(backend);
   const settingsRepo = new SettingsRepository(backend);
+  const workspaceRepo = new WorkspaceRepository(backend);
 
   // 3. Initialize Zustand stores with real repositories
   const appModeStore = initAppModeStore();
   const promptStore = initPromptStore(promptRepo);
   const folderStore = initFolderStore(folderRepo);
   const settingsStore = initSettingsStore(settingsRepo);
+  const workspaceStore = initWorkspaceStore(workspaceRepo);
 
   // 4. Seed default prompts on first launch
   if (seedDefaultData) {
@@ -174,6 +178,7 @@ async function runAppInitialization(options: AppInitializationOptions): Promise<
       promptStore,
       folderStore,
       settingsStore,
+      workspaceStore,
       promptRepository: promptRepo,
       folderRepository: folderRepo,
       authService: authServiceInstance,

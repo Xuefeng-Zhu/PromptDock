@@ -14,6 +14,7 @@ export function AppScreenRouter({ controller }: AppScreenRouterProps) {
   const {
     activeFilter,
     authService,
+    canEditWorkspace,
     conflictService,
     editorPrompt,
     editorPromptId,
@@ -52,6 +53,7 @@ export function AppScreenRouter({ controller }: AppScreenRouterProps) {
           folders={libraryData.derivedFolders}
           selectedPromptId={selectedPromptId}
           activeFilter={activeFilter}
+          canCreatePrompt={canEditWorkspace}
           onSelectPrompt={handleSelectPrompt}
           onToggleFavorite={handleToggleFavorite}
           onFilterChange={handleFilterChange}
@@ -77,7 +79,11 @@ export function AppScreenRouter({ controller }: AppScreenRouterProps) {
       )}
 
       {screen.name === 'settings' && (
-        <SettingsScreen onBack={handleSettingsBack} authService={authService} />
+        <SettingsScreen
+          initialSection={screen.section}
+          onBack={handleSettingsBack}
+          authService={authService}
+        />
       )}
 
       {screen.name === 'conflicts' && conflictService && (

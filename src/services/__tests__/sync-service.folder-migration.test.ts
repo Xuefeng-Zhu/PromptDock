@@ -7,6 +7,7 @@ import type { Folder, PromptRecipe } from '../../types/index';
 const firestoreMocks = vi.hoisted(() => {
   const state = {
     remoteFolderDocs: [] as Array<{ id: string; data: Record<string, unknown> }>,
+    remotePromptDocs: [] as Array<{ id: string; data: Record<string, unknown> }>,
   };
 
   return {
@@ -17,12 +18,13 @@ const firestoreMocks = vi.hoisted(() => {
       exists: () => state.remoteFolderDocs.some((doc) => doc.id === ref.id),
     })),
     getDocs: vi.fn(async (ref: { path: string[] }) => ({
-      docs: ref.path[ref.path.length - 1] === 'folders'
-        ? state.remoteFolderDocs.map((doc) => ({
-            id: doc.id,
-            data: () => doc.data,
-          }))
-        : [],
+      docs: (ref.path[ref.path.length - 1] === 'folders'
+        ? state.remoteFolderDocs
+        : state.remotePromptDocs
+      ).map((doc) => ({
+        id: doc.id,
+        data: () => doc.data,
+      })),
     })),
     onSnapshot: vi.fn((_target: unknown, onNext: (snapshot: { docs: never[] }) => void) => {
       onNext({ docs: [] });
@@ -63,6 +65,8 @@ function createMockAppModeStore(): AppModeStore {
   return {
     mode: 'local',
     userId: null,
+    userEmail: null,
+    userDisplayName: null,
     isOnline: true,
     syncStatus: 'local',
     lastSyncedAt: null,
@@ -77,6 +81,11 @@ function createMockAppModeStore(): AppModeStore {
     }),
     setUserId: vi.fn(function (this: AppModeStore, userId) {
       this.userId = userId;
+    }),
+    setUser: vi.fn(function (this: AppModeStore, user) {
+      this.userId = user?.uid ?? null;
+      this.userEmail = user?.email ?? null;
+      this.userDisplayName = user?.displayName ?? null;
     }),
   };
 }
@@ -132,6 +141,7 @@ describe('SyncService folder migration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     firestoreMocks.state.remoteFolderDocs = [];
+    firestoreMocks.state.remotePromptDocs = [];
   });
 
   it('skips local folders whose normalized name already exists remotely', async () => {
@@ -184,6 +194,46 @@ describe('SyncService folder migration', () => {
         body: prompt.body,
         variables: prompt.variables,
       }),
+    );
+  });
+
+  it('keeps local prompts that share title and body with a different remote prompt id', async () => {
+    const service = new SyncService({ appModeStore: createMockAppModeStore() });
+    const sameContent = makePrompt({
+      id: 'local-existing-id',
+      title: '  Prompt   with Variables ',
+      body: 'Write a {{tone}} reply to {{recipient}}.',
+    });
+    const fresh = makePrompt({
+      id: 'local-fresh-id',
+      title: 'Fresh Prompt',
+      body: 'Draft something new.',
+    });
+    firestoreMocks.state.remotePromptDocs = [
+      {
+        id: 'remote-existing-id',
+        data: {
+          title: 'prompt with variables',
+          body: 'Write a {{tone}} reply to {{recipient}}.',
+        },
+      },
+    ];
+
+    await service.transitionToSynced(
+      'user-1',
+      'workspace-1',
+      [sameContent, fresh],
+      'migrate',
+    );
+
+    expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(2);
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'local-existing-id' }),
+      expect.objectContaining({ title: '  Prompt   with Variables ' }),
+    );
+    expect(firestoreMocks.setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'local-fresh-id' }),
+      expect.objectContaining({ title: 'Fresh Prompt' }),
     );
   });
 });

@@ -75,7 +75,18 @@ export function createFolderStore(repo: IFolderRepository) {
   }));
 }
 
-let _store: StoreApi<FolderStore> | null = null;
+interface FolderStoreHotData {
+  folderStore?: StoreApi<FolderStore> | null;
+}
+
+const hotData = import.meta.hot?.data as FolderStoreHotData | undefined;
+let _store: StoreApi<FolderStore> | null = hotData?.folderStore ?? null;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data: FolderStoreHotData) => {
+    data.folderStore = _store;
+  });
+}
 
 /** Initializes the singleton folder store used by components. */
 export function initFolderStore(repo: IFolderRepository): StoreApi<FolderStore> {

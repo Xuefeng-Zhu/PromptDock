@@ -37,6 +37,20 @@ service cloud.firestore {
         && (getMemberRole(workspaceId) == 'owner' || getMemberRole(workspaceId) == 'editor');
     }
 
+    function workspaceWillBeDeleted(workspaceId) {
+      return !existsAfter(/databases/$(database)/documents/workspaces/$(workspaceId));
+    }
+
+    function membershipId(workspaceId, userId) {
+      return workspaceId + '_' + userId;
+    }
+
+    function isInviteRecipient(email) {
+      return isAuthenticated()
+        && request.auth.token.email != null
+        && request.auth.token.email == email;
+    }
+
     // Check whether this write creates the first owner membership for a
     // workspace owned by the authenticated user.
     function isSelfOwnerBootstrap(workspaceId, memberId) {
@@ -46,6 +60,28 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId
         && request.resource.data.role == 'owner'
         && getAfter(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId == request.auth.uid;
+    }
+
+    function isInviteMemberAcceptance(workspaceId, memberId) {
+      let invite = get(/databases/$(database)/documents/workspaceInvites/$(request.resource.data.acceptedInviteId));
+      return isAuthenticated()
+        && memberId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.workspaceId == workspaceId
+        && invite.data.workspaceId == workspaceId
+        && invite.data.status == 'pending'
+        && invite.data.email == request.auth.token.email
+        && request.resource.data.role == invite.data.role;
+    }
+
+    function preservesSelfOwnerMembership(workspaceId, userId) {
+      return isAuthenticated()
+        && userId == request.auth.uid
+        && resource.data.userId == request.auth.uid
+        && resource.data.role == 'owner'
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.role == 'owner';
     }
 
     // ─── /users/{userId} ────────────────────────────────────────────────────────
@@ -61,6 +97,68 @@ service cloud.firestore {
 
     match /settings/{userId} {
       allow read, write: if isUser(userId);
+    }
+
+    // ─── /workspaceMemberships/{membershipId} ────────────────────────────────
+    // Denormalized membership index for listing "my workspaces".
+
+    match /workspaceMemberships/{memberIndexId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && memberIndexId == membershipId(request.resource.data.workspaceId, request.resource.data.userId)
+        && (
+          (
+            request.resource.data.userId == request.auth.uid
+            && request.resource.data.role == 'owner'
+            && getAfter(/databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)).data.ownerId == request.auth.uid
+          )
+          || isWorkspaceOwner(request.resource.data.workspaceId)
+          || isInviteMemberAcceptance(request.resource.data.workspaceId, request.resource.data.userId)
+        );
+      allow update: if isWorkspaceOwner(resource.data.workspaceId)
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.userId == resource.data.userId
+        && (
+          resource.data.userId != request.auth.uid
+          || request.resource.data.role == 'owner'
+        );
+      allow delete: if (
+          isWorkspaceOwner(resource.data.workspaceId)
+          && (
+            resource.data.userId != request.auth.uid
+            || workspaceWillBeDeleted(resource.data.workspaceId)
+          )
+        )
+        || (
+          isAuthenticated()
+          && resource.data.userId == request.auth.uid
+          && resource.data.role != 'owner'
+        );
+    }
+
+    // ─── /workspaceInvites/{inviteId} ────────────────────────────────────────
+    // In-app email invites. No outbound email is sent by this client.
+
+    match /workspaceInvites/{inviteId} {
+      allow read: if isWorkspaceOwner(resource.data.workspaceId)
+        || isInviteRecipient(resource.data.email);
+      allow create: if isWorkspaceOwner(request.resource.data.workspaceId)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.role in ['editor', 'viewer'];
+      allow update: if (
+          isWorkspaceOwner(resource.data.workspaceId)
+          && request.resource.data.workspaceId == resource.data.workspaceId
+        )
+        || (
+          isInviteRecipient(resource.data.email)
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.acceptedBy == request.auth.uid
+          && request.resource.data.workspaceId == resource.data.workspaceId
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.role == resource.data.role
+        );
+      allow delete: if false;
     }
 
     // ─── /workspaces/{workspaceId} ──────────────────────────────────────────────
@@ -91,8 +189,26 @@ service cloud.firestore {
         // The first owner may create their own membership during bootstrap.
         // After that, only workspace owners can manage members.
         allow create: if isWorkspaceOwner(workspaceId)
-          || isSelfOwnerBootstrap(workspaceId, memberId);
-        allow update, delete: if isWorkspaceOwner(workspaceId);
+          || isSelfOwnerBootstrap(workspaceId, memberId)
+          || isInviteMemberAcceptance(workspaceId, memberId);
+        allow update: if isWorkspaceOwner(workspaceId)
+          && (
+            memberId != request.auth.uid
+            || preservesSelfOwnerMembership(workspaceId, memberId)
+          );
+        allow delete: if (
+            isWorkspaceOwner(workspaceId)
+            && (
+              memberId != request.auth.uid
+              || workspaceWillBeDeleted(workspaceId)
+            )
+          )
+          || (
+            isAuthenticated()
+            && memberId == request.auth.uid
+            && resource.data.userId == request.auth.uid
+            && resource.data.role != 'owner'
+          );
       }
 
       // ─── /workspaces/{workspaceId}/prompts/{promptId} ──────────────────────

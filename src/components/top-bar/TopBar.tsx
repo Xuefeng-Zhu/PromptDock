@@ -2,6 +2,7 @@ import { Menu } from 'lucide-react';
 import { SyncStatusBadge } from '../sync';
 import { AccountMenuPopover } from './AccountMenuPopover';
 import { TopBarSearchTrigger } from './TopBarSearchTrigger';
+import { WorkspaceSwitcher } from '../workspaces';
 import type { IAuthService } from '../../services/interfaces';
 import type { AppMode, AuthUser, SyncStatus } from '../../types/index';
 
@@ -11,6 +12,7 @@ export interface TopBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onCommandPaletteOpen: () => void;
+  onManageWorkspaces?: () => void;
   mobileNavOpen?: boolean;
   onMobileNavToggle?: () => void;
   authService?: IAuthService;
@@ -43,6 +45,7 @@ export function TopBar({
   searchQuery,
   onSearchChange,
   onCommandPaletteOpen,
+  onManageWorkspaces,
   mobileNavOpen = false,
   onMobileNavToggle,
   authService,
@@ -79,6 +82,10 @@ export function TopBar({
       >
         PromptDock
       </span>
+
+      {mode !== 'local' && (
+        <WorkspaceSwitcher onManageSharing={onManageWorkspaces} />
+      )}
 
       <TopBarActions
         authService={authService}

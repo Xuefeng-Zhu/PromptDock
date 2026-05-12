@@ -196,6 +196,33 @@ describe('PromptStore', () => {
       await store.getState().createPrompt(data);
       expect(repo.create).toHaveBeenCalledWith(data);
     });
+
+    it('upserts a created prompt if a realtime snapshot already inserted it', async () => {
+      const created = makePrompt({ id: 'created-race', title: 'Created Race' });
+      repo = {
+        ...createMockRepo([p1]),
+        create: vi.fn(async () => created),
+      };
+      store = createPromptStore(repo);
+      store.setState({ prompts: [p1, created] });
+
+      await store.getState().createPrompt({
+        workspaceId: 'local',
+        title: 'Created Race',
+        description: '',
+        body: 'body',
+        tags: [],
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        lastUsedAt: null,
+        createdBy: 'local',
+        version: 1,
+      });
+
+      expect(store.getState().prompts.filter((prompt) => prompt.id === created.id)).toHaveLength(1);
+    });
   });
 
   // ── updatePrompt ───────────────────────────────────────────────────────────
@@ -262,6 +289,20 @@ describe('PromptStore', () => {
       const dup = store.getState().prompts.find((p) => p.title === 'Copy of First Prompt');
       expect(dup).toBeDefined();
       expect(dup?.id).not.toBe('p1');
+    });
+
+    it('upserts a duplicated prompt if a realtime snapshot already inserted it', async () => {
+      const duplicated = makePrompt({ id: 'duplicate-race', title: 'Copy of First Prompt' });
+      repo = {
+        ...createMockRepo([p1]),
+        duplicate: vi.fn(async () => duplicated),
+      };
+      store = createPromptStore(repo);
+      store.setState({ prompts: [p1, duplicated] });
+
+      await store.getState().duplicatePrompt('p1');
+
+      expect(store.getState().prompts.filter((prompt) => prompt.id === duplicated.id)).toHaveLength(1);
     });
   });
 

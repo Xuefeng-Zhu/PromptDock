@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import type { LibraryViewMode } from './types';
 
 interface LibraryHeaderProps {
+  canCreatePrompt?: boolean;
   displayCount: number;
   onNewPrompt: () => void;
   onViewModeChange: (viewMode: LibraryViewMode) => void;
@@ -10,6 +11,7 @@ interface LibraryHeaderProps {
 }
 
 export function LibraryHeader({
+  canCreatePrompt = true,
   displayCount,
   onNewPrompt,
   onViewModeChange,
@@ -36,6 +38,8 @@ export function LibraryHeader({
           variant="primary"
           size="sm"
           onClick={onNewPrompt}
+          disabled={!canCreatePrompt}
+          title={!canCreatePrompt ? 'Viewers cannot create prompts in this workspace.' : undefined}
           className="h-10 flex-1 whitespace-nowrap sm:flex-none"
         >
           <Plus className="mr-1.5 h-4 w-4" />

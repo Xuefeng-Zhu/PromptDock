@@ -176,6 +176,21 @@ describe('useAppShellController', () => {
     unmount();
   });
 
+  it('opens settings directly to workspace sharing', async () => {
+    await setupStores();
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    act(() => {
+      result.current.handleWorkspaceSettingsOpen();
+    });
+
+    expect(result.current.screen).toEqual({
+      name: 'settings',
+      section: 'workspaces-sharing',
+    });
+    unmount();
+  });
+
   it('saves a new prompt through the prompt store and returns to the library', async () => {
     const { promptRepo } = await setupStores([]);
     const { result, unmount } = renderHook(() => useAppShellController({}));

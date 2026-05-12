@@ -7,6 +7,7 @@ import { SettingsCardTitle } from './SettingsCardTitle';
 
 export function ImportExportSettingsCard() {
   const {
+    canImport,
     duplicates,
     importErrors,
     isExporting,
@@ -40,8 +41,9 @@ export function ImportExportSettingsCard() {
           variant="secondary"
           size="sm"
           onClick={handleImport}
-          disabled={isImporting}
+          disabled={isImporting || !canImport}
           aria-label="Import prompts from JSON file"
+          title={!canImport ? 'Viewers cannot import prompts into this workspace.' : undefined}
         >
           <Download size={16} className="mr-2" />
           {isImporting ? 'Importing...' : 'Import'}

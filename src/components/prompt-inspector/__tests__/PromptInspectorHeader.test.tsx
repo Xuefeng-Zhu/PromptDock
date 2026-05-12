@@ -86,4 +86,17 @@ describe('PromptInspectorHeader', () => {
     expect(onDelete).toHaveBeenCalledWith('prompt-1');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('keeps Duplicate available in read-only mode when a duplicate handler exists', () => {
+    const onDuplicate = vi.fn();
+    render(<PromptInspectorHeader prompt={makePrompt()} onDuplicate={onDuplicate} readOnly />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }));
+
+    expect(onDuplicate).toHaveBeenCalledWith('prompt-1');
+    expect(screen.queryByRole('menuitem', { name: 'Edit prompt' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Archive' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Delete' })).toBeNull();
+  });
 });

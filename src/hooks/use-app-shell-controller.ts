@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { getConflictService } from '../App';
-import type { AppShellProps } from '../components/app-shell/types';
+import type {
+  AppShellProps,
+  DuplicateWorkspaceTarget,
+} from '../components/app-shell/types';
+import { trackPromptAction } from '../services/analytics-service';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { useFolderStore } from '../stores/folder-store';
 import { usePromptStore } from '../stores/prompt-store';
@@ -50,12 +54,14 @@ export function useAppShellController({
   const createPrompt = usePromptStore((s) => s.createPrompt);
   const archivePrompt = usePromptStore((s) => s.archivePrompt);
   const restorePrompt = usePromptStore((s) => s.restorePrompt);
-  const duplicatePrompt = usePromptStore((s) => s.duplicatePrompt);
+  const duplicatePromptToWorkspace = usePromptStore((s) => s.duplicatePromptToWorkspace);
   const deletePrompt = usePromptStore((s) => s.deletePrompt);
   const markPromptUsed = usePromptStore((s) => s.markPromptUsed);
   const clearFolderAssignments = usePromptStore((s) => s.clearFolderAssignments);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const currentWorkspaceRole = useWorkspaceStore((s) => s.currentRole);
+  const memberships = useWorkspaceStore((s) => s.memberships);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
   const userFolders = useFolderStore((s) => s.folders);
   const createFolder = useFolderStore((s) => s.createFolder);
   const deleteFolder = useFolderStore((s) => s.deleteFolder);
@@ -72,6 +78,7 @@ export function useAppShellController({
   const syncStatus = useAppModeStore((s) => s.syncStatus);
   const addToast = useToastStore((s) => s.addToast);
   const [folderDeleteConfirmation, setFolderDeleteConfirmation] = useState<FolderDeleteConfirmation | null>(null);
+  const [duplicatePromptId, setDuplicatePromptId] = useState<string | null>(null);
   const canEditWorkspace = mode === 'local' || canEditRole(currentWorkspaceRole);
 
   const navigation = useShellNavigation({ addToast });
@@ -123,6 +130,64 @@ export function useAppShellController({
     return prompts.find((prompt) => prompt.id === promptId);
   }, [prompts, screen]);
 
+  const duplicateWorkspaceTargets = useMemo<DuplicateWorkspaceTarget[]>(() => (
+    workspaces.flatMap((workspace) => {
+      const role = workspace.id === activeWorkspaceId
+        ? currentWorkspaceRole
+        : memberships.find((membership) => membership.workspaceId === workspace.id)?.role ?? null;
+
+      if (role !== 'owner' && role !== 'editor') return [];
+
+      return [{ role, workspace }];
+    })
+  ), [activeWorkspaceId, currentWorkspaceRole, memberships, workspaces]);
+
+  const duplicateDialogPrompt = useMemo(
+    () => prompts.find((prompt) => prompt.id === duplicatePromptId) ?? null,
+    [duplicatePromptId, prompts],
+  );
+
+  const handleDuplicatePromptRequest = useCallback(
+    (id: string) => {
+      if (duplicateWorkspaceTargets.length === 0) {
+        addToast('You need editor access to a workspace before duplicating this prompt.', 'info');
+        return;
+      }
+      setDuplicatePromptId(id);
+    },
+    [addToast, duplicateWorkspaceTargets.length],
+  );
+
+  const handleDuplicatePromptCancel = useCallback(() => {
+    setDuplicatePromptId(null);
+  }, []);
+
+  const handleDuplicatePromptConfirm = useCallback(
+    async (targetWorkspaceId: string) => {
+      if (!duplicateDialogPrompt) {
+        throw new Error('Prompt no longer exists.');
+      }
+
+      const createdBy = mode !== 'local' && userId ? userId : 'local';
+      await duplicatePromptToWorkspace(duplicateDialogPrompt.id, targetWorkspaceId, createdBy);
+      trackPromptAction('duplicated');
+      setDuplicatePromptId(null);
+
+      const targetName = duplicateWorkspaceTargets.find(
+        (target) => target.workspace.id === targetWorkspaceId,
+      )?.workspace.name ?? 'workspace';
+      addToast(`Duplicated "${duplicateDialogPrompt.title}" to ${targetName}.`, 'success');
+    },
+    [
+      addToast,
+      duplicateDialogPrompt,
+      duplicatePromptToWorkspace,
+      duplicateWorkspaceTargets,
+      mode,
+      userId,
+    ],
+  );
+
   const promptCrud = usePromptCrudActions({
     activeWorkspaceId,
     addToast,
@@ -132,9 +197,9 @@ export function useAppShellController({
     copyText,
     createPrompt,
     deletePrompt,
-    duplicatePrompt,
     mode,
     prompts,
+    requestDuplicatePrompt: handleDuplicatePromptRequest,
     screen,
     selectedPromptId,
     setEditorHasUnsavedChanges,
@@ -276,11 +341,14 @@ export function useAppShellController({
 
   return {
     activeFilter,
+    activeWorkspaceId,
     activeSidebarItem,
     authService,
     commandPaletteOpen,
     conflictService,
     defaultAction,
+    duplicateDialogPrompt,
+    duplicateWorkspaceTargets,
     editorPrompt,
     editorPromptId: promptCrud.editorPromptId,
     canEditWorkspace,
@@ -296,6 +364,8 @@ export function useAppShellController({
     handleCreateFolder,
     handleDeletePrompt: promptCrud.handleDeletePrompt,
     handleDeleteFolder,
+    handleDuplicatePromptCancel,
+    handleDuplicatePromptConfirm,
     handleDuplicatePrompt: promptCrud.handleDuplicatePrompt,
     handleEditPrompt: promptCrud.handleEditPrompt,
     handleEditorArchive: promptCrud.handleEditorArchive,

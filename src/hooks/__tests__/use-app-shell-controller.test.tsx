@@ -1,13 +1,19 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IFolderRepository, IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
+import type {
+  IFolderRepository,
+  IPromptRepository,
+  ISettingsRepository,
+  IWorkspaceRepository,
+} from '../../repositories/interfaces';
 import { initAppModeStore } from '../../stores/app-mode-store';
 import { initFolderStore } from '../../stores/folder-store';
 import { initPromptStore } from '../../stores/prompt-store';
 import { DEFAULT_SETTINGS, initSettingsStore } from '../../stores/settings-store';
 import { useToastStore } from '../../stores/toast-store';
-import type { Folder, PromptRecipe } from '../../types/index';
+import { initWorkspaceStore } from '../../stores/workspace-store';
+import type { Folder, PromptRecipe, Workspace, WorkspaceMembership } from '../../types/index';
 import { useAppShellController } from '../use-app-shell-controller';
 
 vi.mock('../../App', () => ({
@@ -71,6 +77,18 @@ function createPromptRepo(initialPrompts: PromptRecipe[] = []): IPromptRepositor
     softDelete: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
     duplicate: vi.fn(async (id) => makePrompt({ id: `copy-${id}` })),
+    duplicateToWorkspace: vi.fn(async (id, target) => makePrompt({
+      id: `copy-${id}`,
+      workspaceId: target.workspaceId,
+      title: 'Copy of Existing prompt',
+      folderId: null,
+      createdBy: target.createdBy,
+      favorite: false,
+      archived: false,
+      archivedAt: null,
+      lastUsedAt: null,
+      version: 1,
+    })),
     toggleFavorite: vi.fn(async (id) => makePrompt({ id, favorite: true })),
   };
 }
@@ -112,6 +130,46 @@ function createFolderRepo(initialFolders: Folder[] = []): IFolderRepository {
   };
 }
 
+function createWorkspaceRepo(): IWorkspaceRepository {
+  const localWorkspace: Workspace = {
+    id: 'local',
+    name: 'My Prompts',
+    ownerId: 'local',
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+  };
+
+  return {
+    create: vi.fn(async () => localWorkspace),
+    getById: vi.fn(async () => localWorkspace),
+    listForUser: vi.fn(async () => [localWorkspace]),
+    listSyncedWorkspacesForUser: vi.fn(async () => [localWorkspace]),
+    update: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
+    bootstrapPersonalWorkspace: vi.fn(async () => localWorkspace),
+    listMembershipsForUser: vi.fn(async () => []),
+    listPendingInvitesForEmail: vi.fn(async () => []),
+    listMembers: vi.fn(async () => []),
+    listInvites: vi.fn(async () => []),
+    createSyncedWorkspace: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    createInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    acceptInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
+
 async function setupStores(
   initialPrompts: PromptRecipe[] = [makePrompt()],
   initialFolders: Folder[] = [],
@@ -128,10 +186,11 @@ async function setupStores(
   const settingsStore = initSettingsStore(settingsRepo);
   await settingsStore.getState().loadSettings();
 
-  initAppModeStore();
+  const appModeStore = initAppModeStore();
+  const workspaceStore = initWorkspaceStore(createWorkspaceRepo());
   useToastStore.setState({ toasts: [] });
 
-  return { folderRepo, promptRepo };
+  return { appModeStore, folderRepo, promptRepo, promptStore, workspaceStore };
 }
 
 describe('useAppShellController', () => {
@@ -241,6 +300,127 @@ describe('useAppShellController', () => {
       'Client Work',
     );
     expect(localStorage.getItem('promptdock_folders')).toBeNull();
+    unmount();
+  });
+
+  it('opens duplicate target flow and duplicates into the selected workspace', async () => {
+    const { promptRepo } = await setupStores([makePrompt({ folderId: 'folder-a', favorite: true })]);
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    act(() => {
+      result.current.handleDuplicatePrompt('prompt-1');
+    });
+
+    expect(result.current.duplicateDialogPrompt?.id).toBe('prompt-1');
+    expect(result.current.duplicateWorkspaceTargets.map((target) => target.workspace.id)).toEqual(['local']);
+
+    await act(async () => {
+      await result.current.handleDuplicatePromptConfirm('local');
+    });
+
+    expect(promptRepo.duplicateToWorkspace).toHaveBeenCalledWith('prompt-1', {
+      workspaceId: 'local',
+      createdBy: 'local',
+    });
+    expect(result.current.duplicateDialogPrompt).toBeNull();
+    unmount();
+  });
+
+  it('allows a source viewer to duplicate into an editable target workspace', async () => {
+    const sourceWorkspace: Workspace = {
+      id: 'source-workspace',
+      name: 'Source',
+      ownerId: 'owner-1',
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    };
+    const editableWorkspace: Workspace = {
+      id: 'editable-workspace',
+      name: 'Editable',
+      ownerId: 'owner-2',
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    };
+    const viewerWorkspace: Workspace = {
+      id: 'viewer-workspace',
+      name: 'Viewer',
+      ownerId: 'owner-3',
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    };
+    const memberships: WorkspaceMembership[] = [
+      {
+        id: 'source-user-1',
+        workspaceId: sourceWorkspace.id,
+        userId: 'user-1',
+        role: 'viewer',
+        email: 'user@example.com',
+        displayName: null,
+        workspaceName: sourceWorkspace.name,
+        ownerId: sourceWorkspace.ownerId,
+        joinedAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'editable-user-1',
+        workspaceId: editableWorkspace.id,
+        userId: 'user-1',
+        role: 'editor',
+        email: 'user@example.com',
+        displayName: null,
+        workspaceName: editableWorkspace.name,
+        ownerId: editableWorkspace.ownerId,
+        joinedAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+      {
+        id: 'viewer-user-1',
+        workspaceId: viewerWorkspace.id,
+        userId: 'user-1',
+        role: 'viewer',
+        email: 'user@example.com',
+        displayName: null,
+        workspaceName: viewerWorkspace.name,
+        ownerId: viewerWorkspace.ownerId,
+        joinedAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+    ];
+    const { appModeStore, promptRepo, workspaceStore } = await setupStores([
+      makePrompt({ workspaceId: sourceWorkspace.id }),
+    ]);
+    appModeStore.setState({
+      mode: 'synced',
+      syncStatus: 'synced',
+      userId: 'user-1',
+      userEmail: 'user@example.com',
+      userDisplayName: null,
+    });
+    workspaceStore.setState({
+      activeWorkspaceId: sourceWorkspace.id,
+      currentRole: 'viewer',
+      memberships,
+      workspaces: [sourceWorkspace, editableWorkspace, viewerWorkspace],
+    });
+
+    const { result, unmount } = renderHook(() => useAppShellController({}));
+
+    expect(result.current.canEditWorkspace).toBe(false);
+    expect(result.current.duplicateWorkspaceTargets.map((target) => target.workspace.id)).toEqual([
+      editableWorkspace.id,
+    ]);
+
+    act(() => {
+      result.current.handleDuplicatePrompt('prompt-1');
+    });
+    await act(async () => {
+      await result.current.handleDuplicatePromptConfirm(editableWorkspace.id);
+    });
+
+    expect(promptRepo.duplicateToWorkspace).toHaveBeenCalledWith('prompt-1', {
+      workspaceId: editableWorkspace.id,
+      createdBy: 'user-1',
+    });
     unmount();
   });
 

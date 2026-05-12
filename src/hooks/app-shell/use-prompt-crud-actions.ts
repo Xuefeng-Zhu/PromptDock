@@ -65,9 +65,9 @@ interface UsePromptCrudActionsOptions {
   copyText: ExecuteText;
   createPrompt: PromptStore['createPrompt'];
   deletePrompt: PromptStore['deletePrompt'];
-  duplicatePrompt: PromptStore['duplicatePrompt'];
   mode: AppMode;
   prompts: PromptRecipe[];
+  requestDuplicatePrompt: (id: string) => void;
   screen: Screen;
   selectedPromptId: string | null;
   setEditorHasUnsavedChanges: (hasUnsavedChanges: boolean) => void;
@@ -92,9 +92,9 @@ export function usePromptCrudActions({
   copyText,
   createPrompt,
   deletePrompt,
-  duplicatePrompt,
   mode,
   prompts,
+  requestDuplicatePrompt,
   screen,
   selectedPromptId,
   setEditorHasUnsavedChanges,
@@ -195,17 +195,9 @@ export function usePromptCrudActions({
 
   const handleDuplicatePrompt = useCallback(
     (id: string) => {
-      if (!canEditWorkspace) {
-        addToast('Viewers cannot duplicate prompts in this workspace.', 'info');
-        return;
-      }
-      duplicatePrompt(id)
-        .then(() => trackPromptAction('duplicated'))
-        .catch((err: unknown) => {
-          addToast(`Failed to duplicate prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
-        });
+      requestDuplicatePrompt(id);
     },
-    [addToast, canEditWorkspace, duplicatePrompt],
+    [requestDuplicatePrompt],
   );
 
   const handleDeletePrompt = useCallback(
@@ -313,8 +305,7 @@ export function usePromptCrudActions({
   const handleEditorDuplicate = useCallback(() => {
     if (!editorPromptId) return;
     handleDuplicatePrompt(editorPromptId);
-    setScreen({ name: 'library' });
-  }, [editorPromptId, handleDuplicatePrompt, setScreen]);
+  }, [editorPromptId, handleDuplicatePrompt]);
 
   const handleEditorArchive = useCallback(() => {
     if (!editorPromptId) return;

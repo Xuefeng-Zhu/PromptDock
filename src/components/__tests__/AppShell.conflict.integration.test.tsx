@@ -2,12 +2,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AppShell } from '../app-shell';
-import type { Folder, PromptRecipe } from '../../types/index';
-import type { IFolderRepository, IPromptRepository, ISettingsRepository } from '../../repositories/interfaces';
+import type { Folder, PromptRecipe, Workspace } from '../../types/index';
+import type {
+  IFolderRepository,
+  IPromptRepository,
+  ISettingsRepository,
+  IWorkspaceRepository,
+} from '../../repositories/interfaces';
 import { initFolderStore } from '../../stores/folder-store';
 import { initPromptStore } from '../../stores/prompt-store';
 import { initSettingsStore, DEFAULT_SETTINGS } from '../../stores/settings-store';
 import { initAppModeStore } from '../../stores/app-mode-store';
+import { initWorkspaceStore } from '../../stores/workspace-store';
 import { ConflictService } from '../../services/conflict-service';
 
 // ─── Test Helpers ──────────────────────────────────────────────────────────────
@@ -101,6 +107,46 @@ function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository 
   };
 }
 
+function createMockWorkspaceRepo(): IWorkspaceRepository {
+  const localWorkspace: Workspace = {
+    id: 'local',
+    name: 'My Prompts',
+    ownerId: 'local',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
+
+  return {
+    create: vi.fn(async () => localWorkspace),
+    getById: vi.fn(async () => localWorkspace),
+    listForUser: vi.fn(async () => [localWorkspace]),
+    listSyncedWorkspacesForUser: vi.fn(async () => [localWorkspace]),
+    update: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
+    bootstrapPersonalWorkspace: vi.fn(async () => localWorkspace),
+    listMembershipsForUser: vi.fn(async () => []),
+    listPendingInvitesForEmail: vi.fn(async () => []),
+    listMembers: vi.fn(async () => []),
+    listInvites: vi.fn(async () => []),
+    createSyncedWorkspace: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    createInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    acceptInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
+
 // ─── Setup ─────────────────────────────────────────────────────────────────────
 
 let mockRepo: IPromptRepository;
@@ -119,6 +165,7 @@ async function setupStore(prompts: PromptRecipe[] = TEST_PROMPTS) {
   };
   initSettingsStore(settingsRepo);
   initAppModeStore();
+  initWorkspaceStore(createMockWorkspaceRepo());
 
   return store;
 }

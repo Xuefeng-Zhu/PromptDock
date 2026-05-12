@@ -336,6 +336,45 @@ describe('PromptRepository', () => {
         'Prompt not found: nonexistent',
       );
     });
+
+    it('should duplicate a prompt into a target workspace with reset metadata', async () => {
+      const original = makePromptRecipe({
+        id: 'copy-across',
+        workspaceId: 'workspace-a',
+        title: 'Original Title',
+        folderId: 'folder-a',
+        favorite: true,
+        archived: true,
+        archivedAt: new Date('2024-02-01T00:00:00.000Z'),
+        lastUsedAt: new Date('2024-03-01T00:00:00.000Z'),
+        createdBy: 'user-a',
+      });
+      (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
+
+      const result = await repo.duplicateToWorkspace('copy-across', {
+        workspaceId: 'workspace-b',
+        createdBy: 'user-b',
+      });
+
+      expect(result.id).not.toBe('copy-across');
+      expect(result).toEqual(
+        expect.objectContaining({
+          workspaceId: 'workspace-b',
+          title: 'Copy of Original Title',
+          description: original.description,
+          body: original.body,
+          tags: original.tags,
+          folderId: null,
+          favorite: false,
+          archived: false,
+          archivedAt: null,
+          lastUsedAt: null,
+          createdBy: 'user-b',
+          version: 1,
+        }),
+      );
+      expect(backend.writePrompts).toHaveBeenCalled();
+    });
   });
 
   describe('toggleFavorite', () => {

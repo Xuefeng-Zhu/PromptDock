@@ -125,6 +125,25 @@ function createMockFirestoreDelegate(): IPromptRepository {
       prompts.push(dup);
       return dup;
     }),
+    duplicateToWorkspace: vi.fn(async (id, target) => {
+      const orig = prompts.find((p) => p.id === id);
+      if (!orig) throw new Error(`Not found: ${id}`);
+      const dup = {
+        ...orig,
+        id: `fs-dup-${Math.random().toString(36).slice(2, 8)}`,
+        workspaceId: target.workspaceId,
+        title: `Copy of ${orig.title}`,
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        lastUsedAt: null,
+        createdBy: target.createdBy,
+        version: 1,
+      };
+      prompts.push(dup);
+      return dup;
+    }),
     toggleFavorite: vi.fn(async (id) => {
       const idx = prompts.findIndex((p) => p.id === id);
       if (idx === -1) throw new Error(`Not found: ${id}`);
@@ -530,6 +549,36 @@ describe('SyncService ↔ PromptStore wiring', () => {
       await promptRepo.duplicate(created.id);
 
       expect(firestoreDelegate.duplicate).toHaveBeenCalledWith(created.id);
+    });
+
+    it('should delegate duplicateToWorkspace to Firestore when delegate is set', async () => {
+      const firestoreDelegate = createMockFirestoreDelegate();
+      const created = await firestoreDelegate.create({
+        workspaceId: 'ws-1',
+        title: 'Dup Test',
+        description: '',
+        body: 'body',
+        tags: [],
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        lastUsedAt: null,
+        createdBy: 'user-1',
+        version: 1,
+      });
+
+      promptRepo.setFirestoreDelegate(firestoreDelegate);
+
+      await promptRepo.duplicateToWorkspace(created.id, {
+        workspaceId: 'ws-2',
+        createdBy: 'user-2',
+      });
+
+      expect(firestoreDelegate.duplicateToWorkspace).toHaveBeenCalledWith(created.id, {
+        workspaceId: 'ws-2',
+        createdBy: 'user-2',
+      });
     });
 
     it('should delegate restore to Firestore when delegate is set', async () => {

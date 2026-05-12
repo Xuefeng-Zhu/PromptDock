@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
-import type { Folder, PromptRecipe } from '../../types/index';
-import type { IFolderRepository, IPromptRepository } from '../../repositories/interfaces';
+import type { Folder, PromptRecipe, Workspace } from '../../types/index';
+import type {
+  IFolderRepository,
+  IPromptRepository,
+  ISettingsRepository,
+  IWorkspaceRepository,
+} from '../../repositories/interfaces';
 import { initFolderStore } from '../../stores/folder-store';
 import { initPromptStore } from '../../stores/prompt-store';
 import { initSettingsStore, DEFAULT_SETTINGS } from '../../stores/settings-store';
 import { initAppModeStore } from '../../stores/app-mode-store';
-import type { ISettingsRepository } from '../../repositories/interfaces';
+import { initWorkspaceStore } from '../../stores/workspace-store';
 
 const { mockCopyToClipboard, mockPasteToActiveApp, mockHideMainWindow } = vi.hoisted(() => ({
   mockCopyToClipboard: vi.fn(() => Promise.resolve()),
@@ -97,6 +102,27 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       prompts.push(dup);
       return dup;
     }),
+    duplicateToWorkspace: vi.fn(async (id, target) => {
+      const original = prompts.find((p) => p.id === id);
+      if (!original) throw new Error(`Prompt not found: ${id}`);
+      const dup: PromptRecipe = {
+        ...original,
+        id: `prompt-dup-${Date.now()}`,
+        workspaceId: target.workspaceId,
+        title: `Copy of ${original.title}`,
+        folderId: null,
+        favorite: false,
+        archived: false,
+        archivedAt: null,
+        lastUsedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: target.createdBy,
+        version: 1,
+      };
+      prompts.push(dup);
+      return dup;
+    }),
     toggleFavorite: vi.fn(async (id) => {
       const idx = prompts.findIndex((p) => p.id === id);
       if (idx === -1) throw new Error(`Prompt not found: ${id}`);
@@ -134,6 +160,46 @@ function createMockFolderRepo(initialFolders: Folder[] = []): IFolderRepository 
   };
 }
 
+function createMockWorkspaceRepo(): IWorkspaceRepository {
+  const localWorkspace: Workspace = {
+    id: 'local',
+    name: 'My Prompts',
+    ownerId: 'local',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  };
+
+  return {
+    create: vi.fn(async () => localWorkspace),
+    getById: vi.fn(async () => localWorkspace),
+    listForUser: vi.fn(async () => [localWorkspace]),
+    listSyncedWorkspacesForUser: vi.fn(async () => [localWorkspace]),
+    update: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
+    updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
+    bootstrapPersonalWorkspace: vi.fn(async () => localWorkspace),
+    listMembershipsForUser: vi.fn(async () => []),
+    listPendingInvitesForEmail: vi.fn(async () => []),
+    listMembers: vi.fn(async () => []),
+    listInvites: vi.fn(async () => []),
+    createSyncedWorkspace: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    createInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    acceptInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    deleteSyncedWorkspace: vi.fn(async () => {}),
+    leaveSyncedWorkspace: vi.fn(async () => {}),
+    updateMemberRole: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    removeMember: vi.fn(async () => {}),
+    revokeInvite: vi.fn(async () => {}),
+  };
+}
+
 // ─── Setup ─────────────────────────────────────────────────────────────────────
 
 let mockRepo: IPromptRepository;
@@ -165,6 +231,7 @@ async function setupStore(
 
   // Initialize AppModeStore so OnboardingScreen can render
   initAppModeStore();
+  initWorkspaceStore(createMockWorkspaceRepo());
 
   return store;
 }
@@ -949,7 +1016,7 @@ describe('AppShell', () => {
       });
     });
 
-    it('clicking Duplicate in inspector dropdown calls duplicatePrompt on the store', async () => {
+    it('clicking Duplicate in inspector dropdown opens target dialog and duplicates to workspace', async () => {
       const { mockRepo } = await renderOnLibraryScreen();
 
       await selectPromptCard('prompt-1');
@@ -969,7 +1036,21 @@ describe('AppShell', () => {
         fireEvent.click(duplicateItem);
       });
 
-      expect(mockRepo.duplicate).toHaveBeenCalledWith('prompt-1');
+      const dialog = screen.getByRole('dialog', { name: 'Duplicate prompt' });
+      expect(
+        within(dialog).getByRole('radio', { name: /My Prompts/i }).getAttribute('aria-checked'),
+      ).toBe('true');
+
+      await act(async () => {
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Duplicate' }));
+      });
+
+      await waitFor(() => {
+        expect(mockRepo.duplicateToWorkspace).toHaveBeenCalledWith('prompt-1', {
+          workspaceId: 'local',
+          createdBy: 'local',
+        });
+      });
     });
 
     it('clicking Archive in inspector dropdown calls archivePrompt on the store', async () => {

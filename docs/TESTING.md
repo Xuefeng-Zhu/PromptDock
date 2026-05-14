@@ -10,9 +10,11 @@ PromptDock uses Vitest for TypeScript tests, Testing Library for React component
 | Component tests | `src/components/__tests__/`, `src/components/ui/__tests__/`, `src/screens/__tests__/` | Validate rendering, accessibility roles, keyboard behavior, and user events. |
 | Integration tests | `*.integration.test.tsx` | Validate cross-module flows such as sync wiring, folder/tag behavior, and conflict UI. |
 | Property tests | `*.property.test.ts` | Validate invariants over generated data. |
+| Browser e2e tests | `e2e/*.spec.ts` | Validate real browser workflows against the Vite app and browser localStorage runtime. |
 | Setup sanity tests | `src/setup.test.ts` | Confirms Vitest and fast-check are operational. |
 
 The default Vitest environment is `node`. Component tests that need a DOM use per-file `// @vitest-environment jsdom` directives.
+Playwright e2e tests currently run only in Chromium to keep local and CI runtime modest.
 
 ## Commands
 
@@ -20,6 +22,8 @@ The default Vitest environment is `node`. Component tests that need a DOM use pe
 npm run lint
 npm run build
 npm test
+npx playwright install chromium
+npm run test:e2e
 npm run test:watch
 npx vitest run src/services/__tests__/
 npx vitest run src/components/__tests__/AppShell.test.tsx
@@ -40,6 +44,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 - Local Tauri Store serialization/deserialization and corruption recovery paths.
 - Settings repository/store behavior.
 - App mode state machine.
+- Browser onboarding/account entry, prompt lifecycle, library organization, command palette variable fill, settings, import/export, responsive navigation, and localStorage persistence after reload.
 - Firebase converter round trips.
 - Sync service transition, snapshot, offline, and conflict wiring behavior.
 - Prompt editor, library, command palette, quick launcher, settings, and conflict UI behavior.
@@ -66,6 +71,8 @@ Last checked locally:
 npm run lint
 npm run build
 npm test
+npx playwright install chromium
+npm run test:e2e
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
@@ -73,12 +80,13 @@ Result:
 
 - ESLint passed.
 - Frontend production build passed.
-- 78 Vitest files discovered.
-- 78 passed.
+- 7 browser e2e tests passed in Chromium.
+- 92 Vitest files discovered.
+- 92 passed.
 - 0 failed.
 - 0 skipped.
-- 773 tests total.
-- 773 passed.
+- 927 tests total.
+- 927 passed.
 - 0 failed.
 - 0 skipped.
 - Rust/Tauri compiled with 5 Rust unit tests currently present.
@@ -86,7 +94,7 @@ Result:
 ## Recommended Missing Tests
 
 - Higher-level Tauri integration tests for clipboard commands, real hotkey registration, window toggling, and paste simulation.
-- End-to-end tests for the real Tauri desktop app, including quick launcher focus, hide/show behavior, and paste into an active target.
+- End-to-end tests for the real Tauri desktop app, including quick launcher focus, hide/show behavior, and paste into an active target. Browser e2e coverage does not exercise native hotkeys, Tauri Store files, separate launcher windows, or paste simulation.
 - Firebase emulator integration tests that create a user, bootstrap a workspace, write prompts, and verify rules.
 - Firestore security rules tests.
 - Tests for migration from local prompts to synced prompts, including workspace ID consistency.

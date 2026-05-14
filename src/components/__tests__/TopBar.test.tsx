@@ -83,18 +83,25 @@ function createMockWorkspaceRepo(): IWorkspaceRepository {
     updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
     bootstrapPersonalWorkspace: vi.fn(async () => workspace),
     listMembershipsForUser: vi.fn(async () => [membership]),
+    listPendingDomainInvitesForEmail: vi.fn(async () => []),
     listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
+    listDomainInvites: vi.fn(async () => []),
     listMembers: vi.fn(async () => [member]),
     listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
     createSyncedWorkspace: vi.fn(async () => ({ workspace, membership })),
     createInvite: vi.fn(async () => {
       throw new Error('not used');
     }),
+    createDomainInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
     acceptInvite: vi.fn(async () => member),
+    acceptDomainInvite: vi.fn(async () => member),
     deleteSyncedWorkspace: vi.fn(async () => {}),
     leaveSyncedWorkspace: vi.fn(async () => {}),
     updateMemberRole: vi.fn(async () => member),
     removeMember: vi.fn(async () => {}),
+    revokeDomainInvite: vi.fn(async () => {}),
     revokeInvite: vi.fn(async () => {}),
   };
 }

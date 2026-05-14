@@ -4,6 +4,7 @@ import type {
   PromptRecipe,
   UserSettings,
   Workspace,
+  WorkspaceDomainInvite,
   WorkspaceInvite,
   WorkspaceInviteRole,
   WorkspaceMember,
@@ -62,7 +63,9 @@ export interface IWorkspaceRepository {
   updateSyncedWorkspace(id: string, changes: Partial<Workspace>): Promise<Workspace>;
   bootstrapPersonalWorkspace(user: AuthUser): Promise<Workspace>;
   listMembershipsForUser(userId: string): Promise<WorkspaceMembership[]>;
+  listPendingDomainInvitesForEmail(email: string): Promise<WorkspaceDomainInvite[]>;
   listPendingInvitesForEmail(email: string): Promise<WorkspaceInvite[]>;
+  listDomainInvites(workspaceId: string): Promise<WorkspaceDomainInvite[]>;
   listMembers(workspaceId: string): Promise<WorkspaceMember[]>;
   listInvites(workspaceId: string): Promise<WorkspaceInvite[]>;
   createSyncedWorkspace(name: string, owner: AuthUser): Promise<{
@@ -75,7 +78,13 @@ export interface IWorkspaceRepository {
     role: WorkspaceInviteRole,
     invitedBy: string,
   ): Promise<WorkspaceInvite>;
+  createDomainInvite(
+    workspace: Workspace,
+    domain: string,
+    invitedBy: string,
+  ): Promise<WorkspaceDomainInvite>;
   acceptInvite(invite: WorkspaceInvite, user: AuthUser): Promise<WorkspaceMember>;
+  acceptDomainInvite(invite: WorkspaceDomainInvite, user: AuthUser): Promise<WorkspaceMember>;
   deleteSyncedWorkspace(workspaceId: string): Promise<void>;
   leaveSyncedWorkspace(workspaceId: string, userId: string): Promise<void>;
   updateMemberRole(
@@ -84,6 +93,7 @@ export interface IWorkspaceRepository {
     role: WorkspaceRole,
   ): Promise<WorkspaceMember>;
   removeMember(workspaceId: string, memberUserId: string): Promise<void>;
+  revokeDomainInvite(inviteId: string): Promise<void>;
   revokeInvite(inviteId: string): Promise<void>;
 }
 

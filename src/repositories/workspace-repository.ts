@@ -1,6 +1,8 @@
 import type {
   AuthUser,
   Workspace,
+  WorkspaceDomainInvite,
+  WorkspaceDomainInviteStatus,
   WorkspaceInvite,
   WorkspaceInviteRole,
   WorkspaceInviteStatus,
@@ -9,6 +11,11 @@ import type {
   WorkspaceRole,
 } from '../types/index';
 import type { IStorageBackend, IWorkspaceRepository } from './interfaces';
+import {
+  assertValidWorkspaceDomain,
+  getWorkspaceDomainFromEmail,
+  workspaceDomainInviteId,
+} from '../utils/workspace-domain';
 
 interface FirestoreTimestamp {
   seconds: number;
@@ -44,6 +51,7 @@ interface FirestoreWorkspaceMemberDoc {
   joinedAt?: FirestoreTimestamp;
   updatedAt?: FirestoreTimestamp;
   acceptedInviteId?: string;
+  acceptedDomainInviteId?: string;
 }
 
 interface FirestoreWorkspaceMembershipDoc {
@@ -57,6 +65,8 @@ interface FirestoreWorkspaceMembershipDoc {
   ownerId?: string;
   joinedAt?: FirestoreTimestamp;
   updatedAt?: FirestoreTimestamp;
+  acceptedInviteId?: string;
+  acceptedDomainInviteId?: string;
 }
 
 interface FirestoreWorkspaceInviteDoc {
@@ -70,6 +80,25 @@ interface FirestoreWorkspaceInviteDoc {
   updatedAt?: FirestoreTimestamp;
   acceptedAt?: FirestoreTimestamp | null;
   acceptedBy?: string | null;
+}
+
+interface FirestoreWorkspaceDomainInviteDoc {
+  workspaceId: string;
+  workspaceName?: string;
+  ownerId?: string;
+  domain: string;
+  role: 'viewer';
+  status: WorkspaceDomainInviteStatus;
+  invitedBy: string;
+  createdAt?: FirestoreTimestamp;
+  updatedAt?: FirestoreTimestamp;
+  revokedAt?: FirestoreTimestamp | null;
+  revokedBy?: string | null;
+}
+
+interface AcceptedInviteMetadata {
+  acceptedInviteId?: string;
+  acceptedDomainInviteId?: string;
 }
 
 function workspaceMembershipId(workspaceId: string, userId: string): string {
@@ -101,6 +130,7 @@ function toWorkspaceMember(id: string, data: FirestoreWorkspaceMemberDoc): Works
     joinedAt: timestampToDate(data.joinedAt),
     updatedAt: timestampToDate(data.updatedAt),
     ...(data.acceptedInviteId ? { acceptedInviteId: data.acceptedInviteId } : {}),
+    ...(data.acceptedDomainInviteId ? { acceptedDomainInviteId: data.acceptedDomainInviteId } : {}),
   };
 }
 
@@ -119,6 +149,8 @@ function toWorkspaceMembership(
     ownerId: data.ownerId ?? '',
     joinedAt: timestampToDate(data.joinedAt),
     updatedAt: timestampToDate(data.updatedAt),
+    ...(data.acceptedInviteId ? { acceptedInviteId: data.acceptedInviteId } : {}),
+    ...(data.acceptedDomainInviteId ? { acceptedDomainInviteId: data.acceptedDomainInviteId } : {}),
   };
 }
 
@@ -138,12 +170,32 @@ function toWorkspaceInvite(id: string, data: FirestoreWorkspaceInviteDoc): Works
   };
 }
 
+function toWorkspaceDomainInvite(
+  id: string,
+  data: FirestoreWorkspaceDomainInviteDoc,
+): WorkspaceDomainInvite {
+  return {
+    id,
+    workspaceId: data.workspaceId,
+    workspaceName: data.workspaceName ?? 'Workspace',
+    ownerId: data.ownerId ?? '',
+    domain: data.domain,
+    role: 'viewer',
+    status: data.status,
+    invitedBy: data.invitedBy,
+    createdAt: timestampToDate(data.createdAt),
+    updatedAt: timestampToDate(data.updatedAt),
+    revokedAt: data.revokedAt ? timestampToDate(data.revokedAt) : null,
+    revokedBy: data.revokedBy ?? null,
+  };
+}
+
 function createMemberPayload(
   workspace: Workspace,
   user: AuthUser,
   role: WorkspaceRole,
   timestamp: unknown,
-  acceptedInviteId?: string,
+  acceptedMetadata: AcceptedInviteMetadata = {},
 ) {
   return {
     id: user.uid,
@@ -154,7 +206,12 @@ function createMemberPayload(
     displayName: user.displayName,
     joinedAt: timestamp,
     updatedAt: timestamp,
-    ...(acceptedInviteId ? { acceptedInviteId } : {}),
+    ...(acceptedMetadata.acceptedInviteId
+      ? { acceptedInviteId: acceptedMetadata.acceptedInviteId }
+      : {}),
+    ...(acceptedMetadata.acceptedDomainInviteId
+      ? { acceptedDomainInviteId: acceptedMetadata.acceptedDomainInviteId }
+      : {}),
   };
 }
 
@@ -163,10 +220,10 @@ function createMembershipPayload(
   user: AuthUser,
   role: WorkspaceRole,
   timestamp: unknown,
-  acceptedInviteId?: string,
+  acceptedMetadata: AcceptedInviteMetadata = {},
 ) {
   return {
-    ...createMemberPayload(workspace, user, role, timestamp, acceptedInviteId),
+    ...createMemberPayload(workspace, user, role, timestamp, acceptedMetadata),
     workspaceName: workspace.name,
     ownerId: workspace.ownerId,
   };
@@ -376,6 +433,38 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     }
   }
 
+  async listPendingDomainInvitesForEmail(email: string): Promise<WorkspaceDomainInvite[]> {
+    const domain = getWorkspaceDomainFromEmail(email);
+    if (!domain) return [];
+
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { collection, getDocs, query, where } = await import('firebase/firestore');
+
+    try {
+      const firestore = await getFirebaseFirestore();
+      const invitesCol = collection(firestore, 'workspaceDomainInvites');
+      const q = query(
+        invitesCol,
+        where('domain', '==', domain),
+        where('status', '==', 'active'),
+        where('role', '==', 'viewer'),
+      );
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs
+        .map((docSnap) =>
+          toWorkspaceDomainInvite(
+            docSnap.id,
+            docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
+          ),
+        )
+        .filter((invite) => invite.status === 'active' && invite.role === 'viewer');
+    } catch (err) {
+      console.error('Failed to list pending workspace domain invites:', err);
+      return [];
+    }
+  }
+
   async listSyncedWorkspacesForUser(userId: string): Promise<Workspace[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { doc, getDoc } = await import('firebase/firestore');
@@ -457,6 +546,34 @@ export class WorkspaceRepository implements IWorkspaceRepository {
         .filter((invite) => invite.status === 'pending');
     } catch (err) {
       console.error('Failed to list outgoing workspace invites:', err);
+      return [];
+    }
+  }
+
+  async listDomainInvites(workspaceId: string): Promise<WorkspaceDomainInvite[]> {
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { collection, getDocs, query, where } = await import('firebase/firestore');
+
+    try {
+      const firestore = await getFirebaseFirestore();
+      const invitesCol = collection(firestore, 'workspaceDomainInvites');
+      const q = query(
+        invitesCol,
+        where('workspaceId', '==', workspaceId),
+        where('status', '==', 'active'),
+      );
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs
+        .map((docSnap) =>
+          toWorkspaceDomainInvite(
+            docSnap.id,
+            docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
+          ),
+        )
+        .filter((invite) => invite.status === 'active');
+    } catch (err) {
+      console.error('Failed to list workspace domain invites:', err);
       return [];
     }
   }
@@ -561,6 +678,77 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     };
   }
 
+  async createDomainInvite(
+    workspace: Workspace,
+    domain: string,
+    invitedBy: string,
+  ): Promise<WorkspaceDomainInvite> {
+    const cleanDomain = assertValidWorkspaceDomain(domain);
+    const id = workspaceDomainInviteId(workspace.id, cleanDomain);
+
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const {
+      collection,
+      doc,
+      getDocs,
+      query,
+      serverTimestamp,
+      setDoc,
+      where,
+    } = await import('firebase/firestore');
+
+    const firestore = await getFirebaseFirestore();
+    const inviteRef = doc(firestore, 'workspaceDomainInvites', id);
+    const existingQuery = query(
+      collection(firestore, 'workspaceDomainInvites'),
+      where('workspaceId', '==', workspace.id),
+      where('domain', '==', cleanDomain),
+    );
+    const existingSnapshot = await getDocs(existingQuery);
+    const existingDoc = existingSnapshot.docs[0];
+
+    if (existingDoc) {
+      const existingInvite = toWorkspaceDomainInvite(
+        existingDoc.id,
+        existingDoc.data() as FirestoreWorkspaceDomainInviteDoc,
+      );
+      if (existingInvite.status === 'active') return existingInvite;
+    }
+
+    const timestamp = serverTimestamp();
+    const now = new Date();
+    const payload = {
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      ownerId: workspace.ownerId,
+      domain: cleanDomain,
+      role: 'viewer' as const,
+      status: 'active' as const,
+      invitedBy,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      revokedAt: null,
+      revokedBy: null,
+    };
+
+    await setDoc(inviteRef, payload);
+
+    return {
+      id,
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      ownerId: workspace.ownerId,
+      domain: cleanDomain,
+      role: 'viewer',
+      status: 'active',
+      invitedBy,
+      createdAt: now,
+      updatedAt: now,
+      revokedAt: null,
+      revokedBy: null,
+    };
+  }
+
   async acceptInvite(invite: WorkspaceInvite, user: AuthUser): Promise<WorkspaceMember> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { doc, getDoc, serverTimestamp, writeBatch } = await import('firebase/firestore');
@@ -577,13 +765,19 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       workspaceSnapshot.data() as FirestoreWorkspaceDoc,
     );
     const timestamp = serverTimestamp();
-    const memberPayload = createMemberPayload(workspace, user, invite.role, timestamp, invite.id);
+    const memberPayload = createMemberPayload(
+      workspace,
+      user,
+      invite.role,
+      timestamp,
+      { acceptedInviteId: invite.id },
+    );
     const membershipPayload = createMembershipPayload(
       workspace,
       user,
       invite.role,
       timestamp,
-      invite.id,
+      { acceptedInviteId: invite.id },
     );
 
     const memberRef = doc(firestore, 'workspaces', workspace.id, 'members', user.uid);
@@ -603,6 +797,64 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       acceptedBy: user.uid,
       updatedAt: timestamp,
     });
+    await batch.commit();
+
+    return toWorkspaceMember(user.uid, {
+      ...memberPayload,
+      joinedAt: undefined,
+      updatedAt: undefined,
+    });
+  }
+
+  async acceptDomainInvite(
+    invite: WorkspaceDomainInvite,
+    user: AuthUser,
+  ): Promise<WorkspaceMember> {
+    if (invite.status !== 'active') {
+      throw new Error('Domain invite is no longer active.');
+    }
+    if (getWorkspaceDomainFromEmail(user.email) !== invite.domain) {
+      throw new Error('Your account email does not match this domain invite.');
+    }
+
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { doc, serverTimestamp, writeBatch } = await import('firebase/firestore');
+
+    const firestore = await getFirebaseFirestore();
+    const workspace: Workspace = {
+      id: invite.workspaceId,
+      name: invite.workspaceName,
+      ownerId: invite.ownerId,
+      createdAt: invite.createdAt,
+      updatedAt: invite.updatedAt,
+    };
+    const timestamp = serverTimestamp();
+    const acceptedMetadata = { acceptedDomainInviteId: invite.id };
+    const memberPayload = createMemberPayload(
+      workspace,
+      user,
+      'viewer',
+      timestamp,
+      acceptedMetadata,
+    );
+    const membershipPayload = createMembershipPayload(
+      workspace,
+      user,
+      'viewer',
+      timestamp,
+      acceptedMetadata,
+    );
+
+    const memberRef = doc(firestore, 'workspaces', workspace.id, 'members', user.uid);
+    const membershipRef = doc(
+      firestore,
+      'workspaceMemberships',
+      workspaceMembershipId(workspace.id, user.uid),
+    );
+
+    const batch = writeBatch(firestore);
+    batch.set(memberRef, memberPayload);
+    batch.set(membershipRef, membershipPayload);
     await batch.commit();
 
     return toWorkspaceMember(user.uid, {
@@ -633,6 +885,9 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const conflictsSnapshot = await getDocs(collection(firestore, 'workspaces', workspaceId, 'conflicts'));
     const invitesSnapshot = await getDocs(
       query(collection(firestore, 'workspaceInvites'), where('workspaceId', '==', workspaceId)),
+    );
+    const domainInvitesSnapshot = await getDocs(
+      query(collection(firestore, 'workspaceDomainInvites'), where('workspaceId', '==', workspaceId)),
     );
 
     const promptVersionSnapshots = await Promise.all(
@@ -666,6 +921,14 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     invitesSnapshot.docs.forEach((inviteDoc) => {
       writeOperations.push((batch) => batch.update(inviteDoc.ref, {
         status: 'revoked',
+        updatedAt: timestamp,
+      }));
+    });
+    domainInvitesSnapshot.docs.forEach((inviteDoc) => {
+      writeOperations.push((batch) => batch.update(inviteDoc.ref, {
+        status: 'revoked',
+        revokedAt: timestamp,
+        revokedBy: null,
         updatedAt: timestamp,
       }));
     });
@@ -762,6 +1025,21 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     batch.delete(memberRef);
     batch.delete(membershipRef);
     await batch.commit();
+  }
+
+  async revokeDomainInvite(inviteId: string): Promise<void> {
+    const { getFirebaseFirestore } = await import('../firebase/config');
+    const { doc, serverTimestamp, updateDoc } = await import('firebase/firestore');
+
+    const firestore = await getFirebaseFirestore();
+    const inviteRef = doc(firestore, 'workspaceDomainInvites', inviteId);
+    const timestamp = serverTimestamp();
+    await updateDoc(inviteRef, {
+      status: 'revoked',
+      revokedAt: timestamp,
+      revokedBy: null,
+      updatedAt: timestamp,
+    });
   }
 
   async revokeInvite(inviteId: string): Promise<void> {

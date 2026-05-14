@@ -4,6 +4,7 @@ import type { IWorkspaceRepository } from '../../repositories/interfaces';
 import type {
   AuthUser,
   Workspace,
+  WorkspaceDomainInvite,
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceMembership,
@@ -29,6 +30,21 @@ const teamWorkspace: Workspace = {
   ownerId: user.uid,
   createdAt: new Date('2024-01-02'),
   updatedAt: new Date('2024-01-02'),
+};
+
+const domainInvite: WorkspaceDomainInvite = {
+  id: 'team-2_example.com',
+  workspaceId: 'team-2',
+  workspaceName: 'Marketing Ops',
+  ownerId: 'owner-1',
+  domain: 'example.com',
+  role: 'viewer',
+  status: 'active',
+  invitedBy: 'owner-1',
+  createdAt: new Date('2024-01-03'),
+  updatedAt: new Date('2024-01-03'),
+  revokedAt: null,
+  revokedBy: null,
 };
 
 function membershipFor(workspace: Workspace, role: WorkspaceMembership['role']): WorkspaceMembership {
@@ -88,7 +104,9 @@ function createRepo(overrides: Partial<IWorkspaceRepository> = {}): IWorkspaceRe
     updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...teamWorkspace, ...changes })),
     bootstrapPersonalWorkspace: vi.fn(async () => personalWorkspace),
     listMembershipsForUser: vi.fn(async () => memberships),
+    listPendingDomainInvitesForEmail: vi.fn(async () => [] as WorkspaceDomainInvite[]),
     listPendingInvitesForEmail: vi.fn(async () => [invite]),
+    listDomainInvites: vi.fn(async () => [] as WorkspaceDomainInvite[]),
     listMembers: vi.fn(async (workspaceId) => [
       memberFor(workspaces.find((workspace) => workspace.id === workspaceId) ?? personalWorkspace, 'owner'),
     ]),
@@ -110,7 +128,22 @@ function createRepo(overrides: Partial<IWorkspaceRepository> = {}): IWorkspaceRe
       acceptedAt: null,
       acceptedBy: null,
     })),
+    createDomainInvite: vi.fn(async (workspace, domain, invitedBy) => ({
+      id: `${workspace.id}_${domain}`,
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      ownerId: workspace.ownerId,
+      domain,
+      role: 'viewer' as const,
+      status: 'active' as const,
+      invitedBy,
+      createdAt: new Date('2024-01-04'),
+      updatedAt: new Date('2024-01-04'),
+      revokedAt: null,
+      revokedBy: null,
+    })),
     acceptInvite: vi.fn(async () => memberFor(teamWorkspace, 'viewer')),
+    acceptDomainInvite: vi.fn(async () => memberFor(teamWorkspace, 'viewer')),
     deleteSyncedWorkspace: vi.fn(async () => {}),
     leaveSyncedWorkspace: vi.fn(async () => {}),
     updateMemberRole: vi.fn(async (_workspaceId, memberUserId, role) => ({
@@ -118,6 +151,7 @@ function createRepo(overrides: Partial<IWorkspaceRepository> = {}): IWorkspaceRe
       userId: memberUserId,
     })),
     removeMember: vi.fn(async () => {}),
+    revokeDomainInvite: vi.fn(async () => {}),
     revokeInvite: vi.fn(async () => {}),
     ...overrides,
   };
@@ -195,6 +229,56 @@ describe('WorkspaceStore', () => {
     ).rejects.toThrow('Only workspace owners can invite members.');
   });
 
+  it('loads pending domain invites and filters already joined workspaces', async () => {
+    const repo = createRepo({
+      listPendingDomainInvitesForEmail: vi.fn(async () => [
+        domainInvite,
+        {
+          ...domainInvite,
+          id: 'team-1_example.com',
+          workspaceId: teamWorkspace.id,
+          workspaceName: teamWorkspace.name,
+          ownerId: teamWorkspace.ownerId,
+        },
+      ]),
+    });
+    const store = createWorkspaceStore(repo);
+
+    await store.getState().loadForUser(user);
+
+    expect(repo.listPendingDomainInvitesForEmail).toHaveBeenCalledWith(user.email);
+    expect(store.getState().pendingDomainInvites).toEqual([domainInvite]);
+  });
+
+  it('creates and revokes domain invites only when the current user owns the workspace', async () => {
+    const repo = createRepo();
+    const store = createWorkspaceStore(repo);
+    await store.getState().loadForUser(user);
+
+    await store.getState().createDomainInvite('Example.com');
+
+    expect(repo.createDomainInvite).toHaveBeenCalledWith(
+      personalWorkspace,
+      'Example.com',
+      user.uid,
+    );
+    expect(store.getState().domainInvites).toHaveLength(1);
+
+    await store.getState().revokeDomainInvite('user-1_Example.com');
+
+    expect(repo.revokeDomainInvite).toHaveBeenCalledWith('user-1_Example.com');
+    expect(store.getState().domainInvites).toHaveLength(0);
+  });
+
+  it('rejects domain invites for non-owner roles', async () => {
+    const store = createWorkspaceStore(createRepo());
+    await store.getState().loadForUser(user, 'team-1');
+
+    await expect(
+      store.getState().createDomainInvite('example.com'),
+    ).rejects.toThrow('Only workspace owners can add domain access.');
+  });
+
   it('accepts pending invites and reloads workspaces into the invited workspace', async () => {
     const invitedWorkspace: Workspace = {
       id: 'team-2',
@@ -225,6 +309,41 @@ describe('WorkspaceStore', () => {
 
     expect(repo.acceptInvite).toHaveBeenCalled();
     expect(store.getState().activeWorkspaceId).toBe('team-2');
+  });
+
+  it('accepts pending domain invites and reloads into the invited workspace', async () => {
+    const invitedWorkspace: Workspace = {
+      id: domainInvite.workspaceId,
+      name: domainInvite.workspaceName,
+      ownerId: domainInvite.ownerId,
+      createdAt: new Date('2024-01-03'),
+      updatedAt: new Date('2024-01-03'),
+    };
+    let accepted = false;
+    const repo = createRepo({
+      listPendingDomainInvitesForEmail: vi.fn(async () => (accepted ? [] : [domainInvite])),
+      acceptDomainInvite: vi.fn(async () => {
+        accepted = true;
+        return memberFor(invitedWorkspace, 'viewer');
+      }),
+      listSyncedWorkspacesForUser: vi.fn(async () =>
+        accepted ? [personalWorkspace, invitedWorkspace] : [personalWorkspace, teamWorkspace],
+      ),
+      listMembershipsForUser: vi.fn(async () =>
+        accepted
+          ? [membershipFor(personalWorkspace, 'owner'), membershipFor(invitedWorkspace, 'viewer')]
+          : [membershipFor(personalWorkspace, 'owner'), membershipFor(teamWorkspace, 'editor')],
+      ),
+    });
+    const store = createWorkspaceStore(repo);
+    await store.getState().loadForUser(user);
+
+    await store.getState().acceptDomainInvite(domainInvite.id);
+
+    expect(repo.acceptDomainInvite).toHaveBeenCalledWith(domainInvite, user);
+    expect(store.getState().activeWorkspaceId).toBe(domainInvite.workspaceId);
+    expect(store.getState().currentRole).toBe('viewer');
+    expect(store.getState().pendingDomainInvites).toEqual([]);
   });
 
   it('updates and removes members in the active workspace', async () => {

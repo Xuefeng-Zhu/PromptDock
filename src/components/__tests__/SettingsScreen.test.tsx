@@ -7,6 +7,7 @@ import type {
   PromptRecipe,
   UserSettings,
   Workspace,
+  WorkspaceDomainInvite,
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceMembership,
@@ -94,18 +95,25 @@ function createMockWorkspaceRepo(): IWorkspaceRepository {
     updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...workspace, ...changes })),
     bootstrapPersonalWorkspace: vi.fn(async () => workspace),
     listMembershipsForUser: vi.fn(async () => [membership]),
+    listPendingDomainInvitesForEmail: vi.fn(async () => [] as WorkspaceDomainInvite[]),
     listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
+    listDomainInvites: vi.fn(async () => [] as WorkspaceDomainInvite[]),
     listMembers: vi.fn(async () => [member]),
     listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
     createSyncedWorkspace: vi.fn(async () => ({ workspace, membership })),
     createInvite: vi.fn(async () => {
       throw new Error('not used');
     }),
+    createDomainInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
     acceptInvite: vi.fn(async () => member),
+    acceptDomainInvite: vi.fn(async () => member),
     deleteSyncedWorkspace: vi.fn(async () => {}),
     leaveSyncedWorkspace: vi.fn(async () => {}),
     updateMemberRole: vi.fn(async () => member),
     removeMember: vi.fn(async () => {}),
+    revokeDomainInvite: vi.fn(async () => {}),
     revokeInvite: vi.fn(async () => {}),
   };
 }
@@ -444,6 +452,130 @@ describe('SettingsScreen', () => {
 
     expect(repo.leaveSyncedWorkspace).toHaveBeenCalledWith(sharedWorkspace.id, user.uid);
     expect(screen.queryByText('Shared Ops')).toBeNull();
+  });
+
+  it('allows owners to add and revoke domain access from sharing settings', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const domainInvite: WorkspaceDomainInvite = {
+      id: `${workspace.id}_example.com`,
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      ownerId: workspace.ownerId,
+      domain: 'example.com',
+      role: 'viewer',
+      status: 'active',
+      invitedBy: user.uid,
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      revokedAt: null,
+      revokedBy: null,
+    };
+    const repo = createMockWorkspaceRepo();
+    repo.createDomainInvite = vi.fn(async () => domainInvite);
+    repo.revokeDomainInvite = vi.fn(async () => {});
+    const workspaceStore = initWorkspaceStore(repo);
+    workspaceStore.setState({
+      activeWorkspaceId: workspace.id,
+      currentRole: 'owner',
+      currentUser: user,
+      memberships: [makeWorkspaceMembership(workspace, user, 'owner')],
+      workspaces: [workspace],
+    });
+    testAppModeStore.getState().setUserId(user.uid);
+    testAppModeStore.getState().setMode('synced');
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    fireEvent.change(screen.getByLabelText('Allowed email domain'), {
+      target: { value: '@Example.com' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add domain' }));
+    });
+
+    expect(repo.createDomainInvite).toHaveBeenCalledWith(workspace, '@Example.com', user.uid);
+    expect(screen.getByText('@example.com')).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+    });
+
+    expect(repo.revokeDomainInvite).toHaveBeenCalledWith(domainInvite.id);
+    expect(screen.queryByText('@example.com')).toBeNull();
+  });
+
+  it('shows eligible domain invites and accepts them from sharing settings', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const domainInvite: WorkspaceDomainInvite = {
+      id: 'shared-workspace_example.com',
+      workspaceId: 'shared-workspace',
+      workspaceName: 'Shared Ops',
+      ownerId: 'owner-2',
+      domain: 'example.com',
+      role: 'viewer',
+      status: 'active',
+      invitedBy: 'owner-2',
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      revokedAt: null,
+      revokedBy: null,
+    };
+    const repo = createMockWorkspaceRepo();
+    repo.acceptDomainInvite = vi.fn(async () => ({
+      id: user.uid,
+      workspaceId: domainInvite.workspaceId,
+      userId: user.uid,
+      role: 'viewer' as const,
+      email: user.email,
+      displayName: user.displayName,
+      joinedAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      acceptedDomainInviteId: domainInvite.id,
+    }));
+    const workspaceStore = initWorkspaceStore(repo);
+    workspaceStore.setState({
+      activeWorkspaceId: workspace.id,
+      currentRole: 'owner',
+      currentUser: user,
+      memberships: [makeWorkspaceMembership(workspace, user, 'owner')],
+      pendingDomainInvites: [domainInvite],
+      workspaces: [workspace],
+    });
+    testAppModeStore.getState().setUserId(user.uid);
+    testAppModeStore.getState().setMode('synced');
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    expect(screen.getByText('Domain access for @example.com')).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    });
+
+    expect(repo.acceptDomainInvite).toHaveBeenCalledWith(domainInvite, user);
+  });
+
+  it('does not show domain access management to non-owner members', () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const workspaceStore = initWorkspaceStore(createMockWorkspaceRepo());
+    workspaceStore.setState({
+      activeWorkspaceId: workspace.id,
+      currentRole: 'viewer',
+      currentUser: user,
+      memberships: [makeWorkspaceMembership(workspace, user, 'viewer')],
+      workspaces: [workspace],
+    });
+    testAppModeStore.getState().setUserId(user.uid);
+    testAppModeStore.getState().setMode('synced');
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    expect(screen.queryByText('Domain access')).toBeNull();
+    expect(screen.queryByLabelText('Allowed email domain')).toBeNull();
   });
 
   it('keeps settings content in a dedicated scroll pane', () => {

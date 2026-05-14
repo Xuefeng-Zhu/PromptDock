@@ -3,6 +3,7 @@ import type { IWorkspaceRepository } from '../repositories/interfaces';
 import type {
   AuthUser,
   Workspace,
+  WorkspaceDomainInvite,
   WorkspaceInvite,
   WorkspaceInviteRole,
   WorkspaceMember,
@@ -58,13 +59,17 @@ export interface WorkspaceStore {
   activeWorkspaceId: string;
   currentRole: WorkspaceRole | null;
   currentUser: AuthUser | null;
+  domainInvites: WorkspaceDomainInvite[];
   invites: WorkspaceInvite[];
   isLoading: boolean;
   members: WorkspaceMember[];
   memberships: WorkspaceMembership[];
+  pendingDomainInvites: WorkspaceDomainInvite[];
   pendingInvites: WorkspaceInvite[];
   workspaces: Workspace[];
+  acceptDomainInvite: (inviteId: string) => Promise<void>;
   acceptInvite: (inviteId: string) => Promise<void>;
+  createDomainInvite: (domain: string) => Promise<void>;
   createWorkspace: (name: string) => Promise<Workspace>;
   deleteWorkspace: (workspaceId: string) => Promise<void>;
   inviteMember: (email: string, role: WorkspaceInviteRole) => Promise<void>;
@@ -74,6 +79,7 @@ export interface WorkspaceStore {
   removeMember: (userId: string) => Promise<void>;
   renameWorkspace: (name: string) => Promise<void>;
   resetLocal: () => void;
+  revokeDomainInvite: (inviteId: string) => Promise<void>;
   revokeInvite: (inviteId: string) => Promise<void>;
   switchWorkspace: (workspaceId: string) => Promise<void>;
   updateMemberRole: (userId: string, role: WorkspaceRole) => Promise<void>;
@@ -89,10 +95,12 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
     activeWorkspaceId: 'local',
     currentRole: 'owner',
     currentUser: null,
+    domainInvites: [],
     invites: [],
     isLoading: false,
     members: [LOCAL_MEMBER],
     memberships: [],
+    pendingDomainInvites: [],
     pendingInvites: [],
     workspaces: [LOCAL_WORKSPACE],
 
@@ -100,11 +108,20 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       set({ isLoading: true, currentUser: user });
       try {
         await repo.bootstrapPersonalWorkspace(user);
-        const [workspaces, memberships, pendingInvites] = await Promise.all([
+        const [
+          workspaces,
+          memberships,
+          pendingInvites,
+          pendingDomainInvites,
+        ] = await Promise.all([
           repo.listSyncedWorkspacesForUser(user.uid),
           repo.listMembershipsForUser(user.uid),
           repo.listPendingInvitesForEmail(user.email),
+          repo.listPendingDomainInvitesForEmail(user.email),
         ]);
+        const filteredDomainInvites = pendingDomainInvites.filter((invite) =>
+          !memberships.some((membership) => membership.workspaceId === invite.workspaceId),
+        );
         const activeWorkspaceId = chooseActiveWorkspace(
           workspaces,
           preferredWorkspaceId,
@@ -116,6 +133,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
           currentRole: roleForWorkspace(memberships, activeWorkspaceId),
           isLoading: false,
           memberships,
+          pendingDomainInvites: filteredDomainInvites,
           pendingInvites,
           workspaces,
         });
@@ -132,12 +150,14 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       if (!user || workspaceId === 'local') return;
       const currentRole = roleForWorkspace(get().memberships, workspaceId);
 
-      const [members, invites] = await Promise.all([
+      const [members, invites, domainInvites] = await Promise.all([
         repo.listMembers(workspaceId),
         currentRole === 'owner' ? repo.listInvites(workspaceId) : Promise.resolve([]),
+        currentRole === 'owner' ? repo.listDomainInvites(workspaceId) : Promise.resolve([]),
       ]);
 
       set({
+        domainInvites,
         members,
         invites,
         currentRole,
@@ -198,6 +218,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
         return {
           activeWorkspaceId: nextActiveWorkspaceId,
           currentRole: roleForWorkspace(nextMemberships, nextActiveWorkspaceId),
+          domainInvites: wasActive ? [] : state.domainInvites,
           invites: wasActive ? [] : state.invites,
           members: wasActive ? [] : state.members,
           memberships: nextMemberships,
@@ -236,6 +257,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
         return {
           activeWorkspaceId: nextActiveWorkspaceId,
           currentRole: roleForWorkspace(nextMemberships, nextActiveWorkspaceId),
+          domainInvites: wasActive ? [] : state.domainInvites,
           invites: wasActive ? [] : state.invites,
           members: wasActive ? [] : state.members,
           memberships: nextMemberships,
@@ -282,6 +304,31 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       }));
     },
 
+    async createDomainInvite(domain: string) {
+      const { activeWorkspaceId, currentRole, currentUser, workspaces } = get();
+      if (!currentUser) throw new Error('Sign in to add domain access.');
+      if (currentRole !== 'owner') {
+        throw new Error('Only workspace owners can add domain access.');
+      }
+
+      const workspace = workspaces.find((item) => item.id === activeWorkspaceId);
+      if (!workspace) throw new Error(`Workspace not found: ${activeWorkspaceId}`);
+
+      const invite = await repo.createDomainInvite(workspace, domain, currentUser.uid);
+      set((state) => ({
+        domainInvites: state.domainInvites.some((item) => item.id === invite.id)
+          ? state.domainInvites.map((item) => (item.id === invite.id ? invite : item))
+          : [...state.domainInvites, invite],
+      }));
+    },
+
+    async revokeDomainInvite(inviteId: string) {
+      await repo.revokeDomainInvite(inviteId);
+      set((state) => ({
+        domainInvites: state.domainInvites.filter((invite) => invite.id !== inviteId),
+      }));
+    },
+
     async revokeInvite(inviteId: string) {
       await repo.revokeInvite(inviteId);
       set((state) => ({
@@ -297,6 +344,17 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       if (!invite) throw new Error(`Invite not found: ${inviteId}`);
 
       await repo.acceptInvite(invite, user);
+      await get().loadForUser(user, invite.workspaceId);
+    },
+
+    async acceptDomainInvite(inviteId: string) {
+      const user = get().currentUser;
+      if (!user) throw new Error('Sign in to accept workspace invites.');
+
+      const invite = get().pendingDomainInvites.find((item) => item.id === inviteId);
+      if (!invite) throw new Error(`Domain invite not found: ${inviteId}`);
+
+      await repo.acceptDomainInvite(invite, user);
       await get().loadForUser(user, invite.workspaceId);
     },
 
@@ -334,10 +392,12 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
         activeWorkspaceId: 'local',
         currentRole: 'owner',
         currentUser: null,
+        domainInvites: [],
         invites: [],
         isLoading: false,
         members: [LOCAL_MEMBER],
         memberships: [],
+        pendingDomainInvites: [],
         pendingInvites: [],
         workspaces: [LOCAL_WORKSPACE],
       });
@@ -368,7 +428,9 @@ function createTestWorkspaceRepository(): IWorkspaceRepository {
     updateSyncedWorkspace: async (_id, changes) => ({ ...LOCAL_WORKSPACE, ...changes }),
     bootstrapPersonalWorkspace: async () => LOCAL_WORKSPACE,
     listMembershipsForUser: async () => [],
+    listPendingDomainInvitesForEmail: async () => [],
     listPendingInvitesForEmail: async () => [],
+    listDomainInvites: async () => [],
     listMembers: async () => [LOCAL_MEMBER],
     listInvites: async () => [],
     createSyncedWorkspace: async () => ({
@@ -389,11 +451,16 @@ function createTestWorkspaceRepository(): IWorkspaceRepository {
     createInvite: async () => {
       throw new Error('Workspace invites are unavailable in local tests.');
     },
+    createDomainInvite: async () => {
+      throw new Error('Workspace domain invites are unavailable in local tests.');
+    },
     acceptInvite: async () => LOCAL_MEMBER,
+    acceptDomainInvite: async () => LOCAL_MEMBER,
     deleteSyncedWorkspace: async () => {},
     leaveSyncedWorkspace: async () => {},
     updateMemberRole: async () => LOCAL_MEMBER,
     removeMember: async () => {},
+    revokeDomainInvite: async () => {},
     revokeInvite: async () => {},
   };
 }

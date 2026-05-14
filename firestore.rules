@@ -45,10 +45,21 @@ service cloud.firestore {
       return workspaceId + '_' + userId;
     }
 
+    function domainInviteId(workspaceId, domain) {
+      return workspaceId + '_' + domain;
+    }
+
     function isInviteRecipient(email) {
       return isAuthenticated()
         && request.auth.token.email != null
         && request.auth.token.email == email;
+    }
+
+    function hasRequestEmailDomain(domain) {
+      return isAuthenticated()
+        && request.auth.token.email != null
+        && request.auth.token.email.lower().split('@').size() == 2
+        && request.auth.token.email.lower().split('@')[1] == domain;
     }
 
     // Check whether this write creates the first owner membership for a
@@ -72,6 +83,19 @@ service cloud.firestore {
         && invite.data.status == 'pending'
         && invite.data.email == request.auth.token.email
         && request.resource.data.role == invite.data.role;
+    }
+
+    function isDomainInviteMemberAcceptance(workspaceId, memberId) {
+      let invite = get(/databases/$(database)/documents/workspaceDomainInvites/$(request.resource.data.acceptedDomainInviteId));
+      return isAuthenticated()
+        && memberId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.workspaceId == workspaceId
+        && invite.data.workspaceId == workspaceId
+        && invite.data.status == 'active'
+        && invite.data.role == 'viewer'
+        && hasRequestEmailDomain(invite.data.domain)
+        && request.resource.data.role == 'viewer';
     }
 
     function preservesSelfOwnerMembership(workspaceId, userId) {
@@ -114,6 +138,7 @@ service cloud.firestore {
           )
           || isWorkspaceOwner(request.resource.data.workspaceId)
           || isInviteMemberAcceptance(request.resource.data.workspaceId, request.resource.data.userId)
+          || isDomainInviteMemberAcceptance(request.resource.data.workspaceId, request.resource.data.userId)
         );
       allow update: if isWorkspaceOwner(resource.data.workspaceId)
         && request.resource.data.workspaceId == resource.data.workspaceId
@@ -161,6 +186,32 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── /workspaceDomainInvites/{inviteId} ──────────────────────────────────
+    // Domain invites are reusable viewer invitations for exact email domains.
+
+    match /workspaceDomainInvites/{inviteId} {
+      allow read: if isWorkspaceOwner(resource.data.workspaceId)
+        || (
+          resource.data.status == 'active'
+          && resource.data.role == 'viewer'
+          && hasRequestEmailDomain(resource.data.domain)
+        );
+      allow create: if isWorkspaceOwner(request.resource.data.workspaceId)
+        && inviteId == domainInviteId(request.resource.data.workspaceId, request.resource.data.domain)
+        && request.resource.data.ownerId == get(/databases/$(database)/documents/workspaces/$(request.resource.data.workspaceId)).data.ownerId
+        && request.resource.data.invitedBy == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.role == 'viewer';
+      allow update: if isWorkspaceOwner(resource.data.workspaceId)
+        && inviteId == domainInviteId(resource.data.workspaceId, resource.data.domain)
+        && request.resource.data.workspaceId == resource.data.workspaceId
+        && request.resource.data.domain == resource.data.domain
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.role == 'viewer'
+        && request.resource.data.status in ['active', 'revoked'];
+      allow delete: if false;
+    }
+
     // ─── /workspaces/{workspaceId} ──────────────────────────────────────────────
     // Requirement 9.2: Workspace members can read workspace documents they belong to.
     // Requirement 9.4: Only owner role can delete a workspace.
@@ -190,7 +241,8 @@ service cloud.firestore {
         // After that, only workspace owners can manage members.
         allow create: if isWorkspaceOwner(workspaceId)
           || isSelfOwnerBootstrap(workspaceId, memberId)
-          || isInviteMemberAcceptance(workspaceId, memberId);
+          || isInviteMemberAcceptance(workspaceId, memberId)
+          || isDomainInviteMemberAcceptance(workspaceId, memberId);
         allow update: if isWorkspaceOwner(workspaceId)
           && (
             memberId != request.auth.uid

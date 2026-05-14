@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Check, LogOut, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Check, Globe2, LogOut, Plus, Trash2, UserPlus } from 'lucide-react';
 import { useAppModeStore } from '../../../stores/app-mode-store';
 import { canEditWorkspace, useWorkspaceStore } from '../../../stores/workspace-store';
 import type { Workspace, WorkspaceMembership, WorkspaceRole } from '../../../types/index';
@@ -47,19 +47,24 @@ function WorkspaceRoleBadge({ role }: { role: WorkspaceRole | null }) {
 export function WorkspaceSharingSettingsCard() {
   const mode = useAppModeStore((s) => s.mode);
   const userId = useAppModeStore((s) => s.userId);
+  const acceptDomainInvite = useWorkspaceStore((s) => s.acceptDomainInvite);
   const acceptInvite = useWorkspaceStore((s) => s.acceptInvite);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const createDomainInvite = useWorkspaceStore((s) => s.createDomainInvite);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const currentRole = useWorkspaceStore((s) => s.currentRole);
   const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
+  const domainInvites = useWorkspaceStore((s) => s.domainInvites);
   const inviteMember = useWorkspaceStore((s) => s.inviteMember);
   const invites = useWorkspaceStore((s) => s.invites);
   const members = useWorkspaceStore((s) => s.members);
   const memberships = useWorkspaceStore((s) => s.memberships);
   const leaveWorkspace = useWorkspaceStore((s) => s.leaveWorkspace);
+  const pendingDomainInvites = useWorkspaceStore((s) => s.pendingDomainInvites);
   const pendingInvites = useWorkspaceStore((s) => s.pendingInvites);
   const removeMember = useWorkspaceStore((s) => s.removeMember);
   const renameWorkspace = useWorkspaceStore((s) => s.renameWorkspace);
+  const revokeDomainInvite = useWorkspaceStore((s) => s.revokeDomainInvite);
   const revokeInvite = useWorkspaceStore((s) => s.revokeInvite);
   const switchWorkspace = useWorkspaceStore((s) => s.switchWorkspace);
   const updateMemberRole = useWorkspaceStore((s) => s.updateMemberRole);
@@ -67,8 +72,10 @@ export function WorkspaceSharingSettingsCard() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [newDomain, setNewDomain] = useState('');
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [removalIntent, setRemovalIntent] = useState<WorkspaceRemovalIntent | null>(null);
+  const [submittingDomain, setSubmittingDomain] = useState(false);
   const [workspaceNameDraft, setWorkspaceNameDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +86,7 @@ export function WorkspaceSharingSettingsCard() {
   const isOwner = currentRole === 'owner';
   const canEdit = mode === 'local' || canEditWorkspace(currentRole);
   const workspaceName = workspaceNameDraft;
+  const hasPendingInvites = pendingInvites.length > 0 || pendingDomainInvites.length > 0;
 
   useEffect(() => {
     setWorkspaceNameDraft(activeWorkspace?.name ?? '');
@@ -111,6 +119,22 @@ export function WorkspaceSharingSettingsCard() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleCreateDomainInvite = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!newDomain.trim()) return;
+
+    setError(null);
+    setSubmittingDomain(true);
+    try {
+      await createDomainInvite(newDomain);
+      setNewDomain('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmittingDomain(false);
     }
   };
 
@@ -173,7 +197,7 @@ export function WorkspaceSharingSettingsCard() {
         </div>
       )}
 
-      {pendingInvites.length > 0 && (
+      {hasPendingInvites && (
         <div className="mb-5 border-b border-[var(--color-border)] pb-4">
           <h4 className="text-sm font-medium text-[var(--color-text-main)]">
             Invitations for you
@@ -190,6 +214,21 @@ export function WorkspaceSharingSettingsCard() {
                   </p>
                 </div>
                 <Button size="sm" variant="secondary" onClick={() => void acceptInvite(invite.id)}>
+                  Accept
+                </Button>
+              </div>
+            ))}
+            {pendingDomainInvites.map((invite) => (
+              <div key={invite.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-border)] px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-[var(--color-text-main)]">
+                    {invite.workspaceName}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Domain access for @{invite.domain}
+                  </p>
+                </div>
+                <Button size="sm" variant="secondary" onClick={() => void acceptDomainInvite(invite.id)}>
                   Accept
                 </Button>
               </div>
@@ -301,6 +340,57 @@ export function WorkspaceSharingSettingsCard() {
                 Save
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isOwner && (
+        <div className="mt-6">
+          <h4 className="text-sm font-medium text-[var(--color-text-main)]">Domain access</h4>
+          <form className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]" onSubmit={handleCreateDomainInvite}>
+            <Input
+              aria-label="Allowed email domain"
+              placeholder="example.com"
+              value={newDomain}
+              onChange={(event) => setNewDomain(event.target.value)}
+            />
+            <Button
+              type="submit"
+              size="sm"
+              variant="secondary"
+              disabled={!newDomain.trim() || submittingDomain}
+            >
+              <Globe2 className="mr-1.5 h-4 w-4" />
+              Add domain
+            </Button>
+          </form>
+          <div className="mt-2 overflow-hidden rounded-lg border border-[var(--color-border)]">
+            {domainInvites.length === 0 ? (
+              <p className="px-3 py-3 text-sm text-[var(--color-text-muted)]">
+                No domain access.
+              </p>
+            ) : (
+              domainInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-[var(--color-border)] px-3 py-2 last:border-b-0"
+                >
+                  <span className="truncate text-sm text-[var(--color-text-main)]">
+                    @{invite.domain}
+                  </span>
+                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${roleBadgeClass(invite.role)}`}>
+                    {formatRole(invite.role)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void revokeDomainInvite(invite.id)}
+                  >
+                    Revoke
+                  </Button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

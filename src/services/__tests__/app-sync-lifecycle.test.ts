@@ -177,6 +177,7 @@ function createWorkspaceRepository(): IWorkspaceRepository {
     listMembershipsForUser: vi.fn(async () =>
       currentUser ? [makeMembership(currentUser)] : [],
     ),
+    listPendingDomainInvitesForEmail: vi.fn(async () => []),
     listPendingInvitesForEmail: vi.fn(async () => [] as WorkspaceInvite[]),
     listMembers: vi.fn(async () =>
       currentUser
@@ -192,6 +193,7 @@ function createWorkspaceRepository(): IWorkspaceRepository {
           } satisfies WorkspaceMember]
         : [],
     ),
+    listDomainInvites: vi.fn(async () => []),
     listInvites: vi.fn(async () => [] as WorkspaceInvite[]),
     createSyncedWorkspace: vi.fn(async (name, owner) => {
       const workspace = { ...makeWorkspace(owner), id: 'workspace-new', name };
@@ -201,7 +203,13 @@ function createWorkspaceRepository(): IWorkspaceRepository {
     createInvite: vi.fn(async () => {
       throw new Error('not used');
     }),
+    createDomainInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
     acceptInvite: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    acceptDomainInvite: vi.fn(async () => {
       throw new Error('not used');
     }),
     deleteSyncedWorkspace: vi.fn(async () => {}),
@@ -210,6 +218,7 @@ function createWorkspaceRepository(): IWorkspaceRepository {
       throw new Error('not used');
     }),
     removeMember: vi.fn(async () => {}),
+    revokeDomainInvite: vi.fn(async () => {}),
     revokeInvite: vi.fn(async () => {}),
   };
 }

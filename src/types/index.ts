@@ -56,6 +56,7 @@ export interface WorkspaceMember {
   joinedAt: Date;
   updatedAt: Date;
   acceptedInviteId?: string;
+  acceptedDomainInviteId?: string;
 }
 
 export interface WorkspaceMembership {
@@ -69,10 +70,13 @@ export interface WorkspaceMembership {
   ownerId: string;
   joinedAt: Date;
   updatedAt: Date;
+  acceptedInviteId?: string;
+  acceptedDomainInviteId?: string;
 }
 
 export type WorkspaceInviteStatus = 'pending' | 'accepted' | 'revoked';
 export type WorkspaceInviteRole = Exclude<WorkspaceRole, 'owner'>;
+export type WorkspaceDomainInviteStatus = 'active' | 'revoked';
 
 export interface WorkspaceInvite {
   id: string;
@@ -86,6 +90,21 @@ export interface WorkspaceInvite {
   updatedAt: Date;
   acceptedAt: Date | null;
   acceptedBy: string | null;
+}
+
+export interface WorkspaceDomainInvite {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  ownerId: string;
+  domain: string;
+  role: 'viewer';
+  status: WorkspaceDomainInviteStatus;
+  invitedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  revokedAt: Date | null;
+  revokedBy: string | null;
 }
 
 export interface UserSettings {

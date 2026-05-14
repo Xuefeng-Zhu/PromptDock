@@ -125,7 +125,9 @@ function createMockWorkspaceRepo(): IWorkspaceRepository {
     updateSyncedWorkspace: vi.fn(async (_id, changes) => ({ ...localWorkspace, ...changes })),
     bootstrapPersonalWorkspace: vi.fn(async () => localWorkspace),
     listMembershipsForUser: vi.fn(async () => []),
+    listPendingDomainInvitesForEmail: vi.fn(async () => []),
     listPendingInvitesForEmail: vi.fn(async () => []),
+    listDomainInvites: vi.fn(async () => []),
     listMembers: vi.fn(async () => []),
     listInvites: vi.fn(async () => []),
     createSyncedWorkspace: vi.fn(async () => {
@@ -134,7 +136,13 @@ function createMockWorkspaceRepo(): IWorkspaceRepository {
     createInvite: vi.fn(async () => {
       throw new Error('Not implemented');
     }),
+    createDomainInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
     acceptInvite: vi.fn(async () => {
+      throw new Error('Not implemented');
+    }),
+    acceptDomainInvite: vi.fn(async () => {
       throw new Error('Not implemented');
     }),
     deleteSyncedWorkspace: vi.fn(async () => {}),
@@ -143,6 +151,7 @@ function createMockWorkspaceRepo(): IWorkspaceRepository {
       throw new Error('Not implemented');
     }),
     removeMember: vi.fn(async () => {}),
+    revokeDomainInvite: vi.fn(async () => {}),
     revokeInvite: vi.fn(async () => {}),
   };
 }

@@ -4,6 +4,10 @@ const baseURL = 'http://127.0.0.1:1420';
 
 export default defineConfig({
   testDir: './e2e',
+  forbidOnly: Boolean(process.env.CI),
+  fullyParallel: true,
+  outputDir: 'test-results',
+  retries: process.env.CI ? 1 : 0,
   timeout: 120_000,
   expect: {
     timeout: 10_000,
@@ -16,6 +20,7 @@ export default defineConfig({
     baseURL,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
+    video: 'retain-on-failure',
   },
   projects: [
     {

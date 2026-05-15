@@ -113,7 +113,7 @@ Firebase Analytics:
 - Frontend dist: `../dist`
 - Main window: `main`, visible, resizable, 1024 x 700
 - Quick launcher window: `quick-launcher`, hidden by default, always on top, undecorated, 680 x 480
-- Capabilities for global shortcut, clipboard manager, store plugin, and core Tauri APIs
+- Capabilities for global shortcut, clipboard manager, dialog, filesystem write, store plugin, and core Tauri APIs
 
 The Rust layer also registers a tray icon and default hotkey in `src-tauri/src/lib.rs`.
 
@@ -127,7 +127,15 @@ The Rust layer also registers a tray icon and default hotkey in `src-tauri/src/l
 | Firestore | `127.0.0.1` | 8080 |
 | Emulator UI | default host | 4000 |
 
-`firestore.rules` expects authenticated users to access only their own user/settings documents and workspace resources where they have membership. `AuthService` bootstraps the default workspace and owner membership after email/password or Google sign-in.
+`firestore.rules` expects authenticated users to access only their own user/settings documents and workspace resources where they have membership. `AuthService` bootstraps the personal workspace, owner member document, and `/workspaceMemberships/{workspaceId_userId}` index after email/password or Google sign-in.
+
+Workspace sharing also uses top-level invite collections:
+
+| Collection | Purpose |
+|---|---|
+| `/workspaceMemberships/{workspaceId_userId}` | Denormalized index for listing the workspaces available to a signed-in user. |
+| `/workspaceInvites/{inviteId}` | Pending, accepted, or revoked email invites for editor/viewer access. |
+| `/workspaceDomainInvites/{workspaceId_domain}` | Active or revoked viewer access for an exact email domain. |
 
 ## Version Sources
 

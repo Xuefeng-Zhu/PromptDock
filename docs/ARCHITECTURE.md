@@ -10,11 +10,13 @@ React UI
   CommandPalette, VariableFillModal, QuickLauncherWindow, ConflictCenter
         |
 Zustand stores
-  PromptStore, FolderStore, SettingsStore, AppModeStore, ToastStore
+  PromptStore, FolderStore, WorkspaceStore, SettingsStore,
+  AppModeStore, ToastStore
         |
 Services
-  AuthService, SyncService, ConflictService, ImportExportService,
-  SearchEngine, VariableParser, PromptRenderer
+  AuthService, AppSyncLifecycle, SyncService, ConflictService,
+  ImportExportService, PromptJson, SearchEngine, VariableParser,
+  PromptRenderer, AnalyticsService
         |
 Repositories
   PromptRepository, FolderRepository, SettingsRepository, WorkspaceRepository
@@ -33,7 +35,7 @@ Native Tauri commands
 |---|---|---|---|
 | Tauri desktop | `__TAURI_INTERNALS__ in window` in `src/App.tsx` | `LocalStorageBackend`, backed by Tauri Store plugin JSON files | Global hotkey, tray, clipboard command, paste simulation, window hide/show |
 | Browser | Tauri detection fails | `BrowserStorageBackend`, backed by `window.localStorage` | Browser clipboard fallback where available |
-| Synced mode | User signs in or session restores | `PromptRepository` delegates prompt operations to `FirestoreBackend` | Firebase Auth, Firestore snapshots, offline cache |
+| Synced mode | User signs in or session restores | Prompt and folder repositories delegate to `FirestoreBackend`; workspace metadata uses `WorkspaceRepository` | Firebase Auth, Firestore snapshots, workspace switching/sharing, offline cache |
 
 The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 
@@ -49,12 +51,12 @@ The app has two Tauri windows configured in `src-tauri/tauri.conf.json`:
 | Area | Files | Responsibilities |
 |---|---|---|
 | App bootstrap | `src/App.tsx`, `src/main.tsx` | Runtime detection, backend selection, repository/store initialization, default seeding, theme manager, hotkey registration, auth-session restore. |
-| Layout and screens | `src/components/AppShell.tsx`, `src/screens/*` | Navigation, library, editor, settings, quick launcher, conflict center, modal orchestration. |
-| State | `src/stores/*` | Prompt library state, folders, settings, app mode/sync status, transient toasts. |
+| Layout and screens | `src/components/app-shell/*`, `src/components/library/*`, `src/components/settings/*`, `src/screens/*` | Navigation, library, editor, settings, quick launcher, conflict center, modal orchestration. |
+| State | `src/stores/*` | Prompt library state, folders, workspaces, settings, app mode/sync status, transient toasts. |
 | Repositories | `src/repositories/*` | Data access contracts and concrete persistence implementations. |
-| Services | `src/services/*` | Business logic: analytics tracking, auth, sync, conflict detection, import/export, parsing, rendering, search. |
+| Services | `src/services/*` | Business logic: analytics tracking, auth, sync lifecycle, conflict detection, import/export, single-prompt JSON fill, parsing, rendering, search. |
 | Firebase | `src/firebase/config.ts` | Lazy Firebase imports and cached Analytics/Auth/Firestore instances. |
-| Utilities | `src/utils/*` | Clipboard, hotkeys, theme application, file dialog fallback, sidebar counts, folder naming helpers. |
+| Utilities | `src/utils/*` | Clipboard, hotkeys, theme application, file dialog fallback, sidebar counts, folder naming, workspace-domain, runtime, and window helpers. |
 | Native | `src-tauri/src/*` | Tauri command handlers, tray setup, global shortcut setup, paste simulation. |
 | Types | `src/types/index.ts` | Shared domain models and result types. |
 
@@ -231,12 +233,13 @@ Before adding advanced tag management or optimizing for large synced workspaces,
 1. `AuthService` signs in or restores a Firebase Auth user.
 2. `AppModeStore` moves toward `synced`.
 3. `SyncService.transitionToSynced()` creates a `FirestoreBackend`.
-4. Local prompts can be migrated into Firestore.
-5. Firestore `onSnapshot` listeners update `PromptStore`.
-6. `PromptRepository.setFirestoreDelegate()` forwards prompt CRUD to `FirestoreBackend`.
-7. Conflicts are detected by comparing local and remote prompt versions and stored in `ConflictService`.
+4. `WorkspaceStore` bootstraps or loads the personal workspace, membership index, pending email invites, and pending domain invites.
+5. Local prompts and folders can be migrated into the personal workspace.
+6. Firestore `onSnapshot` listeners update `PromptStore` and `FolderStore`.
+7. Prompt and folder repository delegates forward CRUD to `FirestoreBackend`.
+8. Conflicts are detected by comparing local and remote prompt versions and stored in `ConflictService`.
 
-`AuthService` bootstraps the default user workspace and owner membership before synced mode starts Firestore prompt listeners.
+`AuthService` bootstraps the personal workspace, owner membership, and membership index before synced mode starts Firestore prompt listeners. Additional synced workspaces are created through `WorkspaceRepository` and selected through `WorkspaceStore`.
 
 After sync transition, the component and store APIs do not change. The write path changes inside the repository:
 
@@ -271,6 +274,7 @@ See [Sync](SYNC.md) for the detailed local-to-synced transition, migration behav
 | `PromptStore` | prompts, loading state, active workspace, selection, filters, search query | load, create, update, duplicate, archive, restore, favorite, mark-used |
 | `FolderStore` | folders, loading state, active workspace | load, create, delete, set active workspace |
 | `SettingsStore` | hotkey, theme, default action, active workspace | load, update |
+| `WorkspaceStore` | active workspace, workspaces, memberships, pending invites, members, roles | load, switch, create, rename, delete/leave, invite, accept/revoke, member role updates |
 | `AppModeStore` | `local`, `synced`, `offline-synced`, user ID, online state, sync status | set mode, user ID, online state, sync status |
 | `ToastStore` | transient toast queue | add/remove toast |
 
@@ -302,13 +306,15 @@ Stores follow a factory plus singleton pattern:
 - Firebase imports are dynamic to avoid initializing sync dependencies in local mode.
 - Tauri native calls are wrapped so browser development remains possible.
 - The quick launcher is a separate Tauri window so it can stay hidden, focused, and always on top.
+- Synced workspaces use owner/editor/viewer roles. Viewers can search, copy, and paste but cannot mutate prompts, folders, or imports.
 - Conflict tracking is currently in memory through `ConflictService`.
 - Import/export is versioned JSON and excludes archived prompts.
 
 ## Known Architecture Gaps
 
-- Synced mode currently assumes a single default personal workspace where `workspaceId` equals the Firebase user ID.
-- Active workspace state is split across settings, prompt store, and sync assumptions.
+- Local mode exposes a single local workspace; multi-workspace management is synced-only.
+- The personal synced workspace uses `workspaceId = userId`, while additional synced workspaces use generated Firestore document IDs.
+- `WorkspaceStore` owns the active workspace, while prompt/folder stores mirror that ID as repository targets and settings persists it for session restore.
 - Local folder records do not store `workspaceId`, so local-only multi-workspace folder isolation is not implemented.
 - Tags are derived from prompt arrays instead of a canonical tag index, which limits scalability and tag metadata workflows.
 - No E2E test runner is configured for full Tauri window/hotkey/paste flows.

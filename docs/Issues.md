@@ -1,15 +1,17 @@
-# Deferred Workspace Issues
+# Deferred Workspace Follow-Ups
 
-These remaining issues are intentionally documented for future work.
+These remaining workspace-related gaps are intentionally documented for future work.
 
-## Issue: Workspace State Still Has Multiple Owners
+## Issue: Workspace Sharing Needs Emulator E2E Coverage
 
-**Severity:** High
-**Category:** Correctness / Maintainability
-**Location:** `src/components/AppShell.tsx`, `src/stores/prompt-store.ts`, `src/stores/settings-store.ts`
+**Severity:** Medium
+**Category:** Test Coverage
+**Location:** `src/stores/workspace-store.ts`, `src/repositories/workspace-repository.ts`, `e2e/`
 
-The sign-in path now sets the active workspace to the Firebase user ID and routes new/imported prompts through that workspace. The prompt store and settings store still keep separate copies of the active workspace, though, so future multi-workspace work should introduce one authoritative workspace state owner.
+`WorkspaceStore` is now the authoritative active-workspace owner. Prompt and folder stores mirror its ID only as repository targets, and `SettingsStore` persists the active workspace for session restore. The remaining gap is automated coverage for multi-user synced workspace flows.
 
-**Impact:** Future workspace switching could drift if a caller updates only one store.
+The current Playwright suite exercises the browser/localStorage runtime. It does not sign into Firebase emulators, create multiple test users, accept email/domain invites, or assert owner/editor/viewer Firestore rule behavior from the app UI.
 
-**Suggested Fix:** Introduce one workspace state owner and route all create/reload/import operations through that value.
+**Impact:** Workspace sharing regressions may rely on unit tests and manual emulator checks instead of end-to-end coverage.
+
+**Suggested Fix:** Add Firebase emulator E2E coverage for workspace creation, workspace switching, email invite acceptance, domain invite acceptance, viewer read-only behavior, and member role changes.

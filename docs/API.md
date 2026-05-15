@@ -44,6 +44,7 @@ interface IPromptRepository {
   softDelete(id: string): Promise<void>;
   restore(id: string): Promise<void>;
   duplicate(id: string): Promise<PromptRecipe>;
+  duplicateToWorkspace?(id: string, target: { workspaceId: string; createdBy: string }): Promise<PromptRecipe>;
   toggleFavorite(id: string): Promise<PromptRecipe>;
 }
 ```
@@ -62,6 +63,18 @@ interface IFolderRepository {
 ```
 
 `FolderRepository` persists folders through the same `IStorageBackend` abstraction as prompts in local/browser mode. In synced mode, `FolderRepository.setFirestoreDelegate()` forwards folder operations to `FirestoreBackend`.
+
+### `IWorkspaceRepository`
+
+`WorkspaceRepository` exposes one local workspace in local/browser mode and synced workspace metadata in Firebase mode. Synced methods cover:
+
+- personal workspace bootstrap
+- workspace list and membership index reads
+- workspace create, rename, delete, leave, and switch support through `WorkspaceStore`
+- member listing, role updates, and member removal
+- email invites for `editor` or `viewer` access
+- exact-domain invites for reusable `viewer` access
+- pending invite lookup and invite acceptance
 
 ## Service Interfaces
 
@@ -85,6 +98,10 @@ Core models are defined in `src/types/index.ts`.
 | `Folder` | Folder ID, name, timestamps. |
 | `Workspace` | Workspace ID, name, owner, timestamps. |
 | `WorkspaceMember` | User membership and role for a workspace. |
+| `WorkspaceMembership` | Denormalized membership index used to list a user's synced workspaces. |
+| `WorkspaceInvite` | Email invite for editor/viewer access to a workspace. |
+| `WorkspaceDomainInvite` | Exact-domain viewer access invite for a workspace. |
+| `PromptVariable` | Optional variable metadata: name, description, default value, input type, and dropdown options. |
 | `UserSettings` | Hotkey, theme, default action, active workspace. |
 | `PromptConflict` | Local and remote versions that require resolution. |
 | `AuthUser` / `AuthResult` | Firebase Auth user and mapped auth result. |
@@ -127,6 +144,9 @@ Firestore is optional and used only in synced mode.
 |---|---|
 | `/users/{userId}` | User can read/write only their own document. |
 | `/settings/{userId}` | User can read/write only their own settings document. |
+| `/workspaceMemberships/{workspaceId_userId}` | Signed-in users can read their own membership index rows; owners and invite acceptance flows create/update/delete rows under rule constraints. |
+| `/workspaceInvites/{inviteId}` | Workspace owners create/revoke pending email invites; owners and matching invite recipients can read them; invite recipients can accept pending invites. |
+| `/workspaceDomainInvites/{workspaceId_domain}` | Workspace owners manage exact-domain viewer invites; matching-domain users can read active viewer invites. |
 | `/workspaces/{workspaceId}` | Workspace members can read; owners can update/delete; authenticated users can create workspaces they own. |
 | `/workspaces/{workspaceId}/members/{memberId}` | Workspace members can read; owners can create/update/delete; the initial owner can create their own bootstrap membership. |
 | `/workspaces/{workspaceId}/prompts/{promptId}` | Members can read; owners/editors can create/update/delete. |
@@ -136,8 +156,8 @@ Firestore is optional and used only in synced mode.
 
 Important assumption:
 
-- The default workspace ID is currently treated as the Firebase user ID in `src/App.tsx`.
-- `AuthService` bootstraps `/users/{uid}`, `/workspaces/{uid}`, and `/workspaces/{uid}/members/{uid}` after email/password or Google sign-in.
+- The personal workspace ID is the Firebase user ID. Additional synced workspaces use generated Firestore document IDs.
+- `AuthService` bootstraps `/users/{uid}`, `/workspaces/{uid}`, `/workspaces/{uid}/members/{uid}`, and `/workspaceMemberships/{uid_uid}` after email/password or Google sign-in.
 
 ## Import/Export JSON Format
 
@@ -153,6 +173,15 @@ Example:
     {
       "title": "Summarize Text",
       "body": "Summarize this in {{length}} sentences:\n\n{{text}}",
+      "variables": [
+        {
+          "name": "length",
+          "description": "Summary length",
+          "defaultValue": "3",
+          "inputType": "text",
+          "options": []
+        }
+      ],
       "description": "Condense long text.",
       "tags": ["summarization", "writing"],
       "folderId": null,
@@ -177,6 +206,7 @@ Required import fields:
 Optional prompt fields:
 
 - `description`
+- `variables`
 - `tags`
 - `folderId`
 - `favorite`
@@ -196,6 +226,17 @@ Successful imports return generated local `PromptRecipe` objects:
 ```
 
 Duplicate detection compares incoming prompts with existing prompts by title, body, or both.
+
+Variable metadata is reconciled against the prompt body during import/export. Variables not present in `body` are dropped, and dropdown variables must include options with any non-empty default matching one of those options.
+
+## Prompt Editor JSON Fill
+
+The prompt editor also has a single-prompt "Fill From JSON" action handled by `parsePromptJson()` in `src/services/prompt-json.ts`. It accepts an object with:
+
+- required `title` and `body`
+- optional `description`, `tags`, `variables`, `folder` or `folderId`, and `favorite`
+
+Unlike full-library import, `folder` and `folderId` must resolve to an existing folder name or ID so the editor does not create hidden folder assignments. Tags are trimmed and deduplicated case-insensitively.
 
 ## Authentication and Authorization
 

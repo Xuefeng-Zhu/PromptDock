@@ -5,8 +5,9 @@ function xpathLiteral(value) {
   return `concat('${value.replace(/'/g, "', \"'\", '")}')`;
 }
 
-function buttonWithText(text) {
-  return $(`//button[normalize-space(.)=${xpathLiteral(text)}]`);
+function buttonNamed(name) {
+  const literal = xpathLiteral(name);
+  return $(`//button[@aria-label=${literal} or normalize-space(.)=${literal}]`);
 }
 
 function headingWithText(text) {
@@ -80,12 +81,12 @@ describe('PromptDock Tauri desktop shell', () => {
     expect(isTauriRuntime).toBe(true);
 
     await headingWithText('Get started').waitForDisplayed({ timeout: 20_000 });
-    await buttonWithText('Start locally').click();
+    await buttonNamed('Start locally').click();
 
     await headingWithText('All Prompts').waitForDisplayed({ timeout: 20_000 });
     await promptTitle('Summarize Text').waitForDisplayed({ timeout: 20_000 });
 
-    await buttonWithText('Settings').click();
+    await buttonNamed('Settings').click();
     await headingWithText('Settings').waitForDisplayed({ timeout: 10_000 });
     await headingWithText('Hotkey').waitForDisplayed({ timeout: 10_000 });
     await $(

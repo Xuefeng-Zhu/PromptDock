@@ -113,6 +113,7 @@ npm run build        # TypeScript check plus Vite production build
 npm run preview      # Preview the production frontend build
 npm test             # Run Vitest once
 npm run test:e2e     # Run browser E2E tests with Playwright Chromium
+npm run test:e2e:tauri  # Run Tauri desktop E2E on Windows/Linux with tauri-driver
 npm run test:e2e:ui  # Open the Playwright UI runner
 npm run test:watch   # Run Vitest in watch mode
 npm run tauri build  # Build platform-specific desktop bundles
@@ -133,6 +134,7 @@ The suite includes service tests, repository tests, store tests, component tests
 ```bash
 npm test
 npm run test:e2e
+npm run test:e2e:tauri
 npx vitest run src/services/__tests__/
 npx vitest run src/components/__tests__/AppShell.test.tsx
 ```

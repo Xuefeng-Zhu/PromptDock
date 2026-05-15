@@ -19,7 +19,7 @@ jobs:
   verify:
     name: Build and test
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -37,7 +37,9 @@ jobs:
             libssl-dev \
             libwebkit2gtk-4.1-dev \
             libxdo-dev \
-            wget
+            webkit2gtk-driver \
+            wget \
+            xvfb
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -47,6 +49,9 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tauri-driver
+        run: cargo install tauri-driver --locked
 
       - name: Install dependencies
         run: npm ci
@@ -65,6 +70,9 @@ jobs:
 
       - name: Test browser e2e
         run: npm run test:e2e
+
+      - name: Test Tauri desktop e2e
+        run: xvfb-run -a npm run test:e2e:tauri
 
       - name: Test Tauri commands
         run: cargo test --manifest-path src-tauri/Cargo.toml

@@ -15,6 +15,10 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -34,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "4.3.0",
     "@tauri-apps/cli": "2.11.1",
     "@testing-library/jest-dom": "^6.9.1",

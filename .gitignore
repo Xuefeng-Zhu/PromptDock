@@ -5,6 +5,8 @@ node_modules/
 dist/
 coverage/
 .firebase/
+playwright-report/
+test-results/
 
 # Tauri build output
 src-tauri/target/

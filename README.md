@@ -17,18 +17,20 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | [Release](docs/RELEASE.md) | Release flow, browser/Tauri builds, Firebase deployment, CI/CD notes, and rollback strategy. |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common setup, runtime, sync, and build/test issues. |
 | [Architecture Decision Records](docs/adr) | Durable engineering decisions and their consequences. |
-| [Deferred Issues](docs/Issues.md) | Known implementation issues intentionally not fixed in the docs pass. |
+| [Deferred Issues](docs/Issues.md) | Known deferred implementation and test-coverage follow-ups. |
 
 ## Key Features
 
 - Prompt recipe library with create, edit, archive, duplicate, favorite, folder, and tag workflows.
-- Template variables using `{{variable_name}}` placeholders.
-- Variable fill modal with live preview before copy or paste.
+- Template variables using `{{variable_name}}` placeholders, with optional text, textarea, or dropdown metadata.
+- Variable fill modal with default values and live preview before copy or paste.
 - Global desktop hotkey (`CommandOrControl+Shift+P`) that toggles a compact quick launcher window.
 - In-app command palette (`CommandOrControl+K`) for fast prompt lookup.
 - Copy-to-clipboard and paste-into-active-app behavior in Tauri, with browser clipboard fallback where possible.
-- Import/export of non-archived prompts as versioned JSON.
+- Fill a prompt editor draft from a single-prompt JSON snippet.
+- Import/export of non-archived prompts as versioned JSON, including variable metadata and duplicate handling.
 - Local-first storage by default, with optional Firebase Auth and Cloud Firestore sync.
+- Synced workspaces with owner/editor/viewer roles, member invites, viewer domain access, workspace switching, and duplicate-to-workspace flows.
 - Sync status, offline-synced mode, and in-memory conflict review UI.
 - Browser runtime support for development and static hosting experiments.
 
@@ -37,14 +39,14 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | Layer | Technology |
 |---|---|
 | Desktop shell | Tauri 2, Rust 2021 |
-| Frontend | React 19.2.5, TypeScript 6.0.3, Vite 8.0.10 |
+| Frontend | React 19.2.6, TypeScript 6.0.3, Vite 8.0.12 |
 | Styling | Tailwind CSS v4 via `@tailwindcss/vite`, CSS custom properties |
 | State | Zustand 5 |
 | Desktop persistence | `@tauri-apps/plugin-store` JSON store files |
 | Browser persistence | `window.localStorage` via `BrowserStorageBackend` |
 | Optional sync | Firebase Auth, Cloud Firestore |
 | Native integration | Tauri invoke commands, global shortcut, clipboard manager, `enigo` for paste simulation |
-| Tests | Vitest 4.1.5, Testing Library, jsdom, fast-check |
+| Tests | Vitest 4.1.6, Testing Library, jsdom, fast-check, Playwright |
 | Icons | `lucide-react` |
 
 ## Prerequisites
@@ -137,7 +139,7 @@ npx vitest run src/services/__tests__/
 npx vitest run src/components/__tests__/AppShell.test.tsx
 ```
 
-Current verification note: `npm run build`, `npm test`, and `cargo test` pass locally. Details are tracked in [Testing](docs/TESTING.md).
+The main verification suite covers linting, typecheck/build, Vitest, Playwright browser E2E, and Rust unit tests. Details are tracked in [Testing](docs/TESTING.md).
 
 ## Release
 

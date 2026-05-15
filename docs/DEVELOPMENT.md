@@ -93,7 +93,7 @@ Use `develop` as the integration branch for day-to-day work. Open regular
 feature, fix, and documentation pull requests against `develop`; keep `main`
 release-only and merge `develop` into `main` when cutting a release.
 
-The repository CI workflow runs lint, frontend build, frontend tests, and Rust tests on pull requests and pushes to `develop` or `main`. Contributors should run the same verification locally before opening a PR when practical.
+The repository CI workflow runs lint, frontend build, Vitest, Playwright browser E2E, and Rust tests on pull requests and pushes to `develop` or `main`. Contributors should run the same verification locally before opening a PR when practical.
 
 Use Conventional Commit-style titles for commit messages and PR titles when it
 fits the change, such as `feat: add prompt folders`, `fix: preserve clipboard
@@ -151,8 +151,8 @@ docs/<short-description>
 Touch points usually include:
 
 - `src/types/index.ts`
-- `src/components/PromptEditor.tsx`
-- `src/components/PromptCard.tsx` or `PromptInspector.tsx`
+- `src/components/prompt-editor/PromptEditor.tsx`
+- `src/components/prompt-card/PromptCard.tsx` or `src/components/prompt-inspector/PromptInspector.tsx`
 - `src/repositories/local-storage-backend.ts`
 - `src/repositories/browser-storage-backend.ts`
 - `src/repositories/firestore-backend.ts`
@@ -168,7 +168,7 @@ Touch points usually include:
 - `UserSettings` in `src/types/index.ts`
 - defaults in `src/stores/settings-store.ts`
 - defaults in storage backends and `src/repositories/settings-repository.ts`
-- UI in `src/components/SettingsScreen.tsx`
+- UI in `src/components/settings/SettingsScreen.tsx` or `src/components/settings/cards/`
 - settings store/repository/component tests
 
 ### Add a Native Command
@@ -183,7 +183,7 @@ Touch points usually include:
 
 | Problem | First checks |
 |---|---|
-| Browser app shows no saved prompts | Inspect localStorage keys `promptdock:prompts`, `promptdock:settings`, and onboarding key `promptdock_onboarding_complete`. |
+| Browser app shows no saved prompts | Inspect localStorage keys `promptdock:prompts`, `promptdock:folders`, `promptdock:settings`, `promptdock:workspace`, and onboarding key `promptdock_onboarding_complete`. |
 | Tauri app cannot read saved data | Check Tauri Store files and console errors from `LocalStorageBackend` recovery. |
 | Hotkey does not open launcher | Verify you are in Tauri runtime, not browser runtime. Check OS shortcut conflicts. |
 | Clipboard works but paste does not | Paste simulation is desktop-only and may need OS permissions. The fallback leaves text on the clipboard. |

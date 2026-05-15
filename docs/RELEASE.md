@@ -167,19 +167,24 @@ started manually from GitHub Actions.
 Recommended CI jobs:
 
 1. Install npm dependencies with `npm ci`.
-2. Run `npm test`.
+2. Run `npm run lint`.
 3. Run `npm run build`.
-4. Run Rust checks for Tauri code, for example `cargo check --manifest-path src-tauri/Cargo.toml`.
-5. Build platform-specific Tauri bundles on the matching OS runners.
-6. Optionally deploy Firestore rules/indexes from a protected branch.
+4. Run `npm test`.
+5. Run `npm run test:e2e` after installing Playwright Chromium (`npx playwright install --with-deps chromium` on Linux CI).
+6. Run Rust tests for Tauri code, for example `cargo test --manifest-path src-tauri/Cargo.toml`.
+7. Build platform-specific Tauri bundles on the matching OS runners.
+8. Optionally deploy Firestore rules/indexes from a protected branch.
 
 Example high-level release gate:
 
 ```bash
 npm ci
-npm test
+npm run lint
 npm run build
-cargo check --manifest-path src-tauri/Cargo.toml
+npm test
+npx playwright install chromium
+npm run test:e2e
+cargo test --manifest-path src-tauri/Cargo.toml
 npm run tauri build
 ```
 
@@ -241,9 +246,9 @@ bundle targets Tauri produces for the current configuration.
 
 ## Current Build Status
 
-`npm run tauri build`, `npm test`, and `cargo check` passed locally during the
-Windows support update. Keep the release workflows green before publishing
-desktop assets.
+Use the GitHub Actions CI workflow as the current source of truth for build and
+test status. The release workflows publish desktop assets only after their
+platform-specific build and artifact collection steps complete.
 
 ## Rollback Strategy
 

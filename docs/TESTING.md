@@ -70,7 +70,7 @@ external service is required.
 | Import/export | Move prompt data safely. | File chooser/download fixtures. | Export, invalid JSON import, valid JSON import. | Download filename is stable, validation errors show, imported prompt appears. | P1 | Local file fixtures |
 | Duplicate import handling | Resolve imported duplicates deliberately. | Seeded prompt and duplicate JSON fixture. | Skip duplicates, then overwrite duplicate. | Skip leaves data unchanged, overwrite updates existing prompt body/tags. | P1 | Local file fixtures |
 | Responsive navigation | Navigate on narrow screens. | Mobile viewport. | Open drawer, route to settings, go back, close with Escape. | Drawer appears, settings route works, library returns, Escape closes drawer. | P1 | Local fixture |
-| Native desktop smoke | Verify Tauri runtime detection, desktop-only settings, native launcher window creation, launcher search, and variable-fill entry. | Real Tauri app, `tauri-driver`, isolated E2E app identifier/store files. | Boot desktop app, start local mode, inspect desktop settings, invoke native launcher, search prompt, open variable modal. | Tauri bridge is present, desktop-only controls render, launcher window opens and can search seeded prompts. | P0 | Native/Tauri WebDriver |
+| Native desktop smoke | Verify Tauri runtime detection, desktop-only settings, and native launcher command wiring. | Real Tauri app, `tauri-driver`, isolated E2E app identifier/store files. | Boot desktop app, start local mode, inspect desktop settings, invoke launcher toggle twice. | Tauri bridge is present, desktop-only controls render, and the launcher command succeeds without a native command error. | P0 | Native/Tauri WebDriver |
 
 ## Tauri Desktop E2E Coverage
 
@@ -84,7 +84,6 @@ test covers:
 - First-run local onboarding against Tauri-backed storage.
 - Desktop-only Settings affordances such as Hotkey and Paste into Active App.
 - Native `toggle_quick_launcher` command behavior.
-- Switching to the real `quick-launcher` window, searching seeded prompts, and opening the variable-fill modal.
 
 The suite is wired into Linux CI under `xvfb-run` with `tauri-driver` and
 `webkit2gtk-driver`.
@@ -101,7 +100,7 @@ The suite is wired into Linux CI under `xvfb-run` with `tauri-driver` and
 - Settings repository/store behavior.
 - App mode state machine.
 - Browser onboarding/account entry, prompt authoring validation, prompt lifecycle, library organization, command palette variable fill/copy, settings, import/export duplicate handling, responsive navigation, and localStorage persistence after reload.
-- Tauri desktop shell smoke coverage for native runtime boot, desktop settings, and the real quick-launcher window.
+- Tauri desktop shell smoke coverage for native runtime boot, desktop settings, and native quick-launcher command wiring.
 - Firebase converter round trips.
 - Sync service transition, snapshot, offline, and conflict wiring behavior.
 - Prompt editor, library, command palette, quick launcher, settings, and conflict UI behavior.
@@ -161,7 +160,7 @@ expanding the suite.
 | Missing area | Why it is not in browser E2E | Suggested harness | Priority |
 |---|---|---|---|
 | Tauri global hotkey registration | Browser Playwright cannot register or observe OS-level global shortcuts; current desktop smoke invokes the toggle command directly. | Tauri desktop E2E that launches the app and simulates the configured shortcut at the OS level. | P0 for desktop release |
-| Full quick-launcher execution path | The desktop smoke opens/searches the real launcher, but does not yet complete copy/paste close behavior or assert active-window restoration. | Extend Tauri desktop E2E with launcher copy, paste, focus, keyboard navigation, selection, and close assertions. | P0 for desktop release |
+| Full quick-launcher execution path | The desktop smoke invokes the native launcher toggle command, but Linux WebDriver does not expose the separate launcher window as a controllable browser handle in CI. | Extend Tauri desktop E2E with a harness that can drive the launcher webview, then cover launcher search, copy, paste, focus, keyboard navigation, selection, and close assertions. | P0 for desktop release |
 | Paste into active app | Browser tests can verify clipboard fallback, but not `paste_to_active_app`, active-window focus, or Cmd/Ctrl+V simulation. | Native smoke test with a controllable target text field plus Tauri command invocation. | P0 for desktop release |
 | Tauri Store file persistence | Browser E2E uses `BrowserStorageBackend` and `localStorage`, not plugin-store JSON files on disk. | Tauri integration or desktop E2E that writes prompts/settings, restarts, and verifies persisted store contents. | P1 |
 | Tauri Store corruption recovery | Real malformed store files live outside the browser persistence path. | Rust/Tauri integration with temp malformed store files and recovery assertions. | P1 |

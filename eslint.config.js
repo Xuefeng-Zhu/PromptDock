@@ -58,4 +58,18 @@ export default tseslint.config(
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  {
+    files: ["e2e-tauri/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.jasmine,
+        $: "readonly",
+        browser: "readonly",
+        expect: "readonly",
+      },
+    },
+  },
 );

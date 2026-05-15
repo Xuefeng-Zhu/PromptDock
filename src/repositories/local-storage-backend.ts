@@ -88,11 +88,20 @@ function deserializeWorkspace(raw: SerializedWorkspace): Workspace {
 
 // ─── Store File Names ──────────────────────────────────────────────────────────
 
+function storeFileName(fileName: string): string {
+  const prefix = import.meta.env.VITE_PROMPTDOCK_STORE_PREFIX;
+  if (!prefix) return fileName;
+
+  // Desktop E2E builds use prefixed store files so they never touch a
+  // developer's regular PromptDock data inside the Tauri app data directory.
+  return `${prefix.replace(/[^a-zA-Z0-9._-]/g, '_')}${fileName}`;
+}
+
 const STORE_FILES = {
-  prompts: 'prompts.json',
-  folders: 'folders.json',
-  settings: 'settings.json',
-  workspace: 'workspace.json',
+  prompts: storeFileName('prompts.json'),
+  folders: storeFileName('folders.json'),
+  settings: storeFileName('settings.json'),
+  workspace: storeFileName('workspace.json'),
 } as const;
 
 const DATA_KEY = 'data';

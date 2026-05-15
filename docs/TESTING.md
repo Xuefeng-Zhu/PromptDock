@@ -98,6 +98,7 @@ Last checked locally:
 
 ```bash
 npm run lint
+npm run typecheck
 npm run build
 npm test
 npx playwright install chromium
@@ -120,6 +121,27 @@ Result:
 - 0 failed.
 - 8 skipped.
 - Rust/Tauri compiled with 5 Rust unit tests currently present.
+
+## Intentionally Not Covered Yet
+
+The current Playwright suite is browser E2E coverage. It validates the Vite app,
+browser onboarding, `BrowserStorageBackend`, and real `localStorage`
+persistence. It does not launch the native Tauri shell or exercise OS-level
+desktop integration. Track the gaps below when expanding the suite.
+
+| Missing area | Why it is not in browser E2E | Suggested harness | Priority |
+|---|---|---|---|
+| Tauri global hotkey registration | Browser Playwright cannot register or observe OS-level global shortcuts. | Tauri desktop E2E that launches the app and simulates the configured shortcut. | P0 for desktop release |
+| Quick launcher native window | The browser runtime does not create the separate Tauri `quick-launcher` window. | Tauri desktop E2E covering launcher toggle, focus, search, keyboard navigation, selection, and close behavior. | P0 for desktop release |
+| Paste into active app | Browser tests can verify clipboard fallback, but not `paste_to_active_app`, active-window focus, or Cmd/Ctrl+V simulation. | Native smoke test with a controllable target text field plus Tauri command invocation. | P0 for desktop release |
+| Tauri Store file persistence | Browser E2E uses `BrowserStorageBackend` and `localStorage`, not plugin-store JSON files on disk. | Tauri integration or desktop E2E that writes prompts/settings, restarts, and verifies persisted store contents. | P1 |
+| Tauri Store corruption recovery | Real malformed store files live outside the browser persistence path. | Rust/Tauri integration with temp malformed store files and recovery assertions. | P1 |
+| Firebase auth and sync E2E | The browser E2E suite is deterministic and does not require external Firebase config or test users. | Firebase emulator E2E with seeded Auth users, Firestore workspaces, prompts, and sync listeners. | P1 |
+| Firestore security rules | Rule behavior requires authenticated emulator contexts and direct Firestore reads/writes. | Firestore rules tests or emulator-backed integration tests in CI. | P1 |
+| Local-to-synced migration | The flow depends on auth, workspace bootstrap, sync transition state, and remote persistence. | Firebase emulator E2E covering opt-in sync, workspace ID consistency, migrated prompts, and reload. | P1 |
+| Workspace sharing | Multi-user membership and access behavior requires multiple authenticated accounts. | Firebase emulator E2E with owner/editor/viewer test users. | P2 |
+| Visual regression | Current tests assert behavior, not pixel baselines. | Playwright screenshot baselines after the dense desktop UI stabilizes. | P2 |
+| Dialog focus trapping and restore | Component tests cover many keyboard contracts, but full browser focus loops are not exhaustively asserted. | Focus-specific Playwright tests for command palette, variable fill, import duplicate resolution, and destructive confirmations. | P2 |
 
 ## Recommended Missing Tests
 

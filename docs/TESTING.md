@@ -60,6 +60,7 @@ external service is required.
 | Import/export | Move prompt data safely. | File chooser/download fixtures. | Export, invalid JSON import, valid JSON import. | Download filename is stable, validation errors show, imported prompt appears. | P1 | Local file fixtures |
 | Duplicate import handling | Resolve imported duplicates deliberately. | Seeded prompt and duplicate JSON fixture. | Skip duplicates, then overwrite duplicate. | Skip leaves data unchanged, overwrite updates existing prompt body/tags. | P1 | Local file fixtures |
 | Responsive navigation | Navigate on narrow screens. | Mobile viewport. | Open drawer, route to settings, go back, close with Escape. | Drawer appears, settings route works, library returns, Escape closes drawer. | P1 | Local fixture |
+| Dialog accessibility | Keep keyboard users oriented while modal flows open and close. | Seeded library and prompt with variables. | Open command palette from the search trigger, close it, open variable fill, dismiss with Escape. | Focus moves into dialogs, command palette focus restores to the trigger, variable fill autofocuses the first field, Escape dismisses without side effects. | P1 | Local fixture |
 | Native desktop behavior | Verify global hotkey, separate launcher window, Tauri Store files, and paste simulation. | Real Tauri app and OS target app. | Planned separately. | Not covered by browser E2E. | P2 | Native/Tauri follow-up |
 
 ## Important Covered Areas
@@ -74,6 +75,7 @@ external service is required.
 - Settings repository/store behavior.
 - App mode state machine.
 - Browser onboarding/account entry, prompt authoring validation, prompt lifecycle, library organization, command palette variable fill/copy, settings, import/export duplicate handling, responsive navigation, and localStorage persistence after reload.
+- Browser dialog focus handoff for command palette and variable-fill keyboard dismissal.
 - Firebase converter round trips.
 - Sync service transition, snapshot, offline, and conflict wiring behavior.
 - Prompt editor, library, command palette, quick launcher, settings, and conflict UI behavior.
@@ -111,7 +113,7 @@ Result:
 - ESLint passed.
 - TypeScript typecheck passed.
 - Frontend production build passed.
-- 17 browser e2e tests passed in Chromium.
+- 19 browser e2e tests passed in Chromium.
 - 94 Vitest files discovered.
 - 93 passed.
 - 0 failed.
@@ -141,7 +143,7 @@ desktop integration. Track the gaps below when expanding the suite.
 | Local-to-synced migration | The flow depends on auth, workspace bootstrap, sync transition state, and remote persistence. | Firebase emulator E2E covering opt-in sync, workspace ID consistency, migrated prompts, and reload. | P1 |
 | Workspace sharing | Multi-user membership and access behavior requires multiple authenticated accounts. | Firebase emulator E2E with owner/editor/viewer test users. | P2 |
 | Visual regression | Current tests assert behavior, not pixel baselines. | Playwright screenshot baselines after the dense desktop UI stabilizes. | P2 |
-| Dialog focus trapping and restore | Component tests cover many keyboard contracts, but full browser focus loops are not exhaustively asserted. | Focus-specific Playwright tests for command palette, variable fill, import duplicate resolution, and destructive confirmations. | P2 |
+| Remaining dialog focus traps | Browser E2E now covers command palette focus restore and variable-fill autofocus/Escape behavior, but full Tab/Shift+Tab loops are not exhaustively asserted across every dialog. | Focus-specific Playwright tests for command palette, variable fill, import duplicate resolution, and destructive confirmations. | P2 |
 
 ## Recommended Missing Tests
 

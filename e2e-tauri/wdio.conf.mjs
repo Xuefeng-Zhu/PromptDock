@@ -92,7 +92,7 @@ export const config = {
   runner: 'local',
   host: '127.0.0.1',
   port: tauriDriverPort,
-  specs: ['./e2e-tauri/specs/**/*.e2e.mjs'],
+  specs: [path.join(rootDir, 'e2e-tauri', 'specs', '**', '*.e2e.mjs')],
   maxInstances: 1,
   capabilities: [
     {

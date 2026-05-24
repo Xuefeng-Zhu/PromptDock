@@ -112,6 +112,16 @@ function createMockPromptRepo(seedPrompts: PromptRecipe[] = []): MockPromptRepo 
   return repo;
 }
 
+function createDeferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
+}
+
 function createMockWorkspaceRepo(): IWorkspaceRepository {
   const workspace: Workspace = {
     id: 'local',
@@ -332,6 +342,107 @@ describe('usePromptImportExport', () => {
       }),
     );
     expect(result.current.duplicates).toEqual([]);
+    expect(result.current.successMessage).toBe(
+      'Imported 1 prompt(s), skipped 1 duplicate(s).',
+    );
+  });
+
+  it('ignores repeated duplicate skip clicks while writes are pending', async () => {
+    const existing = makePrompt({
+      id: 'existing',
+      title: 'Existing prompt',
+      body: 'Duplicate body',
+    });
+    const { repo } = setupStores([existing]);
+    const createGate = createDeferred();
+    repo.create.mockImplementation(async (data: CreatePromptData) => {
+      await createGate.promise;
+      return {
+        ...data,
+        id: `created-${repo.create.mock.calls.length}`,
+        createdAt: new Date('2024-01-15T12:00:00.000Z'),
+        updatedAt: new Date('2024-01-15T12:00:00.000Z'),
+      };
+    });
+    mockOpenFile.mockResolvedValue(
+      createImportJson([
+        {
+          title: 'Existing prompt',
+          body: 'Duplicate body',
+        },
+        {
+          title: 'Fresh prompt',
+          body: 'Fresh body',
+        },
+      ]),
+    );
+    const { result } = renderHook(() => usePromptImportExport());
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+
+    let firstResolution!: Promise<void>;
+    let secondResolution!: Promise<void>;
+    await act(async () => {
+      firstResolution = result.current.handleSkipAll();
+      secondResolution = result.current.handleSkipAll();
+      await Promise.resolve();
+    });
+
+    expect(result.current.duplicateResolutionAction).toBe('skip');
+    expect(repo.create).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      createGate.resolve();
+      await firstResolution;
+      await secondResolution;
+    });
+
+    expect(repo.create).toHaveBeenCalledTimes(1);
+    expect(result.current.duplicates).toEqual([]);
+    expect(result.current.successMessage).toBe(
+      'Imported 1 prompt(s), skipped 1 duplicate(s).',
+    );
+  });
+
+  it('clears duplicate resolution errors when a retry succeeds', async () => {
+    const existing = makePrompt({
+      id: 'existing',
+      title: 'Existing prompt',
+      body: 'Duplicate body',
+    });
+    const { repo } = setupStores([existing]);
+    repo.create.mockRejectedValueOnce(new Error('disk full'));
+    mockOpenFile.mockResolvedValue(
+      createImportJson([
+        {
+          title: 'Existing prompt',
+          body: 'Duplicate body',
+        },
+        {
+          title: 'Fresh prompt',
+          body: 'Fresh body',
+        },
+      ]),
+    );
+    const { result } = renderHook(() => usePromptImportExport());
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+    await act(async () => {
+      await result.current.handleSkipAll();
+    });
+
+    expect(result.current.importErrors).toEqual(['Import failed: disk full']);
+    expect(result.current.duplicates).toHaveLength(1);
+
+    await act(async () => {
+      await result.current.handleSkipAll();
+    });
+
+    expect(result.current.importErrors).toEqual([]);
     expect(result.current.successMessage).toBe(
       'Imported 1 prompt(s), skipped 1 duplicate(s).',
     );

@@ -47,6 +47,15 @@ function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
   };
 }
 
+function makePromptCreateInput(
+  workspaceId: string,
+): Omit<PromptRecipe, 'id' | 'createdAt' | 'updatedAt'> {
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...input } = makePrompt({
+    workspaceId,
+  });
+  return input;
+}
+
 function makeFolder(overrides: Partial<Folder> = {}): Folder {
   return {
     id: 'folder-1',
@@ -439,5 +448,84 @@ describe('AppSyncLifecycle', () => {
     ).toBeLessThan(
       vi.mocked(harness.syncService.transitionToSynced).mock.invocationCallOrder[0],
     );
+  });
+
+  it('blocks repository calls with a temporary delegate while switching workspaces', async () => {
+    const firestoreDelegate = createFirestoreDelegate();
+    const harness = createHarness({ firestoreDelegateBeforeTransition: firestoreDelegate });
+    let resolveSwitch!: () => void;
+    vi.mocked(harness.syncService.transitionToSynced).mockImplementation(async (_userId, workspaceId) => {
+      if (workspaceId !== 'workspace-2') return;
+      await new Promise<void>((resolve) => {
+        resolveSwitch = resolve;
+      });
+    });
+    harness.lifecycle.start();
+
+    harness.appModeStore.getState().setUserId('user-1');
+    harness.appModeStore.getState().setMode('synced');
+    await flushAsync();
+
+    harness.workspaceStore.setState({ activeWorkspaceId: 'workspace-2' });
+    await flushAsync();
+
+    const delegateCalls = vi.mocked(harness.promptRepository.setFirestoreDelegate).mock.calls;
+    const blockedDelegate = delegateCalls[delegateCalls.length - 1]?.[0];
+    expect(blockedDelegate).not.toBe(firestoreDelegate);
+    expect(blockedDelegate).not.toBeNull();
+    await expect(
+      blockedDelegate!.create(makePromptCreateInput('workspace-2')),
+    ).rejects.toThrow('Workspace workspace-2 is still syncing');
+
+    resolveSwitch();
+    await flushAsync();
+  });
+
+  it('does not rewire delegates when a stale workspace switch completes after a newer one', async () => {
+    const initialDelegate = createFirestoreDelegate();
+    const staleDelegate = createFirestoreDelegate();
+    const latestDelegate = createFirestoreDelegate();
+    const harness = createHarness({ firestoreDelegateBeforeTransition: initialDelegate });
+    let currentDelegate: ReturnType<typeof createFirestoreDelegate> | null = initialDelegate;
+    let resolveStale!: () => void;
+    let resolveLatest!: () => void;
+    vi.mocked(harness.syncService.getFirestoreBackend).mockImplementation(() => currentDelegate);
+    vi.mocked(harness.syncService.transitionToSynced).mockImplementation(async (_userId, workspaceId) => {
+      if (workspaceId === 'workspace-2') {
+        await new Promise<void>((resolve) => {
+          resolveStale = () => {
+            currentDelegate = staleDelegate;
+            resolve();
+          };
+        });
+      }
+      if (workspaceId === 'workspace-3') {
+        await new Promise<void>((resolve) => {
+          resolveLatest = () => {
+            currentDelegate = latestDelegate;
+            resolve();
+          };
+        });
+      }
+    });
+    harness.lifecycle.start();
+
+    harness.appModeStore.getState().setUserId('user-1');
+    harness.appModeStore.getState().setMode('synced');
+    await flushAsync();
+
+    harness.workspaceStore.setState({ activeWorkspaceId: 'workspace-2' });
+    await flushAsync();
+    harness.workspaceStore.setState({ activeWorkspaceId: 'workspace-3' });
+    await flushAsync();
+
+    resolveLatest();
+    await flushAsync();
+    expect(harness.promptRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(latestDelegate);
+
+    resolveStale();
+    await flushAsync();
+    expect(harness.promptRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(latestDelegate);
+    expect(harness.promptRepository.setFirestoreDelegate).not.toHaveBeenCalledWith(staleDelegate);
   });
 });

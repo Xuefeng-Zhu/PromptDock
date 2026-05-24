@@ -72,6 +72,7 @@ function buildTauriApp() {
       env: {
         ...process.env,
         VITE_FIREBASE_ANALYTICS_ENABLED: 'false',
+        VITE_PROMPTDOCK_TAURI_E2E: 'true',
         VITE_PROMPTDOCK_STORE_PREFIX: storePrefix,
       },
       stdio: 'inherit',

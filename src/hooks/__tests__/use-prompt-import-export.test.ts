@@ -386,6 +386,53 @@ describe('usePromptImportExport', () => {
     );
   });
 
+  it('overwrites only one existing prompt when one import matches multiple prompts', async () => {
+    const titleMatch = makePrompt({
+      id: 'title-match',
+      title: 'Shared title',
+      body: 'Existing body A',
+    });
+    const bodyMatch = makePrompt({
+      id: 'body-match',
+      title: 'Existing title B',
+      body: 'Shared body',
+    });
+    const { repo } = setupStores([titleMatch, bodyMatch]);
+    mockOpenFile.mockResolvedValue(
+      createImportJson([
+        {
+          title: 'Shared title',
+          body: 'Shared body',
+          tags: ['updated'],
+        },
+      ]),
+    );
+    const { result } = renderHook(() => usePromptImportExport());
+
+    await act(async () => {
+      await result.current.handleImport();
+    });
+    expect(result.current.duplicates).toHaveLength(1);
+    expect(result.current.duplicates[0].existing.id).toBe('title-match');
+
+    await act(async () => {
+      await result.current.handleOverwriteAll();
+    });
+
+    expect(repo.update).toHaveBeenCalledTimes(1);
+    expect(repo.update).toHaveBeenCalledWith(
+      'title-match',
+      expect.objectContaining({
+        body: 'Shared body',
+        tags: ['updated'],
+        title: 'Shared title',
+      }),
+    );
+    expect(result.current.successMessage).toBe(
+      'Imported 1 prompt(s), overwrote 1 duplicate(s).',
+    );
+  });
+
   it('preserves typed variable metadata when overwriting duplicates', async () => {
     const existing = makePrompt({
       id: 'existing',

@@ -15,6 +15,11 @@ import {
  * Schema version for the export JSON format.
  */
 const EXPORT_SCHEMA_VERSION = '1.0';
+const DUPLICATE_MATCH_PRIORITY: Record<DuplicateInfo['matchedOn'], number> = {
+  body: 1,
+  title: 2,
+  both: 3,
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -26,6 +31,22 @@ function isValidDateString(value: unknown): value is string {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function duplicateInfoFor(incoming: PromptRecipe, existing: PromptRecipe): DuplicateInfo | null {
+  const titleMatch = incoming.title === existing.title;
+  const bodyMatch = incoming.body === existing.body;
+
+  if (titleMatch && bodyMatch) {
+    return { incoming, existing, matchedOn: 'both' };
+  }
+  if (titleMatch) {
+    return { incoming, existing, matchedOn: 'title' };
+  }
+  if (bodyMatch) {
+    return { incoming, existing, matchedOn: 'body' };
+  }
+  return null;
 }
 
 /**
@@ -191,24 +212,34 @@ export class ImportExportService implements IImportExportService {
 
   /**
    * Compare incoming prompts against existing prompts by title and body.
-   * Returns a DuplicateInfo entry for each incoming prompt that matches
-   * an existing prompt on title, body, or both.
+   * Returns at most one DuplicateInfo entry for each matching incoming prompt.
+   * When one incoming prompt matches multiple existing prompts, exact matches
+   * win over title matches, which win over body matches.
    */
   detectDuplicates(incoming: PromptRecipe[], existing: PromptRecipe[]): DuplicateInfo[] {
     const duplicates: DuplicateInfo[] = [];
 
     for (const inc of incoming) {
-      for (const ext of existing) {
-        const titleMatch = inc.title === ext.title;
-        const bodyMatch = inc.body === ext.body;
+      let bestMatch: DuplicateInfo | null = null;
 
-        if (titleMatch && bodyMatch) {
-          duplicates.push({ incoming: inc, existing: ext, matchedOn: 'both' });
-        } else if (titleMatch) {
-          duplicates.push({ incoming: inc, existing: ext, matchedOn: 'title' });
-        } else if (bodyMatch) {
-          duplicates.push({ incoming: inc, existing: ext, matchedOn: 'body' });
+      for (const ext of existing) {
+        const match = duplicateInfoFor(inc, ext);
+        if (
+          match
+          && (
+            bestMatch === null
+            || DUPLICATE_MATCH_PRIORITY[match.matchedOn] > DUPLICATE_MATCH_PRIORITY[bestMatch.matchedOn]
+          )
+        ) {
+          bestMatch = match;
+          if (match.matchedOn === 'both') {
+            break;
+          }
         }
+      }
+
+      if (bestMatch) {
+        duplicates.push(bestMatch);
       }
     }
 

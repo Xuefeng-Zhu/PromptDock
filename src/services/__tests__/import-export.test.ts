@@ -397,6 +397,32 @@ describe('ImportExportService — Unit Tests', () => {
     expect(duplicates).toHaveLength(0);
   });
 
+  it('should return only the strongest duplicate match for each incoming prompt', () => {
+    const existing = [
+      makePrompt({ id: 'title-match', title: 'Shared title', body: 'Existing body A' }),
+      makePrompt({ id: 'body-match', title: 'Existing title B', body: 'Shared body' }),
+    ];
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Shared body' })];
+
+    const duplicates = service.detectDuplicates(incoming, existing);
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates[0].existing.id).toBe('title-match');
+    expect(duplicates[0].matchedOn).toBe('title');
+  });
+
+  it('should prefer exact duplicate matches over earlier partial matches', () => {
+    const existing = [
+      makePrompt({ id: 'title-match', title: 'Shared title', body: 'Existing body A' }),
+      makePrompt({ id: 'exact-match', title: 'Shared title', body: 'Shared body' }),
+    ];
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Shared body' })];
+
+    const duplicates = service.detectDuplicates(incoming, existing);
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates[0].existing.id).toBe('exact-match');
+    expect(duplicates[0].matchedOn).toBe('both');
+  });
+
   it('should exclude archived prompts from export', () => {
     const prompts = [
       makePrompt({ id: '1', title: 'Active', archived: false }),

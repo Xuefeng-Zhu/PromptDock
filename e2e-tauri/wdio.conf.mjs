@@ -9,7 +9,6 @@ const rootDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const appBinary = process.platform === 'win32' ? 'prompt-dock.exe' : 'prompt-dock';
 const appPath = path.join(rootDir, 'src-tauri', 'target', 'debug', appBinary);
 const tauriDriverPath = process.env.TAURI_DRIVER;
-const tauriDriverPort = 4444;
 const storePrefix =
   process.env.PROMPTDOCK_TAURI_E2E_STORE_PREFIX ?? `e2e-${Date.now()}-${process.pid}-`;
 
@@ -43,6 +42,71 @@ function waitForTcpPort(port, host = '127.0.0.1', timeoutMs = 10_000) {
 
     attempt();
   });
+}
+
+function parseTcpPort(value, envName) {
+  if (value === undefined || value === '') return null;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error(`${envName} must be an integer between 1 and 65535.`);
+  }
+  return port;
+}
+
+function listenOnRandomPort(host = '127.0.0.1') {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.once('error', reject);
+    server.listen(0, host, () => {
+      resolve(server);
+    });
+  });
+}
+
+function closeServer(server) {
+  return new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function findAvailableTcpPort(host = '127.0.0.1', excludedPorts = new Set()) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const server = await listenOnRandomPort(host);
+    const address = server.address();
+    await closeServer(server);
+
+    if (!address || typeof address === 'string') {
+      throw new Error(`Could not allocate a TCP port on ${host}.`);
+    }
+    if (!excludedPorts.has(address.port)) {
+      return address.port;
+    }
+  }
+  throw new Error(`Could not allocate a TCP port on ${host} outside the excluded set.`);
+}
+
+const configuredTauriDriverPort = parseTcpPort(
+  process.env.PROMPTDOCK_TAURI_DRIVER_PORT,
+  'PROMPTDOCK_TAURI_DRIVER_PORT',
+);
+const tauriDriverPort = configuredTauriDriverPort
+  ?? await findAvailableTcpPort();
+const configuredNativeDriverPort = parseTcpPort(
+  process.env.PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT,
+  'PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT',
+);
+const tauriNativeDriverPort = configuredNativeDriverPort
+  ?? await findAvailableTcpPort('127.0.0.1', new Set([tauriDriverPort]));
+
+if (tauriDriverPort === tauriNativeDriverPort) {
+  throw new Error('PROMPTDOCK_TAURI_DRIVER_PORT and PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT must differ.');
 }
 
 function buildTauriApp() {
@@ -118,7 +182,12 @@ export const config = {
       throw new Error('TAURI_DRIVER must point to a tauri-driver executable.');
     }
 
-    tauriDriver = spawn(tauriDriverPath, [], {
+    tauriDriver = spawn(tauriDriverPath, [
+      '--port',
+      String(tauriDriverPort),
+      '--native-port',
+      String(tauriNativeDriverPort),
+    ], {
       env: {
         ...process.env,
         PROMPTDOCK_TAURI_E2E: 'true',

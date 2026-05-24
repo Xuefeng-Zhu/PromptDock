@@ -174,11 +174,13 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
+    const now = new Date();
     this.prompts[index] = {
       ...this.prompts[index],
       archived: true,
-      archivedAt: new Date(),
-      updatedAt: new Date(),
+      archivedAt: now,
+      updatedAt: now,
+      version: this.prompts[index].version + 1,
     };
 
     await this.persist();
@@ -212,11 +214,13 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
+    const now = new Date();
     this.prompts[index] = {
       ...this.prompts[index],
       archived: false,
       archivedAt: null,
-      updatedAt: new Date(),
+      updatedAt: now,
+      version: this.prompts[index].version + 1,
     };
 
     await this.persist();
@@ -281,10 +285,12 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
+    const now = new Date();
     this.prompts[index] = {
       ...this.prompts[index],
       favorite: !this.prompts[index].favorite,
-      updatedAt: new Date(),
+      updatedAt: now,
+      version: this.prompts[index].version + 1,
     };
 
     await this.persist();

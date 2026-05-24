@@ -87,8 +87,30 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       return updated;
     }),
     delete: vi.fn(async () => {}),
-    softDelete: vi.fn(async () => {}),
-    restore: vi.fn(async () => {}),
+    softDelete: vi.fn(async (id) => {
+      const idx = prompts.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error(`Prompt not found: ${id}`);
+      const now = new Date();
+      prompts[idx] = {
+        ...prompts[idx],
+        archived: true,
+        archivedAt: now,
+        updatedAt: now,
+        version: prompts[idx].version + 1,
+      };
+    }),
+    restore: vi.fn(async (id) => {
+      const idx = prompts.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error(`Prompt not found: ${id}`);
+      const now = new Date();
+      prompts[idx] = {
+        ...prompts[idx],
+        archived: false,
+        archivedAt: null,
+        updatedAt: now,
+        version: prompts[idx].version + 1,
+      };
+    }),
     duplicate: vi.fn(async (id) => {
       const original = prompts.find((p) => p.id === id);
       if (!original) throw new Error(`Prompt not found: ${id}`);
@@ -126,7 +148,12 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
     toggleFavorite: vi.fn(async (id) => {
       const idx = prompts.findIndex((p) => p.id === id);
       if (idx === -1) throw new Error(`Prompt not found: ${id}`);
-      prompts[idx] = { ...prompts[idx], favorite: !prompts[idx].favorite };
+      prompts[idx] = {
+        ...prompts[idx],
+        favorite: !prompts[idx].favorite,
+        updatedAt: new Date(),
+        version: prompts[idx].version + 1,
+      };
       return prompts[idx];
     }),
   };

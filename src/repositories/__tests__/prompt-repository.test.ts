@@ -231,6 +231,7 @@ describe('PromptRepository', () => {
         id: 'archive-me',
         archived: false,
         archivedAt: null,
+        version: 4,
       });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
 
@@ -244,6 +245,7 @@ describe('PromptRepository', () => {
       expect(archived.archived).toBe(true);
       expect(archived.archivedAt).toBeInstanceOf(Date);
       expect(archived.archivedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(archived.version).toBe(5);
     });
 
     it('should throw when prompt not found', async () => {
@@ -282,6 +284,7 @@ describe('PromptRepository', () => {
         id: 'restore-me',
         archived: true,
         archivedAt: new Date('2024-06-01T00:00:00.000Z'),
+        version: 7,
       });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
 
@@ -292,6 +295,7 @@ describe('PromptRepository', () => {
 
       expect(restored.archived).toBe(false);
       expect(restored.archivedAt).toBeNull();
+      expect(restored.version).toBe(8);
     });
 
     it('should throw when prompt not found', async () => {
@@ -379,11 +383,12 @@ describe('PromptRepository', () => {
 
   describe('toggleFavorite', () => {
     it('should flip favorite from false to true', async () => {
-      const original = makePromptRecipe({ id: 'fav-me', favorite: false });
+      const original = makePromptRecipe({ id: 'fav-me', favorite: false, version: 2 });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
 
       const result = await repo.toggleFavorite('fav-me');
       expect(result.favorite).toBe(true);
+      expect(result.version).toBe(3);
     });
 
     it('should flip favorite from true to false', async () => {

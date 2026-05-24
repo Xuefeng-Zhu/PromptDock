@@ -21,6 +21,10 @@ function formatRole(role: WorkspaceRole): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
+function formatActionError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
 function roleBadgeClass(role: WorkspaceRole): string {
   if (role === 'owner') return 'bg-blue-50 text-blue-700';
   if (role === 'editor') return 'bg-teal-50 text-teal-700';
@@ -100,7 +104,7 @@ export function WorkspaceSharingSettingsCard() {
       setNewWorkspaceName('');
       setCreateOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatActionError(err));
     }
   };
 
@@ -118,7 +122,7 @@ export function WorkspaceSharingSettingsCard() {
         await leaveWorkspace(intent.workspace.id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatActionError(err));
     }
   };
 
@@ -132,7 +136,7 @@ export function WorkspaceSharingSettingsCard() {
       await createDomainInvite(newDomain);
       setNewDomain('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatActionError(err));
     } finally {
       setSubmittingDomain(false);
     }
@@ -145,7 +149,7 @@ export function WorkspaceSharingSettingsCard() {
       await renameWorkspace(workspaceName);
       setWorkspaceNameDraft('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatActionError(err));
     }
   };
 
@@ -155,7 +159,16 @@ export function WorkspaceSharingSettingsCard() {
     try {
       await switchWorkspace(workspaceId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatActionError(err));
+    }
+  };
+
+  const runWorkspaceAction = async (action: () => Promise<void>) => {
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      setError(formatActionError(err));
     }
   };
 
@@ -213,7 +226,11 @@ export function WorkspaceSharingSettingsCard() {
                     Invited as {formatRole(invite.role)}
                   </p>
                 </div>
-                <Button size="sm" variant="secondary" onClick={() => void acceptInvite(invite.id)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void runWorkspaceAction(() => acceptInvite(invite.id))}
+                >
                   Accept
                 </Button>
               </div>
@@ -228,7 +245,11 @@ export function WorkspaceSharingSettingsCard() {
                     Domain access for @{invite.domain}
                   </p>
                 </div>
-                <Button size="sm" variant="secondary" onClick={() => void acceptDomainInvite(invite.id)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void runWorkspaceAction(() => acceptDomainInvite(invite.id))}
+                >
                   Accept
                 </Button>
               </div>
@@ -384,7 +405,7 @@ export function WorkspaceSharingSettingsCard() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => void revokeDomainInvite(invite.id)}
+                    onClick={() => void runWorkspaceAction(() => revokeDomainInvite(invite.id))}
                   >
                     Revoke
                   </Button>
@@ -419,9 +440,10 @@ export function WorkspaceSharingSettingsCard() {
                     aria-label={`Role for ${member.email || member.userId}`}
                     className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1 text-xs text-[var(--color-text-main)]"
                     value={member.role}
-                    onChange={(event) =>
-                      void updateMemberRole(member.userId, event.target.value as WorkspaceRole)
-                    }
+                    onChange={(event) => {
+                      const nextRole = event.target.value as WorkspaceRole;
+                      void runWorkspaceAction(() => updateMemberRole(member.userId, nextRole));
+                    }}
                   >
                     {MEMBER_ROLE_OPTIONS.map((role) => (
                       <option key={role} value={role}>{formatRole(role)}</option>
@@ -436,7 +458,7 @@ export function WorkspaceSharingSettingsCard() {
                   variant="ghost"
                   size="sm"
                   disabled={!canManageMember}
-                  onClick={() => void removeMember(member.userId)}
+                  onClick={() => void runWorkspaceAction(() => removeMember(member.userId))}
                 >
                   Remove
                 </Button>
@@ -467,7 +489,7 @@ export function WorkspaceSharingSettingsCard() {
                   variant="ghost"
                   size="sm"
                   disabled={!isOwner}
-                  onClick={() => void revokeInvite(invite.id)}
+                  onClick={() => void runWorkspaceAction(() => revokeInvite(invite.id))}
                 >
                   Revoke
                 </Button>

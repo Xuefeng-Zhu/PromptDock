@@ -30,7 +30,7 @@ import {
   createPromptStore,
   type PromptStore,
 } from '../../stores/prompt-store';
-import { initWorkspaceStore } from '../../stores/workspace-store';
+import { initWorkspaceStore, type WorkspaceStore } from '../../stores/workspace-store';
 import { SettingsScreen } from '../settings';
 
 // ─── Mock SettingsStore module ─────────────────────────────────────────────────
@@ -69,6 +69,44 @@ function makeWorkspaceMembership(
     joinedAt: workspace.createdAt,
     updatedAt: workspace.updatedAt,
   };
+}
+
+function makeWorkspaceMember(
+  workspace: Workspace,
+  user: AuthUser,
+  role: WorkspaceMember['role'],
+): WorkspaceMember {
+  return {
+    id: user.uid,
+    workspaceId: workspace.id,
+    userId: user.uid,
+    role,
+    email: user.email,
+    displayName: user.displayName,
+    joinedAt: workspace.createdAt,
+    updatedAt: workspace.updatedAt,
+  };
+}
+
+function configureSyncedWorkspace(
+  repo: IWorkspaceRepository,
+  user: AuthUser,
+  workspace: Workspace,
+  overrides: Partial<WorkspaceStore> = {},
+) {
+  const workspaceStore = initWorkspaceStore(repo);
+  workspaceStore.setState({
+    activeWorkspaceId: workspace.id,
+    currentRole: 'owner',
+    currentUser: user,
+    members: [makeWorkspaceMember(workspace, user, 'owner')],
+    memberships: [makeWorkspaceMembership(workspace, user, 'owner')],
+    workspaces: [workspace],
+    ...overrides,
+  });
+  testAppModeStore.getState().setUserId(user.uid);
+  testAppModeStore.getState().setMode('synced');
+  return workspaceStore;
 }
 
 function createMockWorkspaceRepo(): IWorkspaceRepository {
@@ -576,6 +614,137 @@ describe('SettingsScreen', () => {
 
     expect(screen.queryByText('Domain access')).toBeNull();
     expect(screen.queryByLabelText('Allowed email domain')).toBeNull();
+  });
+
+  it('displays errors when accepting a pending workspace invite fails', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const invite: WorkspaceInvite = {
+      id: 'invite-1',
+      workspaceId: 'shared-workspace',
+      workspaceName: 'Shared Ops',
+      email: user.email,
+      role: 'viewer',
+      status: 'pending',
+      invitedBy: 'owner-2',
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      acceptedAt: null,
+      acceptedBy: null,
+    };
+    const repo = createMockWorkspaceRepo();
+    repo.acceptInvite = vi.fn(async () => {
+      throw new Error('Invite is no longer available.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      pendingInvites: [invite],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Invite is no longer available.');
+    });
+  });
+
+  it('displays errors when revoking a pending outgoing invite fails', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const invite: WorkspaceInvite = {
+      id: 'invite-1',
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      email: 'teammate@example.com',
+      role: 'editor',
+      status: 'pending',
+      invitedBy: user.uid,
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      acceptedAt: null,
+      acceptedBy: null,
+    };
+    const repo = createMockWorkspaceRepo();
+    repo.revokeInvite = vi.fn(async () => {
+      throw new Error('Unable to revoke invite.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      invites: [invite],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Unable to revoke invite.');
+    });
+  });
+
+  it('displays errors when member role updates fail', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const teammateUser: AuthUser = { uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' };
+    const teammate = makeWorkspaceMember(workspace, teammateUser, 'editor');
+    const repo = createMockWorkspaceRepo();
+    repo.updateMemberRole = vi.fn(async () => {
+      throw new Error('Unable to update member role.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      members: [
+        makeWorkspaceMember(workspace, user, 'owner'),
+        teammate,
+      ],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Role for teammate@example.com'), {
+        target: { value: 'viewer' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Unable to update member role.');
+    });
+  });
+
+  it('displays errors when removing a member fails', async () => {
+    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const workspace = makeWorkspace(user);
+    const teammateUser: AuthUser = { uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' };
+    const teammate = makeWorkspaceMember(workspace, teammateUser, 'viewer');
+    const repo = createMockWorkspaceRepo();
+    repo.removeMember = vi.fn(async () => {
+      throw new Error('Unable to remove member.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      members: [
+        makeWorkspaceMember(workspace, user, 'owner'),
+        teammate,
+      ],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    const removeButton = screen
+      .getAllByRole('button', { name: 'Remove' })
+      .find((button) => !(button as HTMLButtonElement).disabled);
+    expect(removeButton).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(removeButton!);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Unable to remove member.');
+    });
   });
 
   it('keeps settings content in a dedicated scroll pane', () => {

@@ -100,8 +100,8 @@ export class BrowserStorageBackend implements IStorageBackend {
   // ── Settings ───────────────────────────────────────────────────────────────
 
   async readSettings(): Promise<UserSettings> {
-    const raw = this.read<UserSettings>(KEYS.settings);
-    return raw ?? { ...DEFAULT_SETTINGS };
+    const raw = this.read<Partial<UserSettings>>(KEYS.settings);
+    return { ...DEFAULT_SETTINGS, ...(raw ?? {}) };
   }
 
   async writeSettings(settings: UserSettings): Promise<void> {

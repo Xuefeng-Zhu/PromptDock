@@ -243,6 +243,17 @@ describe('LocalStorageBackend', () => {
       expect(settings).toEqual(DEFAULT_SETTINGS);
     });
 
+    it('should merge missing stored settings with desktop defaults', async () => {
+      const store = mockStores.get('settings.json')!;
+      store._data.set('data', { theme: 'dark' });
+
+      const settings = await backend.readSettings();
+      expect(settings).toEqual({
+        ...DEFAULT_SETTINGS,
+        theme: 'dark',
+      });
+    });
+
     it('should write and read settings', async () => {
       const customSettings: UserSettings = {
         hotkeyCombo: 'CommandOrControl+Shift+L',

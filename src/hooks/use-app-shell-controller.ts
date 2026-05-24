@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settings-store';
 import { useToastStore } from '../stores/toast-store';
 import { canEditWorkspace as canEditRole, useWorkspaceStore } from '../stores/workspace-store';
 import type { Folder } from '../types/index';
+import { formatErrorMessage } from '../utils/error-message';
 import { isTauriRuntime } from '../utils/runtime';
 import { hideMainWindow } from '../utils/window';
 import { useLibraryData } from './use-library-data';
@@ -244,7 +245,7 @@ export function useAppShellController({
   const handleToggleTheme = useCallback(() => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     updateSettings({ theme: nextTheme }).catch((err: unknown) => {
-      addToast(`Failed to update theme: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      addToast(`Failed to update theme: ${formatErrorMessage(err)}`, 'error');
     });
   }, [addToast, theme, updateSettings]);
 
@@ -257,7 +258,7 @@ export function useAppShellController({
       try {
         return await createFolder(name);
       } catch (err) {
-        addToast(`Failed to create folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to create folder: ${formatErrorMessage(err)}`, 'error');
         return undefined;
       }
     },
@@ -322,7 +323,7 @@ export function useAppShellController({
           : '';
         addToast(`Deleted folder "${folder.name}"${movedSummary}.`, 'success');
       } catch (err) {
-        addToast(`Failed to delete folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to delete folder: ${formatErrorMessage(err)}`, 'error');
       }
     },
     [

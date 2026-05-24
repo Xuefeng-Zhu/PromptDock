@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { ToastStore } from '../../stores/toast-store';
 import type { PromptRecipe, UserSettings } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
 import { extractVariables } from '../../utils/prompt-template';
 import type {
   PromptExecutionResult,
@@ -64,7 +65,7 @@ export function usePromptLaunchFlow({
         })
         .catch((err: unknown) => {
           const action = defaultAction === 'paste' ? 'paste' : 'copy';
-          addToast(`Failed to ${action}: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to ${action}: ${formatErrorMessage(err)}`, 'error');
         });
     },
     [addToast, defaultAction, executePrompt, setCommandPaletteOpen, setVariableFillPromptId],
@@ -88,7 +89,7 @@ export function usePromptLaunchFlow({
         // opened another prompt meanwhile, leave the newer modal in place.
         setVariableFillPromptId((currentId) => (currentId === promptId ? null : currentId));
       } catch (err) {
-        addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to copy: ${formatErrorMessage(err)}`, 'error');
         throw err;
       }
     },
@@ -109,7 +110,7 @@ export function usePromptLaunchFlow({
         // opened another prompt meanwhile, leave the newer modal in place.
         setVariableFillPromptId((currentId) => (currentId === promptId ? null : currentId));
       } catch (err) {
-        addToast(`Failed to paste: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to paste: ${formatErrorMessage(err)}`, 'error');
         throw err;
       }
     },

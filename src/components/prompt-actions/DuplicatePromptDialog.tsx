@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Files } from 'lucide-react';
 import type { DuplicateWorkspaceTarget } from '../app-shell/types';
-import type { PromptRecipe, WorkspaceRole } from '../../types/index';
+import type { PromptRecipe } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
+import { formatWorkspaceRole } from '../../utils/workspace-role';
 import { WorkspaceColorMark } from '../workspaces/WorkspaceColorMark';
 import { Button } from '../ui/Button';
 
@@ -11,10 +13,6 @@ interface DuplicatePromptDialogProps {
   onConfirm: (workspaceId: string) => Promise<void>;
   prompt: PromptRecipe;
   targets: DuplicateWorkspaceTarget[];
-}
-
-function roleLabel(role: WorkspaceRole): string {
-  return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
 export function DuplicatePromptDialog({
@@ -46,7 +44,7 @@ export function DuplicatePromptDialog({
     try {
       await onConfirm(selectedWorkspaceId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatErrorMessage(err));
       setSubmitting(false);
     }
   };
@@ -105,7 +103,7 @@ export function DuplicatePromptDialog({
                       {workspace.name}
                     </span>
                     <span className="block text-xs text-[var(--color-text-muted)]">
-                      {workspace.id === activeWorkspaceId ? 'Current workspace' : roleLabel(role)}
+                      {workspace.id === activeWorkspaceId ? 'Current workspace' : formatWorkspaceRole(role)}
                     </span>
                   </span>
                 </button>

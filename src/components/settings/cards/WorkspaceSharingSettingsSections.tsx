@@ -8,6 +8,7 @@ import type {
   WorkspaceMembership,
   WorkspaceRole,
 } from '../../../types/index';
+import { formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { WorkspaceColorMark } from '../../workspaces';
@@ -18,16 +19,6 @@ export type WorkspaceRemovalIntent = {
   action: 'delete' | 'leave';
   workspace: Workspace;
 };
-
-export function formatRole(role: WorkspaceRole): string {
-  return role.charAt(0).toUpperCase() + role.slice(1);
-}
-
-function roleBadgeClass(role: WorkspaceRole): string {
-  if (role === 'owner') return 'bg-blue-50 text-blue-700';
-  if (role === 'editor') return 'bg-teal-50 text-teal-700';
-  return 'bg-gray-100 text-gray-600';
-}
 
 export function roleForWorkspace(
   memberships: WorkspaceMembership[],
@@ -40,8 +31,8 @@ function WorkspaceRoleBadge({ role }: { role: WorkspaceRole | null }) {
   if (!role) return null;
 
   return (
-    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${roleBadgeClass(role)}`}>
-      {formatRole(role)}
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${workspaceRoleBadgeClass(role)}`}>
+      {formatWorkspaceRole(role)}
     </span>
   );
 }
@@ -72,7 +63,7 @@ export function PendingWorkspaceInvitationsSection({
                 {invite.workspaceName}
               </p>
               <p className="text-xs text-[var(--color-text-muted)]">
-                Invited as {formatRole(invite.role)}
+                Invited as {formatWorkspaceRole(invite.role)}
               </p>
             </div>
             <Button size="sm" variant="secondary" onClick={() => onAcceptInvite(invite.id)}>
@@ -298,8 +289,8 @@ export function DomainAccessSection({
               <span className="truncate text-sm text-[var(--color-text-main)]">
                 @{invite.domain}
               </span>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${roleBadgeClass(invite.role)}`}>
-                {formatRole(invite.role)}
+              <span className={`rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(invite.role)}`}>
+                {formatWorkspaceRole(invite.role)}
               </span>
               <Button variant="ghost" size="sm" onClick={() => onRevokeDomainInvite(invite.id)}>
                 Revoke
@@ -353,12 +344,12 @@ export function WorkspaceMembersSection({
                   onChange={(event) => onUpdateMemberRole(member.userId, event.target.value as WorkspaceRole)}
                 >
                   {MEMBER_ROLE_OPTIONS.map((role) => (
-                    <option key={role} value={role}>{formatRole(role)}</option>
+                    <option key={role} value={role}>{formatWorkspaceRole(role)}</option>
                   ))}
                 </select>
               ) : (
-                <span className={`self-center rounded-full px-2 py-1 text-xs font-medium ${roleBadgeClass(member.role)}`}>
-                  {formatRole(member.role)}
+                <span className={`self-center rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(member.role)}`}>
+                  {formatWorkspaceRole(member.role)}
                 </span>
               )}
               <Button
@@ -401,8 +392,8 @@ export function PendingInvitesSection({
               className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-[var(--color-border)] px-3 py-2 last:border-b-0"
             >
               <span className="truncate text-sm text-[var(--color-text-main)]">{invite.email}</span>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${roleBadgeClass(invite.role)}`}>
-                {formatRole(invite.role)}
+              <span className={`rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(invite.role)}`}>
+                {formatWorkspaceRole(invite.role)}
               </span>
               <Button
                 variant="ghost"

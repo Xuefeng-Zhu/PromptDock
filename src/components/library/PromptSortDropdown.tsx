@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useDismissablePopover } from '../ui/listbox/use-dismissable-popover';
 import {
   normalizePromptFilters,
   type FilterType,
@@ -29,29 +30,15 @@ export function PromptSortDropdown({ activeFilter, onFilterChange }: PromptSortD
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+  }, []);
 
-  useEffect(() => {
-    if (!open) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open]);
+  useDismissablePopover({
+    containerRef: dropdownRef,
+    onDismiss: closeDropdown,
+    open,
+  });
 
   function handleSortChange(sortBy: SortFilter) {
     const nextFilters: PromptFilters = {

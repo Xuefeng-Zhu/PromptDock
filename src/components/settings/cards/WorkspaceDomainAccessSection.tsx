@@ -1,9 +1,9 @@
 import type { FormEvent } from 'react';
 import { Globe2 } from 'lucide-react';
 import type { WorkspaceDomainInvite } from '../../../types/index';
-import { formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
+import { WorkspaceRoleBadge } from './WorkspaceSharingRole';
 
 export function DomainAccessSection({
   domainInvites,
@@ -56,9 +56,7 @@ export function DomainAccessSection({
               <span className="truncate text-sm text-[var(--color-text-main)]">
                 @{invite.domain}
               </span>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(invite.role)}`}>
-                {formatWorkspaceRole(invite.role)}
-              </span>
+              <WorkspaceRoleBadge role={invite.role} size="standard" />
               <Button
                 variant="ghost"
                 size="sm"

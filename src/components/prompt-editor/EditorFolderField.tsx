@@ -9,24 +9,18 @@ import {
 import { ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import type { Folder } from '../../types/index';
-import { normalizeFolderName } from '../../utils/folder-names';
-
-interface SelectOption {
-  label: string;
-  value: string;
-}
+import {
+  getQuickFolderOptions,
+  type FolderOption,
+  type FolderQuickOption,
+} from '../../utils/folder-options';
 
 interface EditorFolderFieldProps {
   folderId: string | null;
-  folderOptions: SelectOption[];
+  folderOptions: FolderOption[];
   onCreateFolder?: (name: string) => Folder | void | Promise<Folder | void>;
   onFolderChange: (folderId: string | null) => void;
 }
-
-type FolderQuickOption =
-  | { id: string; kind: 'none'; label: string }
-  | { id: string; kind: 'folder'; label: string; value: string }
-  | { id: string; kind: 'create'; label: string; value: string };
 
 export function EditorFolderField({
   folderId,
@@ -38,10 +32,10 @@ export function EditorFolderField({
   const listboxId = `${fieldId}-folders`;
   const [editing, setEditing] = useState(false);
   const [folderInput, setFolderInput] = useState('');
-  const [createdFolderOptions, setCreatedFolderOptions] = useState<SelectOption[]>([]);
+  const [createdFolderOptions, setCreatedFolderOptions] = useState<FolderOption[]>([]);
 
   const folderChoices = useMemo(() => {
-    const choices = new Map<string, SelectOption>();
+    const choices = new Map<string, FolderOption>();
 
     for (const option of folderOptions) {
       if (option.value !== '') {
@@ -61,41 +55,14 @@ export function EditorFolderField({
     [folderChoices, folderId],
   );
 
-  const quickFolderOptions = useMemo(() => {
-    const trimmedInput = folderInput.trim();
-    const query = normalizeFolderName(trimmedInput);
-    const exactFolder = folderChoices.find(
-      (option) => normalizeFolderName(option.label) === query,
-    );
-    const matchingFolders = folderChoices.filter((option) =>
-      normalizeFolderName(option.label).includes(query),
-    );
-    const options: FolderQuickOption[] = [];
-
-    if (query === '') {
-      options.push({ id: 'none', kind: 'none', label: 'No folder' });
-    }
-
-    options.push(
-      ...matchingFolders.map((option) => ({
-        id: option.value,
-        kind: 'folder' as const,
-        label: option.label,
-        value: option.value,
-      })),
-    );
-
-    if (trimmedInput !== '' && !exactFolder && onCreateFolder) {
-      options.push({
-        id: `create-${query}`,
-        kind: 'create',
-        label: `Create "${trimmedInput}"`,
-        value: trimmedInput,
-      });
-    }
-
-    return options.slice(0, 7);
-  }, [folderChoices, folderInput, onCreateFolder]);
+  const quickFolderOptions = useMemo(
+    () => getQuickFolderOptions({
+      canCreateFolder: Boolean(onCreateFolder),
+      folderChoices,
+      input: folderInput,
+    }),
+    [folderChoices, folderInput, onCreateFolder],
+  );
 
   const {
     highlightedIndex,

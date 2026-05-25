@@ -3,7 +3,7 @@ import { Check, ChevronDown, Plus, Settings } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import type { WorkspaceRole } from '../../types/index';
 import { formatErrorMessage } from '../../utils/error-message';
-import { formatNullableWorkspaceRole } from '../../utils/workspace-role';
+import { formatNullableWorkspaceRole, getWorkspaceRole } from '../../utils/workspace-role';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useDismissablePopover } from '../ui/listbox/use-dismissable-popover';
@@ -90,7 +90,7 @@ export function WorkspaceSwitcher({ onManageSharing }: WorkspaceSwitcherProps) {
           <div className="max-h-64 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = workspace.id === activeWorkspaceId;
-              const role = memberships.find((item) => item.workspaceId === workspace.id)?.role ?? null;
+              const role = getWorkspaceRole(memberships, workspace.id);
               return (
                 <button
                   key={workspace.id}

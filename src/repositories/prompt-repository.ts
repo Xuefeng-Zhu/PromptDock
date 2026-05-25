@@ -54,6 +54,18 @@ export class PromptRepository implements IPromptRepository {
     await this.backend.writePrompts(this.prompts);
   }
 
+  /**
+   * Return a mutation timestamp that always sorts after the prompt's previous
+   * update. Sync conflict checks and tests rely on strictly ordered updates,
+   * while JavaScript clocks can return the same millisecond for rapid changes.
+   */
+  private nextMutationDate(previousUpdatedAt: Date): Date {
+    const now = new Date();
+    return now.getTime() > previousUpdatedAt.getTime()
+      ? now
+      : new Date(previousUpdatedAt.getTime() + 1);
+  }
+
   private buildDuplicate(
     original: PromptRecipe,
     target: { workspaceId: string; createdBy: string },
@@ -149,11 +161,12 @@ export class PromptRepository implements IPromptRepository {
     }
 
     const existing = this.prompts[index];
+    const updatedAt = this.nextMutationDate(existing.updatedAt);
     const updated: PromptRecipe = {
       ...existing,
       ...changes,
       id: existing.id, // prevent id overwrite
-      updatedAt: new Date(),
+      updatedAt,
       version: existing.version + 1,
     };
 
@@ -174,7 +187,7 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
-    const now = new Date();
+    const now = this.nextMutationDate(this.prompts[index].updatedAt);
     this.prompts[index] = {
       ...this.prompts[index],
       archived: true,
@@ -214,7 +227,7 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
-    const now = new Date();
+    const now = this.nextMutationDate(this.prompts[index].updatedAt);
     this.prompts[index] = {
       ...this.prompts[index],
       archived: false,
@@ -285,7 +298,7 @@ export class PromptRepository implements IPromptRepository {
       throw new Error(`Prompt not found: ${id}`);
     }
 
-    const now = new Date();
+    const now = this.nextMutationDate(this.prompts[index].updatedAt);
     this.prompts[index] = {
       ...this.prompts[index],
       favorite: !this.prompts[index].favorite,

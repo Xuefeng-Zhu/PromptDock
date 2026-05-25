@@ -370,12 +370,17 @@ describe('AppSyncLifecycle', () => {
   });
 
   it('leaves the app in local mode when auth restore fails', async () => {
-    const harness = createHarness({ authRejects: new Error('auth unavailable') });
+    const error = new Error('auth unavailable');
+    const harness = createHarness({ authRejects: error });
     harness.lifecycle.start();
 
     await harness.lifecycle.restoreAuthSession();
     await flushAsync();
 
+    expect(harness.logger.error).toHaveBeenCalledWith(
+      'Failed to restore auth session:',
+      error,
+    );
     expect(harness.appModeStore.getState().mode).toBe('local');
     expect(harness.appModeStore.getState().userId).toBeNull();
     expect(harness.createSyncService).not.toHaveBeenCalled();

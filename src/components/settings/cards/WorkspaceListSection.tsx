@@ -5,10 +5,11 @@ import type {
   WorkspaceMembership,
   WorkspaceRemovalIntent,
 } from '../../../types/index';
+import { getWorkspaceRole } from '../../../utils/workspace-role';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { WorkspaceColorMark } from '../../workspaces';
-import { roleForWorkspace, WorkspaceRoleBadge } from './WorkspaceSharingRole';
+import { WorkspaceRoleBadge } from './WorkspaceSharingRole';
 
 export function WorkspaceListSection({
   activeWorkspaceId,
@@ -49,7 +50,7 @@ export function WorkspaceListSection({
       <div className="mt-2 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)]">
         {workspaces.map((workspace) => {
           const selected = workspace.id === activeWorkspaceId;
-          const role = roleForWorkspace(memberships, workspace.id);
+          const role = getWorkspaceRole(memberships, workspace.id);
           const isPersonalWorkspace = workspace.id === userId;
           const canDeleteWorkspace = role === 'owner' && workspace.ownerId === userId && !isPersonalWorkspace;
           const canLeaveWorkspace = role !== null && role !== 'owner';

@@ -1,14 +1,7 @@
-import type { WorkspaceMembership, WorkspaceRole } from '../../../types/index';
+import type { WorkspaceRole } from '../../../types/index';
 import { formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
 
 export const MEMBER_ROLE_OPTIONS: WorkspaceRole[] = ['owner', 'editor', 'viewer'];
-
-export function roleForWorkspace(
-  memberships: WorkspaceMembership[],
-  workspaceId: string,
-): WorkspaceRole | null {
-  return memberships.find((membership) => membership.workspaceId === workspaceId)?.role ?? null;
-}
 
 export function WorkspaceRoleBadge({ role }: { role: WorkspaceRole | null }) {
   if (!role) return null;

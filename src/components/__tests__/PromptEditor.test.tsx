@@ -160,6 +160,29 @@ describe('PromptEditor', () => {
     });
   });
 
+  it('shows folder creation failures without closing the folder field', async () => {
+    const onCreateFolder = vi.fn(async () => {
+      throw new Error('Folder service unavailable');
+    });
+    render(
+      <PromptEditor
+        {...defaultProps}
+        onCreateFolder={onCreateFolder}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Folder' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Folder' }), {
+      target: { value: 'Client Work' },
+    });
+    fireEvent.click(screen.getByRole('option', { name: 'Create "Client Work"' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Failed to create folder: Folder service unavailable');
+    const folderInput = screen.getByRole('combobox', { name: 'Folder' }) as HTMLInputElement;
+    expect(folderInput.value).toBe('Client Work');
+  });
+
   it('does not offer folder creation for duplicate normalized names', () => {
     const onCreateFolder = vi.fn();
     render(

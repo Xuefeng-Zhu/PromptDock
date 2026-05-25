@@ -9,6 +9,7 @@ import {
 import { ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import type { Folder } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
 import {
   getQuickFolderOptions,
   type FolderOption,
@@ -31,7 +32,9 @@ export function EditorFolderField({
 }: EditorFolderFieldProps) {
   const fieldId = useId();
   const listboxId = `${fieldId}-folders`;
+  const errorId = `${fieldId}-folder-error`;
   const [editing, setEditing] = useState(false);
+  const [createFolderError, setCreateFolderError] = useState<string | null>(null);
   const [folderInput, setFolderInput] = useState('');
   const [createdFolderOptions, setCreatedFolderOptions] = useState<FolderOption[]>([]);
 
@@ -77,11 +80,13 @@ export function EditorFolderField({
 
   const closeEditor = useCallback(() => {
     setEditing(false);
+    setCreateFolderError(null);
     setFolderInput('');
   }, []);
 
   const openEditor = useCallback(() => {
     setEditing(true);
+    setCreateFolderError(null);
     setFolderInput('');
   }, []);
 
@@ -102,8 +107,8 @@ export function EditorFolderField({
       let createdFolder: Folder | void;
       try {
         createdFolder = await onCreateFolder?.(option.value);
-      } catch {
-        closeEditor();
+      } catch (err) {
+        setCreateFolderError(`Failed to create folder: ${formatErrorMessage(err)}`);
         return;
       }
       if (createdFolder) {
@@ -188,7 +193,10 @@ export function EditorFolderField({
                 id={fieldId}
                 type="text"
                 value={folderInput}
-                onChange={(event) => setFolderInput(event.target.value)}
+                onChange={(event) => {
+                  setCreateFolderError(null);
+                  setFolderInput(event.target.value);
+                }}
                 onKeyDown={handleInputKeyDown}
                 autoFocus
                 placeholder={selectedFolder?.label ?? 'Folder name'}
@@ -199,6 +207,7 @@ export function EditorFolderField({
                 aria-expanded={quickFolderOptions.length > 0}
                 aria-haspopup="listbox"
                 aria-activedescendant={activeOptionId}
+                aria-describedby={createFolderError ? errorId : undefined}
                 role="combobox"
               />
             </div>
@@ -231,6 +240,12 @@ export function EditorFolderField({
                   </button>
                 ))}
               </div>
+            )}
+
+            {createFolderError && (
+              <p id={errorId} role="alert" className="text-xs text-red-600">
+                {createFolderError}
+              </p>
             )}
           </>
         ) : (

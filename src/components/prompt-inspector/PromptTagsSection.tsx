@@ -1,9 +1,8 @@
-import { useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { Plus, X } from 'lucide-react';
-import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import type { PromptRecipe } from '../../types/index';
+import { TagAutocompleteInput } from '../prompt-tags/TagAutocompleteInput';
 import {
-  getQuickTagOptions,
   normalizeTag,
   resolveExistingTagName,
 } from '../../utils/tag-options';
@@ -21,22 +20,9 @@ export function PromptTagsSection({
   onUpdateTags,
   prompt,
 }: PromptTagsSectionProps) {
-  const listboxId = useId();
   const [editing, setEditing] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const canEditTags = Boolean(onUpdateTags);
-  const quickTagOptions = useMemo(
-    () => getQuickTagOptions({ availableTags, selectedTags: prompt.tags, query: tagInput }),
-    [availableTags, prompt.tags, tagInput],
-  );
-  const {
-    highlightedIndex,
-    moveHighlightedIndex,
-    setHighlightedIndex,
-  } = useHighlightedIndex(quickTagOptions.length, tagInput);
-  const clampedHighlightedIndex = Math.min(highlightedIndex, quickTagOptions.length - 1);
-  const activeOptionId =
-    quickTagOptions.length > 0 ? `${listboxId}-option-${clampedHighlightedIndex}` : undefined;
 
   function resetTagInput() {
     setTagInput('');
@@ -73,27 +59,7 @@ export function PromptTagsSection({
     setEditing(true);
   }
 
-  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (quickTagOptions.length > 0) {
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        moveHighlightedIndex(1);
-        return;
-      }
-
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        moveHighlightedIndex(-1);
-        return;
-      }
-
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        addTagValue(quickTagOptions[clampedHighlightedIndex]);
-        return;
-      }
-    }
-
+  function handleUnhandledInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
       event.preventDefault();
       addTagValue(tagInput);
@@ -130,55 +96,17 @@ export function PromptTagsSection({
         ))}
 
         {editing ? (
-          <div className="relative w-36">
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(event) => setTagInput(event.target.value)}
-              onKeyDown={handleInputKeyDown}
-              onBlur={() => addTagValue(tagInput)}
-              autoFocus
-              placeholder="tag name"
-              className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-1 text-xs text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
-              aria-label="Add tag"
-              aria-autocomplete="list"
-              aria-controls={quickTagOptions.length > 0 ? listboxId : undefined}
-              aria-expanded={quickTagOptions.length > 0}
-              aria-haspopup="listbox"
-              aria-activedescendant={activeOptionId}
-              role="combobox"
-            />
-
-            {quickTagOptions.length > 0 && (
-              <div
-                id={listboxId}
-                role="listbox"
-                aria-label="Existing tags"
-                className="absolute left-0 top-full z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-1 shadow-lg"
-              >
-                {quickTagOptions.map((tag, index) => (
-                  <button
-                    key={tag}
-                    id={`${listboxId}-option-${index}`}
-                    type="button"
-                    role="option"
-                    aria-selected={index === clampedHighlightedIndex}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    onClick={() => addTagValue(tag)}
-                    className={[
-                      'block w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                      index === clampedHighlightedIndex
-                        ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                        : 'text-[var(--color-text-main)] hover:bg-gray-50',
-                    ].join(' ')}
-                  >
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <TagAutocompleteInput
+            availableTags={availableTags}
+            className="relative w-36"
+            inputClassName="text-[var(--color-text-main)]"
+            onBlur={() => addTagValue(tagInput)}
+            onSubmitTag={addTagValue}
+            onUnhandledKeyDown={handleUnhandledInputKeyDown}
+            onValueChange={setTagInput}
+            selectedTags={prompt.tags}
+            value={tagInput}
+          />
         ) : (
           <button
             type="button"

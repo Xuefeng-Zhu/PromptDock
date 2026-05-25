@@ -79,6 +79,40 @@ export interface WorkspaceStore {
   updateMemberRole: (userId: string, role: WorkspaceRole) => Promise<void>;
 }
 
+type WorkspaceRemovalState = Pick<
+  WorkspaceStore,
+  | 'activeWorkspaceId'
+  | 'currentRole'
+  | 'domainInvites'
+  | 'invites'
+  | 'members'
+  | 'memberships'
+  | 'workspaces'
+>;
+
+function removeWorkspaceFromState(
+  state: WorkspaceStore,
+  workspaceId: string,
+  fallbackWorkspaceId: string,
+): WorkspaceRemovalState {
+  const wasActive = state.activeWorkspaceId === workspaceId;
+  const nextWorkspaces = state.workspaces.filter((item) => item.id !== workspaceId);
+  const nextMemberships = state.memberships.filter((item) => item.workspaceId !== workspaceId);
+  const nextActiveWorkspaceId = wasActive
+    ? chooseActiveWorkspace(nextWorkspaces, undefined, fallbackWorkspaceId)
+    : state.activeWorkspaceId;
+
+  return {
+    activeWorkspaceId: nextActiveWorkspaceId,
+    currentRole: getWorkspaceRole(nextMemberships, nextActiveWorkspaceId),
+    domainInvites: wasActive ? [] : state.domainInvites,
+    invites: wasActive ? [] : state.invites,
+    members: wasActive ? [] : state.members,
+    memberships: nextMemberships,
+    workspaces: nextWorkspaces,
+  };
+}
+
 /**
  * Creates the workspace store around a repository.
  * This store is the authoritative active-workspace owner; prompt/folder stores
@@ -211,23 +245,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       await repo.deleteSyncedWorkspace(workspaceId);
 
       const wasActive = get().activeWorkspaceId === workspaceId;
-      set((state) => {
-        const nextWorkspaces = state.workspaces.filter((item) => item.id !== workspaceId);
-        const nextMemberships = state.memberships.filter((item) => item.workspaceId !== workspaceId);
-        const nextActiveWorkspaceId = wasActive
-          ? chooseActiveWorkspace(nextWorkspaces, undefined, currentUser.uid)
-          : state.activeWorkspaceId;
-
-        return {
-          activeWorkspaceId: nextActiveWorkspaceId,
-          currentRole: getWorkspaceRole(nextMemberships, nextActiveWorkspaceId),
-          domainInvites: wasActive ? [] : state.domainInvites,
-          invites: wasActive ? [] : state.invites,
-          members: wasActive ? [] : state.members,
-          memberships: nextMemberships,
-          workspaces: nextWorkspaces,
-        };
-      });
+      set((state) => removeWorkspaceFromState(state, workspaceId, currentUser.uid));
 
       if (wasActive && get().workspaces.some((item) => item.id === get().activeWorkspaceId)) {
         await get().loadWorkspaceDetails();
@@ -250,23 +268,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       await repo.leaveSyncedWorkspace(workspaceId, currentUser.uid);
 
       const wasActive = get().activeWorkspaceId === workspaceId;
-      set((state) => {
-        const nextWorkspaces = state.workspaces.filter((item) => item.id !== workspaceId);
-        const nextMemberships = state.memberships.filter((item) => item.workspaceId !== workspaceId);
-        const nextActiveWorkspaceId = wasActive
-          ? chooseActiveWorkspace(nextWorkspaces, undefined, currentUser.uid)
-          : state.activeWorkspaceId;
-
-        return {
-          activeWorkspaceId: nextActiveWorkspaceId,
-          currentRole: getWorkspaceRole(nextMemberships, nextActiveWorkspaceId),
-          domainInvites: wasActive ? [] : state.domainInvites,
-          invites: wasActive ? [] : state.invites,
-          members: wasActive ? [] : state.members,
-          memberships: nextMemberships,
-          workspaces: nextWorkspaces,
-        };
-      });
+      set((state) => removeWorkspaceFromState(state, workspaceId, currentUser.uid));
 
       if (wasActive && get().workspaces.some((item) => item.id === get().activeWorkspaceId)) {
         await get().loadWorkspaceDetails();

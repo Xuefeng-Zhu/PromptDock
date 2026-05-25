@@ -9,6 +9,7 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   collection,
+  deleteDoc,
   doc,
   getDocs,
   query,
@@ -289,6 +290,17 @@ describeRules('firestore workspace rules', () => {
         title: 'Updated launch copy',
         updatedAt: new Date('2024-01-02T00:00:00.000Z'),
       },
+    ));
+  });
+
+  it('allows deleting existing prompts with mismatched workspace metadata', async () => {
+    await seedPrompt(testEnv, 'prompt-1', { workspaceId: 'workspace-2' });
+    const db = testEnv.authenticatedContext('owner-1', {
+      email: 'owner@example.com',
+    }).firestore();
+
+    await assertSucceeds(deleteDoc(
+      doc(db, 'workspaces', workspaceId, 'prompts', 'prompt-1'),
     ));
   });
 

@@ -58,10 +58,6 @@ service cloud.firestore {
         && request.resource.data.workspaceId == workspaceId;
     }
 
-    function promptDeleteTargetsWorkspace(workspaceId) {
-      return resource.data.workspaceId == workspaceId;
-    }
-
     function isInviteRecipient(email) {
       return isAuthenticated()
         && request.auth.token.email != null
@@ -284,14 +280,14 @@ service cloud.firestore {
         // Any workspace member can read prompts.
         allow read: if isWorkspaceMember(workspaceId);
 
-        // Only owners and editors can create, update, or delete prompts scoped
-        // to the workspace path being written.
+        // Only owners and editors can create or update prompts scoped to the
+        // workspace path being written. Delete stays path-authorized so owners
+        // and editors can clean up malformed legacy metadata.
         allow create: if isOwnerOrEditor(workspaceId)
           && promptCreateTargetsWorkspace(workspaceId);
         allow update: if isOwnerOrEditor(workspaceId)
           && promptUpdateKeepsWorkspace(workspaceId);
-        allow delete: if isOwnerOrEditor(workspaceId)
-          && promptDeleteTargetsWorkspace(workspaceId);
+        allow delete: if isOwnerOrEditor(workspaceId);
 
         // ─── /workspaces/{workspaceId}/prompts/{promptId}/versions/{versionId}
         match /versions/{versionId} {

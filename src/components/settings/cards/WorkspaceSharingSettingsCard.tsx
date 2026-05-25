@@ -3,6 +3,7 @@ import { useWorkspaceSharingSettings } from '../../../hooks/use-workspace-sharin
 import type { WorkspaceRemovalIntent } from '../../../types/index';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
+import { ConfirmationDialog } from '../../ui/ConfirmationDialog';
 import { SettingsCardTitle } from './SettingsCardTitle';
 import { InviteMemberDialog } from './InviteMemberDialog';
 import {
@@ -217,48 +218,14 @@ function WorkspaceRemovalDialog({
   const actionLabel = isDelete ? 'Delete workspace' : 'Leave workspace';
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 px-4"
-      role="presentation"
-    >
-      <div
-        aria-describedby="workspace-removal-description"
-        aria-labelledby="workspace-removal-title"
-        aria-modal="true"
-        className="w-full max-w-sm rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 shadow-xl"
-        role="dialog"
-      >
-        <h3
-          className="text-base font-semibold text-[var(--color-text-main)]"
-          id="workspace-removal-title"
-        >
-          {title}
-        </h3>
-        <p
-          className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]"
-          id="workspace-removal-description"
-        >
-          {description}
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-gray-50"
-            onClick={onCancel}
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
-            onClick={() => {
-              void onConfirm();
-            }}
-            type="button"
-          >
-            {actionLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmationDialog
+      confirmLabel={actionLabel}
+      description={description}
+      idPrefix="workspace-removal"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      title={title}
+      zIndexClassName="z-[90]"
+    />
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
+import { SelectionIndicator } from './SelectionIndicator';
 import { useAnchoredDropdownPosition } from './listbox/use-anchored-dropdown-position';
 import { useDismissablePopover } from './listbox/use-dismissable-popover';
 import { getListboxOptionClass } from './listbox/listbox-option-class';
@@ -126,17 +127,7 @@ export function SearchableMultiSelect<T extends string>({
                     onClick={() => onChange(toggleValue(selectedValues, option.value))}
                     className={getListboxOptionClass({ active: selected })}
                   >
-                    <span
-                      className={[
-                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                        selected
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
-                          : 'border-[var(--color-border)] bg-[var(--color-panel)]',
-                      ].join(' ')}
-                      aria-hidden="true"
-                    >
-                      {selected && <Check className="h-3 w-3" />}
-                    </span>
+                    <SelectionIndicator selected={selected} />
                     <span className="min-w-0 truncate">
                       {formatSelected?.(option) ?? option.label}
                     </span>

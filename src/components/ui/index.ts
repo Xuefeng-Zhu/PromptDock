@@ -5,7 +5,7 @@ export * from './IconTile';
 export * from './Input';
 export * from './SearchableMultiSelect';
 export * from './Select';
+export * from './SelectionIndicator';
 export * from './TagPill';
 export * from './Textarea';
 export * from './Toggle';
-

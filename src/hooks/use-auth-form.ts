@@ -1,4 +1,4 @@
-import { useCallback, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState, type FormEvent } from 'react';
 import type { AuthResult, AuthUser } from '../types/index';
 import type { IAuthService } from '../services/interfaces';
 import { authErrorMessage } from '../utils/auth-error-message';
@@ -36,8 +36,21 @@ export function useAuthForm({
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const authServiceAvailable = isAuthServiceAvailable(authService);
   const canSubmitAuth = Boolean(authService) && authServiceAvailable;
+
+  const beginSubmitting = useCallback(() => {
+    if (submittingRef.current) return false;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    return true;
+  }, []);
+
+  const finishSubmitting = useCallback(() => {
+    submittingRef.current = false;
+    setIsSubmitting(false);
+  }, []);
 
   const clearAuthError = useCallback(() => {
     setAuthError(null);
@@ -70,24 +83,26 @@ export function useAuthForm({
         setAuthError(unavailableMessage);
         return;
       }
+      if (!beginSubmitting()) return;
 
       setAuthError(null);
-      setIsSubmitting(true);
       try {
         const result = authFormMode === 'sign-in'
           ? await authService.signIn(email, password)
           : await authService.signUp(email, password);
         completeAuth(result);
       } finally {
-        setIsSubmitting(false);
+        finishSubmitting();
       }
     },
     [
       authFormMode,
       authService,
+      beginSubmitting,
       canSubmitAuth,
       completeAuth,
       email,
+      finishSubmitting,
       password,
       unavailableMessage,
     ],
@@ -98,25 +113,25 @@ export function useAuthForm({
       setAuthError(unavailableMessage);
       return;
     }
+    if (!beginSubmitting()) return;
 
     setAuthError(null);
-    setIsSubmitting(true);
     try {
       const result = await authService.signInWithGoogle();
       completeAuth(result);
     } finally {
-      setIsSubmitting(false);
+      finishSubmitting();
     }
-  }, [authService, canSubmitAuth, completeAuth, unavailableMessage]);
+  }, [authService, beginSubmitting, canSubmitAuth, completeAuth, finishSubmitting, unavailableMessage]);
 
   const handleSignOut = useCallback(async () => {
     if (!authService) {
       setAuthError('Cloud sign-out is unavailable in this build.');
       return;
     }
+    if (!beginSubmitting()) return;
 
     setAuthError(null);
-    setIsSubmitting(true);
     try {
       await authService.signOut();
       setAuthUser(null);
@@ -124,9 +139,9 @@ export function useAuthForm({
     } catch (err) {
       setAuthError(`Failed to sign out: ${formatErrorMessage(err)}`);
     } finally {
-      setIsSubmitting(false);
+      finishSubmitting();
     }
-  }, [authService, onSignOutSuccess]);
+  }, [authService, beginSubmitting, finishSubmitting, onSignOutSuccess]);
 
   return {
     authError,

@@ -48,11 +48,20 @@ function reviveDates<T>(obj: T, dateKeys: string[]): T {
  */
 export class BrowserStorageBackend implements IStorageBackend {
   private read<T>(key: string): T | null {
+    let raw: string | null;
     try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return null;
+      raw = localStorage.getItem(key);
+    } catch (err) {
+      console.warn(`Unable to read browser storage key "${key}".`, err);
+      return null;
+    }
+
+    if (!raw) return null;
+
+    try {
       return JSON.parse(raw) as T;
-    } catch {
+    } catch (err) {
+      console.warn(`Ignoring invalid browser storage JSON for key "${key}".`, err);
       return null;
     }
   }

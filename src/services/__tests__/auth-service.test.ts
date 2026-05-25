@@ -147,6 +147,19 @@ describe('AuthService', () => {
     expect(unsubscribe).not.toHaveBeenCalled();
   });
 
+  it('logs Firebase auth restore setup failures before falling back to local mode', async () => {
+    const error = new Error('auth unavailable');
+    const logger = { error: vi.fn() };
+    firebaseConfigMocks.getFirebaseAuth.mockRejectedValueOnce(error);
+
+    await expect(new AuthService({ logger }).restoreSession()).resolves.toBeNull();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to restore Firebase auth session:',
+      error,
+    );
+  });
+
   it('delivers a late restored session after the startup timeout once bootstrap succeeds', async () => {
     vi.useFakeTimers();
     const unsubscribe = vi.fn();
@@ -206,5 +219,23 @@ describe('AuthService', () => {
       },
     });
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs Firebase auth listener setup failures before reporting local mode', async () => {
+    const error = new Error('listener unavailable');
+    const logger = { error: vi.fn() };
+    const callback = vi.fn();
+    firebaseConfigMocks.getFirebaseAuth.mockRejectedValueOnce(error);
+
+    const unsubscribe = new AuthService({ logger }).onAuthStateChanged(callback);
+    await vi.dynamicImportSettled();
+
+    expect(callback).toHaveBeenCalledWith(null);
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to subscribe to Firebase auth state:',
+      error,
+    );
+
+    unsubscribe();
   });
 });

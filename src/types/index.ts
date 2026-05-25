@@ -46,6 +46,11 @@ export interface Workspace {
   updatedAt: Date;
 }
 
+export type WorkspaceRemovalIntent = {
+  action: 'delete' | 'leave';
+  workspace: Workspace;
+};
+
 export interface WorkspaceMember {
   id: string;
   workspaceId: string;

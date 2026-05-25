@@ -6,6 +6,7 @@ import type {
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceMembership,
+  WorkspaceRemovalIntent,
   WorkspaceRole,
 } from '../../../types/index';
 import { getWorkspaceRole, formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
@@ -14,11 +15,6 @@ import { Input } from '../../ui/Input';
 import { WorkspaceColorMark } from '../../workspaces';
 
 export const MEMBER_ROLE_OPTIONS: WorkspaceRole[] = ['owner', 'editor', 'viewer'];
-
-export type WorkspaceRemovalIntent = {
-  action: 'delete' | 'leave';
-  workspace: Workspace;
-};
 
 function WorkspaceRoleBadge({ role }: { role: WorkspaceRole | null }) {
   if (!role) return null;

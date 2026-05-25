@@ -308,10 +308,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const firestore = await getFirebaseFirestore();
     const timestamp = serverTimestamp();
     const workspaceRef = doc(firestore, 'workspaces', user.uid);
-    const existingWorkspaceSnapshot = await getDoc(workspaceRef).catch((err) => {
-      console.error('Failed to read personal workspace metadata before bootstrap:', err);
-      return null;
-    });
+    const existingWorkspaceSnapshot = await getDoc(workspaceRef);
     const existingWorkspace = existingWorkspaceSnapshot?.exists()
       ? toWorkspace(
         existingWorkspaceSnapshot.id,
@@ -347,17 +344,10 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       workspaceRef,
       workspacePayload,
       { merge: true },
-    ).catch((err) => {
-      console.error('Failed to bootstrap personal workspace metadata:', err);
-    });
+    );
 
-    await setDoc(memberRef, memberPayload, { merge: true }).catch((err) => {
-      console.error('Failed to bootstrap personal workspace member:', err);
-    });
-
-    await setDoc(membershipRef, membershipPayload, { merge: true }).catch((err) => {
-      console.error('Failed to bootstrap personal workspace membership index:', err);
-    });
+    await setDoc(memberRef, memberPayload, { merge: true });
+    await setDoc(membershipRef, membershipPayload, { merge: true });
 
     return workspace;
   }
@@ -366,20 +356,15 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const membershipsCol = collection(firestore, 'workspaceMemberships');
-      const q = query(membershipsCol, where('userId', '==', userId));
-      const snapshot = await getDocs(q);
-      const memberships = snapshot.docs.map((docSnap) =>
-        toWorkspaceMembership(docSnap.id, docSnap.data() as FirestoreWorkspaceMembershipDoc),
-      );
+    const firestore = await getFirebaseFirestore();
+    const membershipsCol = collection(firestore, 'workspaceMemberships');
+    const q = query(membershipsCol, where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    const memberships = snapshot.docs.map((docSnap) =>
+      toWorkspaceMembership(docSnap.id, docSnap.data() as FirestoreWorkspaceMembershipDoc),
+    );
 
-      return memberships.length > 0 ? memberships : [createPersonalMembershipFallback(userId)];
-    } catch (err) {
-      console.error('Failed to list workspace membership index; using personal workspace fallback:', err);
-      return [createPersonalMembershipFallback(userId)];
-    }
+    return memberships.length > 0 ? memberships : [createPersonalMembershipFallback(userId)];
   }
 
   async listPendingDomainInvitesForEmail(email: string): Promise<WorkspaceDomainInvite[]> {
@@ -389,29 +374,24 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceDomainInvites');
-      const q = query(
-        invitesCol,
-        where('domain', '==', domain),
-        where('status', '==', 'active'),
-        where('role', '==', 'viewer'),
-      );
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceDomainInvites');
+    const q = query(
+      invitesCol,
+      where('domain', '==', domain),
+      where('status', '==', 'active'),
+      where('role', '==', 'viewer'),
+    );
+    const snapshot = await getDocs(q);
 
-      return snapshot.docs
-        .map((docSnap) =>
-          toWorkspaceDomainInvite(
-            docSnap.id,
-            docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
-          ),
-        )
-        .filter((invite) => invite.status === 'active' && invite.role === 'viewer');
-    } catch (err) {
-      console.error('Failed to list pending workspace domain invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) =>
+        toWorkspaceDomainInvite(
+          docSnap.id,
+          docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
+        ),
+      )
+      .filter((invite) => invite.status === 'active' && invite.role === 'viewer');
   }
 
   async listSyncedWorkspacesForUser(userId: string): Promise<Workspace[]> {
@@ -422,15 +402,10 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const memberships = await this.listMembershipsForUser(userId);
     const workspaces = await Promise.all(
       memberships.map(async (membership) => {
-        try {
-          const workspaceRef = doc(firestore, 'workspaces', membership.workspaceId);
-          const snapshot = await getDoc(workspaceRef);
-          if (!snapshot.exists()) return null;
-          return toWorkspace(snapshot.id, snapshot.data() as FirestoreWorkspaceDoc);
-        } catch (err) {
-          console.error('Failed to read workspace metadata:', err);
-          return null;
-        }
+        const workspaceRef = doc(firestore, 'workspaces', membership.workspaceId);
+        const snapshot = await getDoc(workspaceRef);
+        if (!snapshot.exists()) return null;
+        return toWorkspace(snapshot.id, snapshot.data() as FirestoreWorkspaceDoc);
       }),
     );
 
@@ -447,84 +422,64 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceInvites');
-      const q = query(invitesCol, where('email', '==', normalizedEmail));
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceInvites');
+    const q = query(invitesCol, where('email', '==', normalizedEmail));
+    const snapshot = await getDocs(q);
 
-      return snapshot.docs
-        .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
-        .filter((invite) => invite.status === 'pending');
-    } catch (err) {
-      console.error('Failed to list pending workspace invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
+      .filter((invite) => invite.status === 'pending');
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMember[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const membersCol = collection(firestore, 'workspaces', workspaceId, 'members');
-      const snapshot = await getDocs(membersCol);
+    const firestore = await getFirebaseFirestore();
+    const membersCol = collection(firestore, 'workspaces', workspaceId, 'members');
+    const snapshot = await getDocs(membersCol);
 
-      return snapshot.docs.map((docSnap) =>
-        toWorkspaceMember(docSnap.id, docSnap.data() as FirestoreWorkspaceMemberDoc),
-      );
-    } catch (err) {
-      console.error('Failed to list workspace members:', err);
-      return [];
-    }
+    return snapshot.docs.map((docSnap) =>
+      toWorkspaceMember(docSnap.id, docSnap.data() as FirestoreWorkspaceMemberDoc),
+    );
   }
 
   async listInvites(workspaceId: string): Promise<WorkspaceInvite[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceInvites');
-      const q = query(invitesCol, where('workspaceId', '==', workspaceId));
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceInvites');
+    const q = query(invitesCol, where('workspaceId', '==', workspaceId));
+    const snapshot = await getDocs(q);
 
-      return snapshot.docs
-        .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
-        .filter((invite) => invite.status === 'pending');
-    } catch (err) {
-      console.error('Failed to list outgoing workspace invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
+      .filter((invite) => invite.status === 'pending');
   }
 
   async listDomainInvites(workspaceId: string): Promise<WorkspaceDomainInvite[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceDomainInvites');
-      const q = query(
-        invitesCol,
-        where('workspaceId', '==', workspaceId),
-        where('status', '==', 'active'),
-      );
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceDomainInvites');
+    const q = query(
+      invitesCol,
+      where('workspaceId', '==', workspaceId),
+      where('status', '==', 'active'),
+    );
+    const snapshot = await getDocs(q);
 
-      return snapshot.docs
-        .map((docSnap) =>
-          toWorkspaceDomainInvite(
-            docSnap.id,
-            docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
-          ),
-        )
-        .filter((invite) => invite.status === 'active');
-    } catch (err) {
-      console.error('Failed to list workspace domain invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) =>
+        toWorkspaceDomainInvite(
+          docSnap.id,
+          docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
+        ),
+      )
+      .filter((invite) => invite.status === 'active');
   }
 
   async createSyncedWorkspace(

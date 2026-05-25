@@ -313,6 +313,55 @@ describe('WorkspaceRepository', () => {
         { merge: true },
       );
     });
+
+    it('surfaces Firestore write failures during personal workspace bootstrap', async () => {
+      firestoreMocks.setDoc.mockRejectedValueOnce(new Error('permission denied'));
+
+      await expect(
+        repo.bootstrapPersonalWorkspace({
+          uid: 'user-1',
+          email: 'user@example.com',
+          displayName: 'User One',
+        }),
+      ).rejects.toThrow('permission denied');
+    });
+  });
+
+  describe('synced workspace reads', () => {
+    it('surfaces membership index read failures instead of using a fallback workspace', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('index unavailable'));
+
+      await expect(repo.listMembershipsForUser('user-1')).rejects.toThrow('index unavailable');
+    });
+
+    it('surfaces workspace metadata read failures instead of dropping the workspace', async () => {
+      firestoreMocks.state.collectionDocs.set('workspaceMemberships', [
+        firestoreMocks.makeDoc('workspaceMemberships/workspace-1_user-1', {
+          workspaceId: 'workspace-1',
+          userId: 'user-1',
+          role: 'owner',
+          workspaceName: 'Design Team',
+          ownerId: 'user-1',
+        }),
+      ]);
+      firestoreMocks.getDoc.mockRejectedValueOnce(new Error('metadata unavailable'));
+
+      await expect(repo.listSyncedWorkspacesForUser('user-1')).rejects.toThrow(
+        'metadata unavailable',
+      );
+    });
+
+    it('surfaces member read failures instead of returning an empty member list', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('members denied'));
+
+      await expect(repo.listMembers('workspace-1')).rejects.toThrow('members denied');
+    });
+
+    it('surfaces outgoing invite read failures instead of returning an empty invite list', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('invites denied'));
+
+      await expect(repo.listInvites('workspace-1')).rejects.toThrow('invites denied');
+    });
   });
 
   describe('domain invites', () => {

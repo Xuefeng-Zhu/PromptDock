@@ -17,7 +17,6 @@ import {
   workspaceDomainInviteId,
 } from '../utils/workspace-domain';
 import {
-  PERSONAL_WORKSPACE_NAME,
   createPersonalWorkspaceRecord,
   createWorkspaceMemberPayload,
   createWorkspaceMembershipPayload,
@@ -308,20 +307,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const firestore = await getFirebaseFirestore();
     const timestamp = serverTimestamp();
     const workspaceRef = doc(firestore, 'workspaces', user.uid);
-    const existingWorkspaceSnapshot = await getDoc(workspaceRef);
-    const existingWorkspace = existingWorkspaceSnapshot?.exists()
-      ? toWorkspace(
-        existingWorkspaceSnapshot.id,
-        existingWorkspaceSnapshot.data() as FirestoreWorkspaceDoc,
-      )
-      : null;
-    const workspace: Workspace = {
-      id: user.uid,
-      name: PERSONAL_WORKSPACE_NAME,
-      ownerId: user.uid,
-      createdAt: existingWorkspace?.createdAt ?? new Date(),
-      updatedAt: new Date(),
-    };
+    const workspace = createPersonalWorkspaceRecord(user.uid);
     const memberPayload = createWorkspaceMemberPayload(workspace, user, 'owner', timestamp);
     const membershipPayload = createWorkspaceMembershipPayload(workspace, user, 'owner', timestamp);
 
@@ -336,15 +322,26 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       ownerId: workspace.ownerId,
       updatedAt: timestamp,
     };
-    if (!existingWorkspace) {
-      workspacePayload.createdAt = timestamp;
-    }
 
     await setDoc(workspaceRef, workspacePayload, { merge: true });
     await setDoc(memberRef, memberPayload, { merge: true });
     await setDoc(membershipRef, membershipPayload, { merge: true });
 
-    return workspace;
+    const workspaceSnapshot = await getDoc(workspaceRef);
+    if (!workspaceSnapshot.exists()) {
+      await setDoc(workspaceRef, { createdAt: timestamp }, { merge: true });
+      return workspace;
+    }
+
+    const workspaceData = workspaceSnapshot.data() as FirestoreWorkspaceDoc;
+    if (!workspaceData.createdAt) {
+      await setDoc(workspaceRef, { createdAt: timestamp }, { merge: true });
+    }
+
+    const persistedWorkspace = toWorkspace(workspaceSnapshot.id, workspaceData);
+    return workspaceData.createdAt
+      ? persistedWorkspace
+      : { ...persistedWorkspace, createdAt: workspace.createdAt };
   }
 
   async listMembershipsForUser(userId: string): Promise<WorkspaceMembership[]> {

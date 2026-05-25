@@ -314,6 +314,38 @@ describe('WorkspaceRepository', () => {
       );
     });
 
+    it('creates owner records before reading personal workspace metadata', async () => {
+      await repo.bootstrapPersonalWorkspace({
+        uid: 'user-1',
+        email: 'user@example.com',
+        displayName: 'User One',
+      });
+
+      expect(firestoreMocks.getDoc).toHaveBeenCalledTimes(1);
+      const firstReadOrder = firestoreMocks.getDoc.mock.invocationCallOrder[0];
+      const bootstrapWriteOrders = firestoreMocks.setDoc.mock.invocationCallOrder.slice(0, 3);
+
+      expect(firstReadOrder).toBeGreaterThan(Math.max(...bootstrapWriteOrders));
+      expect(firestoreMocks.setDoc).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ path: 'workspaces/user-1' }),
+        expect.not.objectContaining({ createdAt: expect.anything() }),
+        { merge: true },
+      );
+      expect(firestoreMocks.setDoc).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ path: 'workspaces/user-1/members/user-1' }),
+        expect.any(Object),
+        { merge: true },
+      );
+      expect(firestoreMocks.setDoc).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ path: 'workspaceMemberships/user-1_user-1' }),
+        expect.any(Object),
+        { merge: true },
+      );
+    });
+
     it('throws when required personal workspace writes fail', async () => {
       const error = new Error('permission-denied');
       firestoreMocks.setDoc.mockRejectedValueOnce(error);

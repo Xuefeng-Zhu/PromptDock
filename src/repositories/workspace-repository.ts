@@ -2,10 +2,8 @@ import type {
   AuthUser,
   Workspace,
   WorkspaceDomainInvite,
-  WorkspaceDomainInviteStatus,
   WorkspaceInvite,
   WorkspaceInviteRole,
-  WorkspaceInviteStatus,
   WorkspaceMember,
   WorkspaceMembership,
   WorkspaceRole,
@@ -24,166 +22,20 @@ import {
   normalizeWorkspaceEmail,
   workspaceMembershipId,
 } from '../utils/workspace-records';
-
-interface FirestoreTimestamp {
-  seconds: number;
-  nanoseconds: number;
-  toDate(): Date;
-}
-
-function timestampToDate(timestamp: FirestoreTimestamp | Date | null | undefined): Date {
-  if (!timestamp) return new Date();
-  if (timestamp instanceof Date) return timestamp;
-  if (typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
-  }
-  return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1_000_000);
-}
+import {
+  type FirestoreWorkspaceDoc,
+  type FirestoreWorkspaceDomainInviteDoc,
+  type FirestoreWorkspaceInviteDoc,
+  type FirestoreWorkspaceMemberDoc,
+  type FirestoreWorkspaceMembershipDoc,
+  toWorkspace,
+  toWorkspaceDomainInvite,
+  toWorkspaceInvite,
+  toWorkspaceMember,
+  toWorkspaceMembership,
+} from './workspace-firestore-converters';
 
 const LOCAL_WORKSPACE_ID = 'local';
-
-interface FirestoreWorkspaceDoc {
-  name: string;
-  ownerId: string;
-  createdAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-}
-
-interface FirestoreWorkspaceMemberDoc {
-  id?: string;
-  workspaceId: string;
-  userId: string;
-  role: WorkspaceRole;
-  email?: string;
-  displayName?: string | null;
-  joinedAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  acceptedInviteId?: string;
-  acceptedDomainInviteId?: string;
-}
-
-interface FirestoreWorkspaceMembershipDoc {
-  id?: string;
-  workspaceId: string;
-  userId: string;
-  role: WorkspaceRole;
-  email?: string;
-  displayName?: string | null;
-  workspaceName?: string;
-  ownerId?: string;
-  joinedAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  acceptedInviteId?: string;
-  acceptedDomainInviteId?: string;
-}
-
-interface FirestoreWorkspaceInviteDoc {
-  workspaceId: string;
-  workspaceName?: string;
-  email: string;
-  role: WorkspaceInviteRole;
-  status: WorkspaceInviteStatus;
-  invitedBy: string;
-  createdAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  acceptedAt?: FirestoreTimestamp | null;
-  acceptedBy?: string | null;
-}
-
-interface FirestoreWorkspaceDomainInviteDoc {
-  workspaceId: string;
-  workspaceName?: string;
-  ownerId?: string;
-  domain: string;
-  role: 'viewer';
-  status: WorkspaceDomainInviteStatus;
-  invitedBy: string;
-  createdAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  revokedAt?: FirestoreTimestamp | null;
-  revokedBy?: string | null;
-}
-
-function toWorkspace(id: string, data: FirestoreWorkspaceDoc): Workspace {
-  return {
-    id,
-    name: data.name,
-    ownerId: data.ownerId,
-    createdAt: timestampToDate(data.createdAt),
-    updatedAt: timestampToDate(data.updatedAt),
-  };
-}
-
-function toWorkspaceMember(id: string, data: FirestoreWorkspaceMemberDoc): WorkspaceMember {
-  return {
-    id: data.id ?? id,
-    workspaceId: data.workspaceId,
-    userId: data.userId,
-    role: data.role,
-    email: data.email ?? '',
-    displayName: data.displayName ?? null,
-    joinedAt: timestampToDate(data.joinedAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    ...(data.acceptedInviteId ? { acceptedInviteId: data.acceptedInviteId } : {}),
-    ...(data.acceptedDomainInviteId ? { acceptedDomainInviteId: data.acceptedDomainInviteId } : {}),
-  };
-}
-
-function toWorkspaceMembership(
-  id: string,
-  data: FirestoreWorkspaceMembershipDoc,
-): WorkspaceMembership {
-  return {
-    id: data.id ?? id,
-    workspaceId: data.workspaceId,
-    userId: data.userId,
-    role: data.role,
-    email: data.email ?? '',
-    displayName: data.displayName ?? null,
-    workspaceName: data.workspaceName ?? 'Workspace',
-    ownerId: data.ownerId ?? '',
-    joinedAt: timestampToDate(data.joinedAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    ...(data.acceptedInviteId ? { acceptedInviteId: data.acceptedInviteId } : {}),
-    ...(data.acceptedDomainInviteId ? { acceptedDomainInviteId: data.acceptedDomainInviteId } : {}),
-  };
-}
-
-function toWorkspaceInvite(id: string, data: FirestoreWorkspaceInviteDoc): WorkspaceInvite {
-  return {
-    id,
-    workspaceId: data.workspaceId,
-    workspaceName: data.workspaceName ?? 'Workspace',
-    email: data.email,
-    role: data.role,
-    status: data.status,
-    invitedBy: data.invitedBy,
-    createdAt: timestampToDate(data.createdAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    acceptedAt: data.acceptedAt ? timestampToDate(data.acceptedAt) : null,
-    acceptedBy: data.acceptedBy ?? null,
-  };
-}
-
-function toWorkspaceDomainInvite(
-  id: string,
-  data: FirestoreWorkspaceDomainInviteDoc,
-): WorkspaceDomainInvite {
-  return {
-    id,
-    workspaceId: data.workspaceId,
-    workspaceName: data.workspaceName ?? 'Workspace',
-    ownerId: data.ownerId ?? '',
-    domain: data.domain,
-    role: 'viewer',
-    status: data.status,
-    invitedBy: data.invitedBy,
-    createdAt: timestampToDate(data.createdAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    revokedAt: data.revokedAt ? timestampToDate(data.revokedAt) : null,
-    revokedBy: data.revokedBy ?? null,
-  };
-}
 
 function createPersonalWorkspaceFallback(userId: string): Workspace {
   return createPersonalWorkspaceRecord(userId);

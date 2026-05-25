@@ -1,6 +1,7 @@
 import { useId, useMemo, type KeyboardEvent } from 'react';
 import { useHighlightedIndex } from '../../hooks/use-highlighted-index';
 import { getQuickTagOptions } from '../../utils/tag-options';
+import { getListboxOptionClass } from '../ui/listbox/listbox-option-class';
 
 interface TagAutocompleteInputProps {
   availableTags?: string[];
@@ -103,12 +104,11 @@ export function TagAutocompleteInput({
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setHighlightedIndex(index)}
               onClick={() => onSubmitTag(tag)}
-              className={[
-                'block w-full rounded-md px-2 py-1.5 text-left text-xs transition-colors',
-                index === clampedHighlightedIndex
-                  ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                  : 'text-[var(--color-text-main)] hover:bg-gray-50',
-              ].join(' ')}
+              className={getListboxOptionClass({
+                active: index === clampedHighlightedIndex,
+                layout: 'block',
+                size: 'compact',
+              })}
             >
               #{tag}
             </button>

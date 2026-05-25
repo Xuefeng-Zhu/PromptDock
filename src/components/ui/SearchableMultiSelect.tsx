@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { useAnchoredDropdownPosition } from './listbox/use-anchored-dropdown-position';
 import { useDismissablePopover } from './listbox/use-dismissable-popover';
+import { getListboxOptionClass } from './listbox/listbox-option-class';
 
 export interface SearchableMultiSelectOption<T extends string> {
   label: string;
@@ -123,12 +124,7 @@ export function SearchableMultiSelect<T extends string>({
                     role="option"
                     aria-selected={selected}
                     onClick={() => onChange(toggleValue(selectedValues, option.value))}
-                    className={[
-                      'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors',
-                      selected
-                        ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                        : 'text-[var(--color-text-main)] hover:bg-gray-50',
-                    ].join(' ')}
+                    className={getListboxOptionClass({ active: selected })}
                   >
                     <span
                       className={[

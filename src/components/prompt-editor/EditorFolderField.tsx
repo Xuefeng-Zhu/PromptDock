@@ -14,6 +14,7 @@ import {
   type FolderOption,
   type FolderQuickOption,
 } from '../../utils/folder-options';
+import { getListboxOptionClass } from '../ui/listbox/listbox-option-class';
 
 interface EditorFolderFieldProps {
   folderId: string | null;
@@ -219,12 +220,7 @@ export function EditorFolderField({
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setHighlightedIndex(index)}
                     onClick={() => void selectFolderOption(option)}
-                    className={[
-                      'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors',
-                      index === clampedHighlightedIndex
-                        ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                        : 'text-[var(--color-text-main)] hover:bg-gray-50',
-                    ].join(' ')}
+                    className={getListboxOptionClass({ active: index === clampedHighlightedIndex })}
                   >
                     {option.kind === 'create' ? (
                       <Plus className="h-4 w-4 shrink-0" />

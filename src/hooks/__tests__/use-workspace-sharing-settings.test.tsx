@@ -6,77 +6,46 @@ import type { IWorkspaceRepository } from '../../repositories/interfaces';
 import { initAppModeStore } from '../../stores/app-mode-store';
 import { initWorkspaceStore } from '../../stores/workspace-store';
 import type {
-  AuthUser,
   Workspace,
   WorkspaceDomainInvite,
   WorkspaceInvite,
   WorkspaceMember,
   WorkspaceMembership,
 } from '../../types/index';
+import {
+  createDeferred,
+  makeTestAuthUser,
+  makeTestWorkspace as makeWorkspace,
+  makeTestWorkspaceMember as makeWorkspaceMember,
+  makeTestWorkspaceMembership as makeWorkspaceMembership,
+} from '../../test-utils/workspace-fixtures';
 import { useWorkspaceSharingSettings } from '../use-workspace-sharing-settings';
 
-const user: AuthUser = {
+const user = makeTestAuthUser({
   uid: 'user-1',
   email: 'user@example.com',
   displayName: 'User One',
-};
+});
 
-const personalWorkspace: Workspace = {
-  id: user.uid,
-  name: 'Personal Workspace',
-  ownerId: user.uid,
-  createdAt: new Date('2024-01-01'),
-  updatedAt: new Date('2024-01-01'),
-};
+const personalWorkspace = makeWorkspace(user);
 
-const teamWorkspace: Workspace = {
+const teamWorkspace = makeWorkspace(user, {
   id: 'team-1',
   name: 'Design Team',
-  ownerId: user.uid,
   createdAt: new Date('2024-01-02'),
   updatedAt: new Date('2024-01-02'),
-};
+});
 
 function membershipFor(workspace: Workspace, role: WorkspaceMembership['role']): WorkspaceMembership {
-  return {
-    id: `${workspace.id}_${user.uid}`,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: user.email,
-    displayName: user.displayName,
-    workspaceName: workspace.name,
-    ownerId: workspace.ownerId,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
+  return makeWorkspaceMembership(workspace, user, role);
 }
 
 function memberFor(workspace: Workspace, role: WorkspaceMember['role']): WorkspaceMember {
-  return {
-    id: user.uid,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: user.email,
-    displayName: user.displayName,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
+  return makeWorkspaceMember(workspace, user, role);
 }
 
 function submitEvent(): FormEvent<HTMLFormElement> {
   return { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>;
-}
-
-function createDeferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<T>((promiseResolve, promiseReject) => {
-    resolve = promiseResolve;
-    reject = promiseReject;
-  });
-  return { promise, reject, resolve };
 }
 
 function createRepo(overrides: Partial<IWorkspaceRepository> = {}): IWorkspaceRepository {

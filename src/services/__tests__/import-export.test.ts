@@ -398,6 +398,50 @@ describe('ImportExportService — Unit Tests', () => {
     expect(duplicates).toHaveLength(0);
   });
 
+  it('should return only the strongest duplicate match for each incoming prompt', () => {
+    const existing = [
+      makePrompt({ id: 'title-match', title: 'Shared title', body: 'Existing body A' }),
+      makePrompt({ id: 'body-match', title: 'Existing title B', body: 'Shared body' }),
+    ];
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Shared body' })];
+
+    const duplicates = service.detectDuplicates(incoming, existing);
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates[0].existing.id).toBe('title-match');
+    expect(duplicates[0].matchedOn).toBe('title');
+  });
+
+  it('should prefer exact duplicate matches over earlier partial matches', () => {
+    const existing = [
+      makePrompt({ id: 'title-match', title: 'Shared title', body: 'Existing body A' }),
+      makePrompt({ id: 'exact-match', title: 'Shared title', body: 'Shared body' }),
+    ];
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Shared body' })];
+
+    const duplicates = service.detectDuplicates(incoming, existing);
+    expect(duplicates).toHaveLength(1);
+    expect(duplicates[0].existing.id).toBe('exact-match');
+    expect(duplicates[0].matchedOn).toBe('both');
+  });
+
+  it('should deterministically choose the same prompt for same-strength matches', () => {
+    const first = makePrompt({ id: 'alpha-match', title: 'Shared title', body: 'Existing body A' });
+    const second = makePrompt({ id: 'zeta-match', title: 'Shared title', body: 'Existing body B' });
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Imported body' })];
+
+    expect(service.detectDuplicates(incoming, [second, first])[0].existing.id).toBe('alpha-match');
+    expect(service.detectDuplicates(incoming, [first, second])[0].existing.id).toBe('alpha-match');
+  });
+
+  it('should use locale-independent id ordering for same-strength matches', () => {
+    const upper = makePrompt({ id: 'I-match', title: 'Shared title', body: 'Existing body A' });
+    const lower = makePrompt({ id: 'i-match', title: 'Shared title', body: 'Existing body B' });
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Imported body' })];
+
+    expect(service.detectDuplicates(incoming, [lower, upper])[0].existing.id).toBe('I-match');
+    expect(service.detectDuplicates(incoming, [upper, lower])[0].existing.id).toBe('I-match');
+  });
+
   it('should exclude archived prompts from export', () => {
     const prompts = [
       makePrompt({ id: '1', title: 'Active', archived: false }),

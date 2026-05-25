@@ -11,6 +11,13 @@
 import type { IAuthService } from './interfaces';
 import type { AuthResult, AuthUser, AuthError } from '../types/index';
 import { isFirebaseCoreConfigured } from '../firebase/env';
+import {
+  PERSONAL_WORKSPACE_NAME,
+  createPersonalWorkspaceRecord,
+  createWorkspaceMemberPayload,
+  createWorkspaceMembershipPayload,
+  workspaceMembershipId,
+} from '../utils/workspace-records';
 
 const AUTH_RESTORE_TIMEOUT_MS = 3000;
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
@@ -101,19 +108,15 @@ export class AuthService implements IAuthService {
     const userRef = doc(firestore, 'users', user.uid);
     const workspaceRef = doc(firestore, 'workspaces', user.uid);
     const memberRef = doc(firestore, 'workspaces', user.uid, 'members', user.uid);
-    const membershipRef = doc(firestore, 'workspaceMemberships', `${user.uid}_${user.uid}`);
+    const membershipRef = doc(
+      firestore,
+      'workspaceMemberships',
+      workspaceMembershipId(user.uid, user.uid),
+    );
     const timestamp = serverTimestamp();
-    const workspaceName = 'Personal Workspace';
-    const memberData = {
-      id: user.uid,
-      userId: user.uid,
-      workspaceId: user.uid,
-      role: 'owner',
-      email: user.email.trim().toLowerCase(),
-      displayName: user.displayName,
-      joinedAt: timestamp,
-      updatedAt: timestamp,
-    };
+    const workspace = createPersonalWorkspaceRecord(user.uid);
+    const memberData = createWorkspaceMemberPayload(workspace, user, 'owner', timestamp);
+    const membershipData = createWorkspaceMembershipPayload(workspace, user, 'owner', timestamp);
 
     await Promise.allSettled([
       setDoc(
@@ -129,7 +132,7 @@ export class AuthService implements IAuthService {
       setDoc(
         workspaceRef,
         {
-          name: workspaceName,
+          name: PERSONAL_WORKSPACE_NAME,
           ownerId: user.uid,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -140,15 +143,7 @@ export class AuthService implements IAuthService {
 
     const metadataResults = await Promise.allSettled([
       setDoc(memberRef, memberData, { merge: true }),
-      setDoc(
-        membershipRef,
-        {
-          ...memberData,
-          workspaceName,
-          ownerId: user.uid,
-        },
-        { merge: true },
-      ),
+      setDoc(membershipRef, membershipData, { merge: true }),
     ]);
 
     metadataResults.forEach((result) => {

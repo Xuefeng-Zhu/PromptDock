@@ -3,6 +3,7 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { Card } from '../../ui/Card';
 import type { ThemeOption } from '../settings-data';
 import { SettingsCardTitle } from './SettingsCardTitle';
+import { SettingsOptionLabel } from './SettingsOptionLabel';
 
 interface AppearanceSettingsCardProps {
   theme: ThemeOption;
@@ -37,15 +38,10 @@ export function AppearanceSettingsCard({
           {THEME_OPTIONS.map((option) => {
             const isActive = theme === option.key;
             return (
-              <label
+              <SettingsOptionLabel
                 key={option.key}
-                className={[
-                  'flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-4 transition-colors',
-                  'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]',
-                  isActive
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]'
-                    : 'border-[var(--color-border)] bg-[var(--color-panel)] hover:bg-gray-50',
-                ].join(' ')}
+                active={isActive}
+                className="flex-col items-center gap-2 p-4"
               >
                 <input
                   type="radio"
@@ -74,7 +70,7 @@ export function AppearanceSettingsCard({
                 >
                   {option.label}
                 </span>
-              </label>
+              </SettingsOptionLabel>
             );
           })}
         </div>

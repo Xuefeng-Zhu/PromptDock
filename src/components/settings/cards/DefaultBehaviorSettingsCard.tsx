@@ -1,6 +1,7 @@
 import { Card } from '../../ui/Card';
 import type { DefaultAction } from '../settings-data';
 import { SettingsCardTitle } from './SettingsCardTitle';
+import { SettingsOptionLabel } from './SettingsOptionLabel';
 
 interface DefaultBehaviorSettingsCardProps {
   canUsePasteAction: boolean;
@@ -46,15 +47,10 @@ export function DefaultBehaviorSettingsCard({
           {options.map((opt) => {
             const isActive = selectedAction === opt.key;
             return (
-              <label
+              <SettingsOptionLabel
                 key={opt.key}
-                className={[
-                  'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors',
-                  'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-primary)]',
-                  isActive
-                    ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]'
-                    : 'border-[var(--color-border)] bg-[var(--color-panel)] hover:bg-gray-50',
-                ].join(' ')}
+                active={isActive}
+                className="items-start gap-3 p-3"
               >
                 <input
                   type="radio"
@@ -72,7 +68,7 @@ export function DefaultBehaviorSettingsCard({
                     {opt.description}
                   </span>
                 </div>
-              </label>
+              </SettingsOptionLabel>
             );
           })}
         </div>

@@ -6,6 +6,7 @@ import {
   AUTH_UNCONFIGURED_MESSAGE,
   isAuthServiceAvailable,
 } from '../utils/auth-service-availability';
+import { formatErrorMessage } from '../utils/error-message';
 
 export type AuthFormMode = 'sign-in' | 'sign-up';
 
@@ -121,7 +122,7 @@ export function useAuthForm({
       setAuthUser(null);
       onSignOutSuccess?.();
     } catch (err) {
-      setAuthError(`Failed to sign out: ${err instanceof Error ? err.message : String(err)}`);
+      setAuthError(`Failed to sign out: ${formatErrorMessage(err)}`);
     } finally {
       setIsSubmitting(false);
     }

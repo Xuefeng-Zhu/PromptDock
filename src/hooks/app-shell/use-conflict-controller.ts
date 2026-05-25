@@ -3,6 +3,7 @@ import type { ConflictService } from '../../services/conflict-service';
 import type { PromptStore } from '../../stores/prompt-store';
 import type { ToastStore } from '../../stores/toast-store';
 import type { PromptRecipe } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
 
 interface UseConflictControllerOptions {
   addToast: ToastStore['addToast'];
@@ -34,7 +35,7 @@ export function useConflictController({
   const handleConflictResolve = useCallback(
     (promptId: string, resolvedVersion: PromptRecipe) => {
       updatePrompt(promptId, resolvedVersion).catch((err: unknown) => {
-        addToast(`Failed to resolve conflict: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to resolve conflict: ${formatErrorMessage(err)}`, 'error');
       });
     },
     [addToast, updatePrompt],

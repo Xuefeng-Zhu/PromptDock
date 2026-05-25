@@ -8,6 +8,7 @@ import {
 import { X } from 'lucide-react';
 import { parsePromptJson, type PromptJsonDraft } from '../../services/prompt-json';
 import type { Folder } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
 import { Button, Textarea } from '../ui';
 
 interface PromptJsonImportModalProps {
@@ -72,7 +73,7 @@ export function PromptJsonImportModal({
       await onApply(result.data);
     } catch (err) {
       setErrors([
-        `Failed to fill form: ${err instanceof Error ? err.message : String(err)}`,
+        `Failed to fill form: ${formatErrorMessage(err)}`,
       ]);
     } finally {
       setIsApplying(false);

@@ -6,12 +6,13 @@ import { usePromptSearchResults } from '../../hooks/use-prompt-search-results';
 import { usePromptStore } from '../../stores/prompt-store';
 import { useSettingsStore } from '../../stores/settings-store';
 import { canEditWorkspace, useWorkspaceStore } from '../../stores/workspace-store';
+import { formatPrefixedErrorMessage } from '../../utils/error-message';
 import { extractVariables } from '../../utils/prompt-template';
 import { resolvePromptRecipeVariables } from '../../utils/prompt-variables';
 import type { PromptRecipe } from '../../types/index';
 
 function formatActionError(action: string, err: unknown): string {
-  return `Failed to ${action}: ${err instanceof Error ? err.message : String(err)}`;
+  return formatPrefixedErrorMessage(`Failed to ${action}`, err);
 }
 
 /**

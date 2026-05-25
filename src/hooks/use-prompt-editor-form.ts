@@ -16,6 +16,7 @@ import {
 } from '../utils/prompt-variables';
 import { normalizeTag, resolveExistingTagName } from '../utils/tag-options';
 import { countChars, countWords } from '../utils/text-counts';
+import { formatErrorMessage } from '../utils/error-message';
 
 interface UsePromptEditorFormOptions {
   availableTags?: string[];
@@ -283,7 +284,7 @@ export function usePromptEditorForm({
       });
     } catch (err) {
       setValidationError(
-        `Failed to save prompt: ${err instanceof Error ? err.message : String(err)}`,
+        `Failed to save prompt: ${formatErrorMessage(err)}`,
       );
     } finally {
       setIsSaving(false);

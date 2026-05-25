@@ -13,6 +13,7 @@ import type { Analytics } from 'firebase/analytics';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import { isFirebaseCoreConfigured } from './env';
+import { formatErrorMessage } from '../utils/error-message';
 
 // ─── Cached instances ──────────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export async function getFirebaseFirestore(): Promise<Firestore> {
       localCache: persistentLocalCache(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = formatErrorMessage(err);
     if (!message.includes('initializeFirestore() has already been called')) {
       throw err;
     }
@@ -200,7 +201,7 @@ export async function getFirebaseFirestore(): Promise<Firestore> {
     try {
       connectFirestoreEmulator(_firestore, host, port);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = formatErrorMessage(err);
       if (!message.includes('already been called')) {
         throw err;
       }

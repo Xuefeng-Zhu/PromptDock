@@ -2,6 +2,8 @@ import { useCallback, useRef, useState, type FormEvent } from 'react';
 import { Check, ChevronDown, Plus, Settings } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import type { WorkspaceRole } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
+import { formatNullableWorkspaceRole } from '../../utils/workspace-role';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useDismissablePopover } from '../ui/listbox/use-dismissable-popover';
@@ -11,15 +13,10 @@ interface WorkspaceSwitcherProps {
   onManageSharing?: () => void;
 }
 
-function roleLabel(role: WorkspaceRole | null): string {
-  if (!role) return 'Member';
-  return role.charAt(0).toUpperCase() + role.slice(1);
-}
-
 function RoleBadge({ role }: { role: WorkspaceRole | null }) {
   return (
     <span className="rounded-full bg-[var(--color-primary-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
-      {roleLabel(role)}
+      {formatNullableWorkspaceRole(role)}
     </span>
   );
 }
@@ -61,7 +58,7 @@ export function WorkspaceSwitcher({ onManageSharing }: WorkspaceSwitcherProps) {
       setNewWorkspaceName('');
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatErrorMessage(err));
     }
   };
 
@@ -106,7 +103,7 @@ export function WorkspaceSwitcher({ onManageSharing }: WorkspaceSwitcherProps) {
                   ].join(' ')}
                   onClick={() => {
                     void switchWorkspace(workspace.id).then(close).catch((err) => {
-                      setError(err instanceof Error ? err.message : String(err));
+                      setError(formatErrorMessage(err));
                     });
                   }}
                 >

@@ -3,6 +3,7 @@ import { UserPlus } from 'lucide-react';
 import { useAppModeStore } from '../../../stores/app-mode-store';
 import { canEditWorkspace, useWorkspaceStore } from '../../../stores/workspace-store';
 import type { Workspace } from '../../../types/index';
+import { formatErrorMessage } from '../../../utils/error-message';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
 import { SettingsCardTitle } from './SettingsCardTitle';
@@ -16,10 +17,6 @@ import {
   WorkspaceRenameSection,
   type WorkspaceRemovalIntent,
 } from './WorkspaceSharingSettingsSections';
-
-function formatActionError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
 
 export function WorkspaceSharingSettingsCard() {
   const mode = useAppModeStore((s) => s.mode);
@@ -76,7 +73,7 @@ export function WorkspaceSharingSettingsCard() {
       setNewWorkspaceName('');
       setCreateOpen(false);
     } catch (err) {
-      setError(formatActionError(err));
+      setError(formatErrorMessage(err));
     }
   };
 
@@ -94,7 +91,7 @@ export function WorkspaceSharingSettingsCard() {
         await leaveWorkspace(intent.workspace.id);
       }
     } catch (err) {
-      setError(formatActionError(err));
+      setError(formatErrorMessage(err));
     }
   };
 
@@ -108,7 +105,7 @@ export function WorkspaceSharingSettingsCard() {
       await createDomainInvite(newDomain);
       setNewDomain('');
     } catch (err) {
-      setError(formatActionError(err));
+      setError(formatErrorMessage(err));
     } finally {
       setSubmittingDomain(false);
     }
@@ -121,7 +118,7 @@ export function WorkspaceSharingSettingsCard() {
       await renameWorkspace(workspaceName);
       setWorkspaceNameDraft('');
     } catch (err) {
-      setError(formatActionError(err));
+      setError(formatErrorMessage(err));
     }
   };
 
@@ -131,7 +128,7 @@ export function WorkspaceSharingSettingsCard() {
     try {
       await switchWorkspace(workspaceId);
     } catch (err) {
-      setError(formatActionError(err));
+      setError(formatErrorMessage(err));
     }
   };
 
@@ -140,7 +137,7 @@ export function WorkspaceSharingSettingsCard() {
     try {
       await action();
     } catch (err) {
-      setError(formatActionError(err));
+      setError(formatErrorMessage(err));
     }
   };
 

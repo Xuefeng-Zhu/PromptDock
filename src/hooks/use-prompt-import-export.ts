@@ -3,6 +3,7 @@ import { ImportExportService } from '../services/import-export';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore, type CreatePromptData } from '../stores/prompt-store';
 import { canEditWorkspace, useWorkspaceStore } from '../stores/workspace-store';
+import { formatPrefixedErrorMessage } from '../utils/error-message';
 import { openFile, saveFile } from '../utils/file-dialog';
 import type { DuplicateInfo, PromptRecipe } from '../types/index';
 
@@ -10,7 +11,7 @@ const importExportService = new ImportExportService();
 type DuplicateResolutionAction = 'skip' | 'overwrite' | null;
 
 function formatImportError(prefix: string, err: unknown): string {
-  return `${prefix}: ${err instanceof Error ? err.message : String(err)}`;
+  return formatPrefixedErrorMessage(prefix, err);
 }
 
 /**

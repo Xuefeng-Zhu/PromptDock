@@ -162,6 +162,11 @@ Important assumption:
 ## Import/Export JSON Format
 
 Export is handled by `ImportExportService`. Archived prompts are excluded.
+Schema version `1.0` is intentionally backward-compatible with additive
+optional prompt fields. Typed `variables` metadata can appear in `1.0` exports
+and can be omitted by older `1.0` files; bump the schema version only when a
+field becomes required, a field type changes, or import semantics become
+incompatible.
 
 Example:
 

@@ -15,10 +15,14 @@ const firestoreMocks = vi.hoisted(() => {
     path: string;
     ref: { id: string; path: string };
   };
+  type BatchSet = { path: string; data: Record<string, unknown> };
+  type BatchUpdate = { path: string; data: Record<string, unknown> };
   const state = {
     batches: [] as Array<{
       commit: ReturnType<typeof vi.fn>;
+      deletes: string[];
       operations: string[];
+      sets: BatchSet[];
       updates: Array<{ path: string; data: Record<string, unknown> }>;
     }>,
     collectionDocs: new Map<string, DocSnapshot[]>(),
@@ -76,23 +80,36 @@ const firestoreMocks = vi.hoisted(() => {
     where: vi.fn(() => ({})),
     writeBatch: vi.fn(() => {
       const batch = {
-        commit: vi.fn(async () => undefined),
+        commit: vi.fn(async () => {
+          for (const { data, path } of batch.sets) {
+            state.documentData.set(path, data);
+          }
+          for (const { data, path } of batch.updates) {
+            state.documentData.set(path, {
+              ...(state.documentData.get(path) ?? {}),
+              ...data,
+            });
+          }
+          for (const path of batch.deletes) {
+            state.documentData.delete(path);
+          }
+        }),
         delete: vi.fn((ref: { path: string }) => {
           batch.operations.push(`delete:${ref.path}`);
+          batch.deletes.push(ref.path);
         }),
+        deletes: [] as string[],
         operations: [] as string[],
-        set: vi.fn((ref: { path: string }) => {
+        set: vi.fn((ref: { path: string }, data: Record<string, unknown>) => {
           batch.operations.push(`set:${ref.path}`);
+          batch.sets.push({ path: ref.path, data });
         }),
+        sets: [] as BatchSet[],
         update: vi.fn((ref: { path: string }, data: Record<string, unknown>) => {
           batch.operations.push(`update:${ref.path}`);
           batch.updates.push({ path: ref.path, data });
-          state.documentData.set(ref.path, {
-            ...(state.documentData.get(ref.path) ?? {}),
-            ...data,
-          });
         }),
-        updates: [] as Array<{ path: string; data: Record<string, unknown> }>,
+        updates: [] as BatchUpdate[],
       };
       state.batches.push(batch);
       return batch;
@@ -387,6 +404,36 @@ describe('WorkspaceRepository', () => {
         'set:workspaces/workspace-created/members/user-2',
         'set:workspaceMemberships/workspace-created_user-2',
       ]);
+      expect(firestoreMocks.state.batches[0].sets).toEqual([
+        {
+          path: 'workspaces/workspace-created',
+          data: expect.objectContaining({
+            createdAt: 'server-timestamp',
+            name: 'Product Team',
+            ownerId: domainUser.uid,
+            updatedAt: 'server-timestamp',
+          }),
+        },
+        {
+          path: 'workspaces/workspace-created/members/user-2',
+          data: expect.objectContaining({
+            email: domainUser.email,
+            role: 'owner',
+            userId: domainUser.uid,
+            workspaceId: 'workspace-created',
+          }),
+        },
+        {
+          path: 'workspaceMemberships/workspace-created_user-2',
+          data: expect.objectContaining({
+            role: 'owner',
+            userId: domainUser.uid,
+            workspaceId: 'workspace-created',
+            workspaceName: 'Product Team',
+          }),
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
 
     it('accepts email invites by creating membership records and marking the invite accepted', async () => {
@@ -406,6 +453,39 @@ describe('WorkspaceRepository', () => {
         'set:workspaceMemberships/workspace-1_user-2',
         'update:workspaceInvites/invite-1',
       ]);
+      expect(firestoreMocks.state.batches[0].sets).toEqual([
+        {
+          path: 'workspaces/workspace-1/members/user-2',
+          data: expect.objectContaining({
+            acceptedInviteId: 'invite-1',
+            role: 'editor',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+          }),
+        },
+        {
+          path: 'workspaceMemberships/workspace-1_user-2',
+          data: expect.objectContaining({
+            acceptedInviteId: 'invite-1',
+            role: 'editor',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+            workspaceName: syncedWorkspace.name,
+          }),
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].updates).toEqual([
+        {
+          path: 'workspaceInvites/invite-1',
+          data: {
+            acceptedAt: 'server-timestamp',
+            acceptedBy: domainUser.uid,
+            status: 'accepted',
+            updatedAt: 'server-timestamp',
+          },
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
 
     it('rejects email invite acceptance when the workspace document is gone', async () => {
@@ -447,6 +527,7 @@ describe('WorkspaceRepository', () => {
           data: { role: 'editor', updatedAt: 'server-timestamp' },
         },
       ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
 
     it('removes a member from both workspace members and membership index records', async () => {
@@ -457,6 +538,7 @@ describe('WorkspaceRepository', () => {
         'delete:workspaces/workspace-1/members/user-2',
         'delete:workspaceMemberships/workspace-1_user-2',
       ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
 
     it('leaves a synced workspace by deleting only the current user membership records', async () => {
@@ -467,6 +549,7 @@ describe('WorkspaceRepository', () => {
         'delete:workspaces/workspace-1/members/user-2',
         'delete:workspaceMemberships/workspace-1_user-2',
       ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -579,6 +662,28 @@ describe('WorkspaceRepository', () => {
         'set:workspaces/workspace-1/members/user-2',
         'set:workspaceMemberships/workspace-1_user-2',
       ]);
+      expect(firestoreMocks.state.batches[0].sets).toEqual([
+        {
+          path: 'workspaces/workspace-1/members/user-2',
+          data: expect.objectContaining({
+            acceptedDomainInviteId: invite.id,
+            role: 'viewer',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+          }),
+        },
+        {
+          path: 'workspaceMemberships/workspace-1_user-2',
+          data: expect.objectContaining({
+            acceptedDomainInviteId: invite.id,
+            role: 'viewer',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+            workspaceName: syncedWorkspace.name,
+          }),
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
 
     it('rejects accepting a domain invite when the email domain does not match', async () => {

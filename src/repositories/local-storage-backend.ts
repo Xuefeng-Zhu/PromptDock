@@ -285,9 +285,8 @@ export class LocalStorageBackend {
   // ─── Settings ──────────────────────────────────────────────────────────────
 
   async readSettings(): Promise<UserSettings> {
-    const raw = await this.readFromStore<UserSettings>(STORE_FILES.settings);
-    if (!raw) return { ...DEFAULT_SETTINGS };
-    return raw;
+    const raw = await this.readFromStore<Partial<UserSettings>>(STORE_FILES.settings);
+    return { ...DEFAULT_SETTINGS, ...(raw ?? {}) };
   }
 
   async writeSettings(settings: UserSettings): Promise<void> {

@@ -21,6 +21,18 @@ const DUPLICATE_MATCH_PRIORITY: Record<DuplicateInfo['matchedOn'], number> = {
   both: 3,
 };
 
+function isStrongerDuplicateMatch(candidate: DuplicateInfo, current: DuplicateInfo | null): boolean {
+  if (current === null) return true;
+
+  const candidatePriority = DUPLICATE_MATCH_PRIORITY[candidate.matchedOn];
+  const currentPriority = DUPLICATE_MATCH_PRIORITY[current.matchedOn];
+  if (candidatePriority !== currentPriority) {
+    return candidatePriority > currentPriority;
+  }
+
+  return candidate.existing.id.localeCompare(current.existing.id) < 0;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -214,7 +226,8 @@ export class ImportExportService implements IImportExportService {
    * Compare incoming prompts against existing prompts by title and body.
    * Returns at most one DuplicateInfo entry for each matching incoming prompt.
    * When one incoming prompt matches multiple existing prompts, exact matches
-   * win over title matches, which win over body matches.
+   * win over title matches, which win over body matches. Same-strength matches
+   * are selected by existing prompt id so unordered backends remain stable.
    */
   detectDuplicates(incoming: PromptRecipe[], existing: PromptRecipe[]): DuplicateInfo[] {
     const duplicates: DuplicateInfo[] = [];
@@ -224,17 +237,8 @@ export class ImportExportService implements IImportExportService {
 
       for (const ext of existing) {
         const match = duplicateInfoFor(inc, ext);
-        if (
-          match
-          && (
-            bestMatch === null
-            || DUPLICATE_MATCH_PRIORITY[match.matchedOn] > DUPLICATE_MATCH_PRIORITY[bestMatch.matchedOn]
-          )
-        ) {
+        if (match && isStrongerDuplicateMatch(match, bestMatch)) {
           bestMatch = match;
-          if (match.matchedOn === 'both') {
-            break;
-          }
         }
       }
 

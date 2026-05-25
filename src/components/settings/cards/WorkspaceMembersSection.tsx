@@ -1,7 +1,7 @@
 import type { WorkspaceMember, WorkspaceRole } from '../../../types/index';
-import { formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
+import { formatWorkspaceRole } from '../../../utils/workspace-role';
 import { Button } from '../../ui/Button';
-import { MEMBER_ROLE_OPTIONS } from './WorkspaceSharingRole';
+import { MEMBER_ROLE_OPTIONS, WorkspaceRoleBadge } from './WorkspaceSharingRole';
 
 export function WorkspaceMembersSection({
   isRemovingMember,
@@ -55,9 +55,7 @@ export function WorkspaceMembersSection({
                   ))}
                 </select>
               ) : (
-                <span className={`self-center rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(member.role)}`}>
-                  {formatWorkspaceRole(member.role)}
-                </span>
+                <WorkspaceRoleBadge role={member.role} size="standard" className="self-center" />
               )}
               <Button
                 variant="ghost"

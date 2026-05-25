@@ -1,6 +1,7 @@
 import type { WorkspaceDomainInvite, WorkspaceInvite } from '../../../types/index';
-import { formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
+import { formatWorkspaceRole } from '../../../utils/workspace-role';
 import { Button } from '../../ui/Button';
+import { WorkspaceRoleBadge } from './WorkspaceSharingRole';
 
 export function PendingWorkspaceInvitationsSection({
   isAcceptingDomainInvite,
@@ -96,9 +97,7 @@ export function PendingInvitesSection({
               className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-[var(--color-border)] px-3 py-2 last:border-b-0"
             >
               <span className="truncate text-sm text-[var(--color-text-main)]">{invite.email}</span>
-              <span className={`rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(invite.role)}`}>
-                {formatWorkspaceRole(invite.role)}
-              </span>
+              <WorkspaceRoleBadge role={invite.role} size="standard" />
               <Button
                 variant="ghost"
                 size="sm"

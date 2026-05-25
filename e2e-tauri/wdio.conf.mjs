@@ -96,17 +96,28 @@ const configuredTauriDriverPort = parseTcpPort(
   process.env.PROMPTDOCK_TAURI_DRIVER_PORT,
   'PROMPTDOCK_TAURI_DRIVER_PORT',
 );
-const tauriDriverPort = configuredTauriDriverPort
-  ?? await findAvailableTcpPort();
 const configuredNativeDriverPort = parseTcpPort(
   process.env.PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT,
   'PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT',
 );
-const tauriNativeDriverPort = configuredNativeDriverPort
-  ?? await findAvailableTcpPort('127.0.0.1', new Set([tauriDriverPort]));
 
-if (tauriDriverPort === tauriNativeDriverPort) {
+if (
+  configuredTauriDriverPort !== null
+  && configuredTauriDriverPort === configuredNativeDriverPort
+) {
   throw new Error('PROMPTDOCK_TAURI_DRIVER_PORT and PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT must differ.');
+}
+
+async function resolveTauriDriverPorts() {
+  const driverPort = configuredTauriDriverPort ?? await findAvailableTcpPort();
+  const nativeDriverPort = configuredNativeDriverPort
+    ?? await findAvailableTcpPort('127.0.0.1', new Set([driverPort]));
+
+  if (driverPort === nativeDriverPort) {
+    throw new Error('PROMPTDOCK_TAURI_DRIVER_PORT and PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT must differ.');
+  }
+
+  return { driverPort, nativeDriverPort };
 }
 
 function buildTauriApp() {
@@ -155,7 +166,7 @@ process.once('exit', closeTauriDriver);
 export const config = {
   runner: 'local',
   host: '127.0.0.1',
-  port: tauriDriverPort,
+  port: configuredTauriDriverPort ?? 0,
   specs: [path.join(rootDir, 'e2e-tauri', 'specs', '**', '*.e2e.mjs')],
   maxInstances: 1,
   capabilities: [
@@ -177,16 +188,20 @@ export const config = {
     defaultTimeoutInterval: 120_000,
   },
   onPrepare: buildTauriApp,
-  beforeSession: async () => {
+  beforeSession: async (wdioConfig) => {
     if (!tauriDriverPath) {
       throw new Error('TAURI_DRIVER must point to a tauri-driver executable.');
     }
 
+    const { driverPort, nativeDriverPort } = await resolveTauriDriverPorts();
+    config.port = driverPort;
+    wdioConfig.port = driverPort;
+
     tauriDriver = spawn(tauriDriverPath, [
       '--port',
-      String(tauriDriverPort),
+      String(driverPort),
       '--native-port',
-      String(tauriNativeDriverPort),
+      String(nativeDriverPort),
     ], {
       env: {
         ...process.env,
@@ -199,7 +214,7 @@ export const config = {
       throw error;
     });
 
-    await waitForTcpPort(tauriDriverPort);
+    await waitForTcpPort(driverPort);
   },
   afterSession: closeTauriDriver,
   onComplete: closeTauriDriver,

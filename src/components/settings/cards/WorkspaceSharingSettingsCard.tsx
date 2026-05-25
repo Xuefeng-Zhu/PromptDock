@@ -38,6 +38,16 @@ export function WorkspaceSharingSettingsCard() {
     inviteOpen,
     invites,
     isOwner,
+    isAcceptingDomainInvite,
+    isAcceptingInvite,
+    isCreatingWorkspace,
+    isRemovingMember,
+    isRemovingWorkspace,
+    isRenamingWorkspace,
+    isRevokingDomainInvite,
+    isRevokingInvite,
+    isSwitchingWorkspace,
+    isUpdatingMemberRole,
     members,
     memberships,
     mode,
@@ -99,6 +109,8 @@ export function WorkspaceSharingSettingsCard() {
       <PendingWorkspaceInvitationsSection
         pendingDomainInvites={pendingDomainInvites}
         pendingInvites={pendingInvites}
+        isAcceptingDomainInvite={isAcceptingDomainInvite}
+        isAcceptingInvite={isAcceptingInvite}
         onAcceptDomainInvite={handleAcceptDomainInvite}
         onAcceptInvite={handleAcceptInvite}
       />
@@ -107,6 +119,9 @@ export function WorkspaceSharingSettingsCard() {
         activeWorkspaceId={activeWorkspaceId}
         createOpen={createOpen}
         memberships={memberships}
+        isCreatingWorkspace={isCreatingWorkspace}
+        isRemovingWorkspace={isRemovingWorkspace}
+        isSwitchingWorkspace={isSwitchingWorkspace}
         newWorkspaceName={newWorkspaceName}
         userId={userId}
         workspaces={workspaces}
@@ -121,6 +136,7 @@ export function WorkspaceSharingSettingsCard() {
       {isOwner && (
         <WorkspaceRenameSection
           activeWorkspace={activeWorkspace}
+          isRenamingWorkspace={isRenamingWorkspace}
           workspaceName={workspaceName}
           onRenameWorkspace={() => {
             void handleRenameWorkspace();
@@ -132,6 +148,7 @@ export function WorkspaceSharingSettingsCard() {
       {isOwner && (
         <DomainAccessSection
           domainInvites={domainInvites}
+          isRevokingDomainInvite={isRevokingDomainInvite}
           newDomain={newDomain}
           submittingDomain={submittingDomain}
           onCreateDomainInvite={handleCreateDomainInvite}
@@ -142,6 +159,8 @@ export function WorkspaceSharingSettingsCard() {
 
       <WorkspaceMembersSection
         isOwner={isOwner}
+        isRemovingMember={isRemovingMember}
+        isUpdatingMemberRole={isUpdatingMemberRole}
         members={members}
         userId={userId}
         onRemoveMember={handleRemoveMember}
@@ -151,6 +170,7 @@ export function WorkspaceSharingSettingsCard() {
       <PendingInvitesSection
         invites={invites}
         isOwner={isOwner}
+        isRevokingInvite={isRevokingInvite}
         onRevokeInvite={handleRevokeInvite}
       />
 

@@ -27,11 +27,15 @@ function WorkspaceRoleBadge({ role }: { role: WorkspaceRole | null }) {
 }
 
 export function PendingWorkspaceInvitationsSection({
+  isAcceptingDomainInvite,
+  isAcceptingInvite,
   onAcceptDomainInvite,
   onAcceptInvite,
   pendingDomainInvites,
   pendingInvites,
 }: {
+  isAcceptingDomainInvite: (inviteId: string) => boolean;
+  isAcceptingInvite: (inviteId: string) => boolean;
   onAcceptDomainInvite: (inviteId: string) => void;
   onAcceptInvite: (inviteId: string) => void;
   pendingDomainInvites: WorkspaceDomainInvite[];
@@ -55,7 +59,12 @@ export function PendingWorkspaceInvitationsSection({
                 Invited as {formatWorkspaceRole(invite.role)}
               </p>
             </div>
-            <Button size="sm" variant="secondary" onClick={() => onAcceptInvite(invite.id)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isAcceptingInvite(invite.id)}
+              onClick={() => onAcceptInvite(invite.id)}
+            >
               Accept
             </Button>
           </div>
@@ -70,7 +79,12 @@ export function PendingWorkspaceInvitationsSection({
                 Domain access for @{invite.domain}
               </p>
             </div>
-            <Button size="sm" variant="secondary" onClick={() => onAcceptDomainInvite(invite.id)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isAcceptingDomainInvite(invite.id)}
+              onClick={() => onAcceptDomainInvite(invite.id)}
+            >
               Accept
             </Button>
           </div>
@@ -83,6 +97,9 @@ export function PendingWorkspaceInvitationsSection({
 export function WorkspaceListSection({
   activeWorkspaceId,
   createOpen,
+  isCreatingWorkspace,
+  isRemovingWorkspace,
+  isSwitchingWorkspace,
   memberships,
   newWorkspaceName,
   onCancelCreate,
@@ -96,6 +113,9 @@ export function WorkspaceListSection({
 }: {
   activeWorkspaceId: string;
   createOpen: boolean;
+  isCreatingWorkspace: boolean;
+  isRemovingWorkspace: (workspaceId: string) => boolean;
+  isSwitchingWorkspace: (workspaceId: string) => boolean;
   memberships: WorkspaceMembership[];
   newWorkspaceName: string;
   onCancelCreate: () => void;
@@ -117,6 +137,7 @@ export function WorkspaceListSection({
           const isPersonalWorkspace = workspace.id === userId;
           const canDeleteWorkspace = role === 'owner' && workspace.ownerId === userId && !isPersonalWorkspace;
           const canLeaveWorkspace = role !== null && role !== 'owner';
+          const removingWorkspace = isRemovingWorkspace(workspace.id);
           return (
             <div
               key={workspace.id}
@@ -130,6 +151,7 @@ export function WorkspaceListSection({
               <button
                 type="button"
                 className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-left"
+                disabled={selected || isSwitchingWorkspace(workspace.id)}
                 onClick={() => onSwitchWorkspace(workspace.id)}
               >
                 <WorkspaceColorMark size="sm" workspace={workspace} />
@@ -143,6 +165,7 @@ export function WorkspaceListSection({
                 <button
                   type="button"
                   className="mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                  disabled={removingWorkspace}
                   onClick={() => onRemoveWorkspace({ action: 'delete', workspace })}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -153,6 +176,7 @@ export function WorkspaceListSection({
                 <button
                   type="button"
                   className="mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:bg-gray-100 hover:text-[var(--color-text-main)]"
+                  disabled={removingWorkspace}
                   onClick={() => onRemoveWorkspace({ action: 'leave', workspace })}
                 >
                   <LogOut className="h-3.5 w-3.5" />
@@ -175,7 +199,7 @@ export function WorkspaceListSection({
               <Button type="button" variant="ghost" size="sm" onClick={onCancelCreate}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={!newWorkspaceName.trim()}>
+              <Button type="submit" size="sm" disabled={!newWorkspaceName.trim() || isCreatingWorkspace}>
                 Create
               </Button>
             </div>
@@ -197,11 +221,13 @@ export function WorkspaceListSection({
 
 export function WorkspaceRenameSection({
   activeWorkspace,
+  isRenamingWorkspace,
   onRenameWorkspace,
   onWorkspaceNameChange,
   workspaceName,
 }: {
   activeWorkspace: Workspace | undefined;
+  isRenamingWorkspace: boolean;
   onRenameWorkspace: () => void;
   onWorkspaceNameChange: (name: string) => void;
   workspaceName: string;
@@ -219,7 +245,7 @@ export function WorkspaceRenameSection({
             variant="secondary"
             size="sm"
             onClick={onRenameWorkspace}
-            disabled={!workspaceName.trim() || workspaceName === activeWorkspace?.name}
+            disabled={!workspaceName.trim() || workspaceName === activeWorkspace?.name || isRenamingWorkspace}
           >
             Save
           </Button>
@@ -231,6 +257,7 @@ export function WorkspaceRenameSection({
 
 export function DomainAccessSection({
   domainInvites,
+  isRevokingDomainInvite,
   newDomain,
   onCreateDomainInvite,
   onNewDomainChange,
@@ -238,6 +265,7 @@ export function DomainAccessSection({
   submittingDomain,
 }: {
   domainInvites: WorkspaceDomainInvite[];
+  isRevokingDomainInvite: (inviteId: string) => boolean;
   newDomain: string;
   onCreateDomainInvite: (event: FormEvent<HTMLFormElement>) => void;
   onNewDomainChange: (domain: string) => void;
@@ -281,7 +309,12 @@ export function DomainAccessSection({
               <span className={`rounded-full px-2 py-1 text-xs font-medium ${workspaceRoleBadgeClass(invite.role)}`}>
                 {formatWorkspaceRole(invite.role)}
               </span>
-              <Button variant="ghost" size="sm" onClick={() => onRevokeDomainInvite(invite.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isRevokingDomainInvite(invite.id)}
+                onClick={() => onRevokeDomainInvite(invite.id)}
+              >
                 Revoke
               </Button>
             </div>
@@ -293,13 +326,17 @@ export function DomainAccessSection({
 }
 
 export function WorkspaceMembersSection({
+  isRemovingMember,
   isOwner,
+  isUpdatingMemberRole,
   members,
   onRemoveMember,
   onUpdateMemberRole,
   userId,
 }: {
+  isRemovingMember: (userId: string) => boolean;
   isOwner: boolean;
+  isUpdatingMemberRole: (userId: string) => boolean;
   members: WorkspaceMember[];
   onRemoveMember: (userId: string) => void;
   onUpdateMemberRole: (userId: string, role: WorkspaceRole) => void;
@@ -312,6 +349,8 @@ export function WorkspaceMembersSection({
         {members.map((member) => {
           const isSelf = member.userId === userId;
           const canManageMember = isOwner && !isSelf;
+          const removingMember = isRemovingMember(member.userId);
+          const updatingMemberRole = isUpdatingMemberRole(member.userId);
           return (
             <div
               key={member.userId}
@@ -329,6 +368,7 @@ export function WorkspaceMembersSection({
                 <select
                   aria-label={`Role for ${member.email || member.userId}`}
                   className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1 text-xs text-[var(--color-text-main)]"
+                  disabled={updatingMemberRole}
                   value={member.role}
                   onChange={(event) => onUpdateMemberRole(member.userId, event.target.value as WorkspaceRole)}
                 >
@@ -344,7 +384,7 @@ export function WorkspaceMembersSection({
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={!canManageMember}
+                disabled={!canManageMember || removingMember}
                 onClick={() => onRemoveMember(member.userId)}
               >
                 Remove
@@ -360,10 +400,12 @@ export function WorkspaceMembersSection({
 export function PendingInvitesSection({
   invites,
   isOwner,
+  isRevokingInvite,
   onRevokeInvite,
 }: {
   invites: WorkspaceInvite[];
   isOwner: boolean;
+  isRevokingInvite: (inviteId: string) => boolean;
   onRevokeInvite: (inviteId: string) => void;
 }) {
   return (
@@ -387,7 +429,7 @@ export function PendingInvitesSection({
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={!isOwner}
+                disabled={!isOwner || isRevokingInvite(invite.id)}
                 onClick={() => onRevokeInvite(invite.id)}
               >
                 Revoke

@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { canEditWorkspace, useWorkspaceStore } from '../stores/workspace-store';
 import type { Workspace, WorkspaceRemovalIntent, WorkspaceRole } from '../types/index';
 import { formatErrorMessage } from '../utils/error-message';
+
+const CREATE_DOMAIN_INVITE_ACTION = 'create-domain-invite';
+const CREATE_WORKSPACE_ACTION = 'create-workspace';
+const RENAME_WORKSPACE_ACTION = 'rename-workspace';
+
+function workspaceActionKey(action: string, id: string): string {
+  return `${action}:${id}`;
+}
 
 /**
  * Coordinates workspace-sharing settings state, store selectors, and async actions.
@@ -40,9 +48,10 @@ export function useWorkspaceSharingSettings() {
   const [newDomain, setNewDomain] = useState('');
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [removalIntent, setRemovalIntent] = useState<WorkspaceRemovalIntent | null>(null);
-  const [submittingDomain, setSubmittingDomain] = useState(false);
   const [workspaceNameDraft, setWorkspaceNameDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [pendingActionKeys, setPendingActionKeys] = useState<Set<string>>(() => new Set());
+  const pendingActionKeysRef = useRef(new Set<string>());
 
   const activeWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId),
@@ -55,25 +64,61 @@ export function useWorkspaceSharingSettings() {
     setWorkspaceNameDraft(activeWorkspace?.name ?? '');
   }, [activeWorkspace?.id, activeWorkspace?.name]);
 
-  const runWorkspaceAction = useCallback(async (action: () => Promise<void>) => {
+  const beginWorkspaceAction = useCallback((key: string) => {
+    if (pendingActionKeysRef.current.has(key)) return false;
+
+    const nextKeys = new Set(pendingActionKeysRef.current);
+    nextKeys.add(key);
+    pendingActionKeysRef.current = nextKeys;
+    setPendingActionKeys(nextKeys);
     setError(null);
+    return true;
+  }, []);
+
+  const finishWorkspaceAction = useCallback((key: string) => {
+    if (!pendingActionKeysRef.current.has(key)) return;
+
+    const nextKeys = new Set(pendingActionKeysRef.current);
+    nextKeys.delete(key);
+    pendingActionKeysRef.current = nextKeys;
+    setPendingActionKeys(nextKeys);
+  }, []);
+
+  const isWorkspaceActionPending = useCallback(
+    (key: string) => pendingActionKeys.has(key),
+    [pendingActionKeys],
+  );
+
+  const runWorkspaceAction = useCallback(async (key: string, action: () => Promise<void>) => {
+    if (!beginWorkspaceAction(key)) return false;
+
     try {
       await action();
+      return true;
     } catch (err) {
       setError(formatErrorMessage(err));
+      return false;
+    } finally {
+      finishWorkspaceAction(key);
     }
-  }, []);
+  }, [beginWorkspaceAction, finishWorkspaceAction]);
 
   const handleAcceptDomainInvite = useCallback(
     (inviteId: string) => {
-      void runWorkspaceAction(() => acceptDomainInvite(inviteId));
+      void runWorkspaceAction(
+        workspaceActionKey('accept-domain-invite', inviteId),
+        () => acceptDomainInvite(inviteId),
+      );
     },
     [acceptDomainInvite, runWorkspaceAction],
   );
 
   const handleAcceptInvite = useCallback(
     (inviteId: string) => {
-      void runWorkspaceAction(() => acceptInvite(inviteId));
+      void runWorkspaceAction(
+        workspaceActionKey('accept-invite', inviteId),
+        () => acceptInvite(inviteId),
+      );
     },
     [acceptInvite, runWorkspaceAction],
   );
@@ -81,103 +126,103 @@ export function useWorkspaceSharingSettings() {
   const handleCreateWorkspace = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      setError(null);
-      try {
+      const created = await runWorkspaceAction(CREATE_WORKSPACE_ACTION, async () => {
         await createWorkspace(newWorkspaceName);
+      });
+      if (created) {
         setNewWorkspaceName('');
         setCreateOpen(false);
-      } catch (err) {
-        setError(formatErrorMessage(err));
       }
     },
-    [createWorkspace, newWorkspaceName],
+    [createWorkspace, newWorkspaceName, runWorkspaceAction],
   );
 
   const handleConfirmWorkspaceRemoval = useCallback(async () => {
     if (!removalIntent) return;
 
-    setError(null);
     const intent = removalIntent;
     setRemovalIntent(null);
 
-    try {
+    await runWorkspaceAction(workspaceActionKey(`workspace-${intent.action}`, intent.workspace.id), async () => {
       if (intent.action === 'delete') {
         await deleteWorkspace(intent.workspace.id);
       } else {
         await leaveWorkspace(intent.workspace.id);
       }
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    }
-  }, [deleteWorkspace, leaveWorkspace, removalIntent]);
+    });
+  }, [deleteWorkspace, leaveWorkspace, removalIntent, runWorkspaceAction]);
 
   const handleCreateDomainInvite = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!newDomain.trim()) return;
 
-      setError(null);
-      setSubmittingDomain(true);
-      try {
+      const created = await runWorkspaceAction(CREATE_DOMAIN_INVITE_ACTION, async () => {
         await createDomainInvite(newDomain);
+      });
+      if (created) {
         setNewDomain('');
-      } catch (err) {
-        setError(formatErrorMessage(err));
-      } finally {
-        setSubmittingDomain(false);
       }
     },
-    [createDomainInvite, newDomain],
+    [createDomainInvite, newDomain, runWorkspaceAction],
   );
 
   const handleRenameWorkspace = useCallback(async () => {
     if (!workspaceNameDraft.trim() || workspaceNameDraft === activeWorkspace?.name) return;
-    setError(null);
-    try {
+    const renamed = await runWorkspaceAction(RENAME_WORKSPACE_ACTION, async () => {
       await renameWorkspace(workspaceNameDraft);
+    });
+    if (renamed) {
       setWorkspaceNameDraft('');
-    } catch (err) {
-      setError(formatErrorMessage(err));
     }
-  }, [activeWorkspace?.name, renameWorkspace, workspaceNameDraft]);
+  }, [activeWorkspace?.name, renameWorkspace, runWorkspaceAction, workspaceNameDraft]);
 
   const handleSwitchWorkspace = useCallback(
     async (workspaceId: Workspace['id']) => {
       if (workspaceId === activeWorkspaceId) return;
-      setError(null);
-      try {
+      await runWorkspaceAction(workspaceActionKey('switch-workspace', workspaceId), async () => {
         await switchWorkspace(workspaceId);
-      } catch (err) {
-        setError(formatErrorMessage(err));
-      }
+      });
     },
-    [activeWorkspaceId, switchWorkspace],
+    [activeWorkspaceId, runWorkspaceAction, switchWorkspace],
   );
 
   const handleRemoveMember = useCallback(
     (memberUserId: string) => {
-      void runWorkspaceAction(() => removeMember(memberUserId));
+      void runWorkspaceAction(
+        workspaceActionKey('remove-member', memberUserId),
+        () => removeMember(memberUserId),
+      );
     },
     [removeMember, runWorkspaceAction],
   );
 
   const handleRevokeDomainInvite = useCallback(
     (inviteId: string) => {
-      void runWorkspaceAction(() => revokeDomainInvite(inviteId));
+      void runWorkspaceAction(
+        workspaceActionKey('revoke-domain-invite', inviteId),
+        () => revokeDomainInvite(inviteId),
+      );
     },
     [revokeDomainInvite, runWorkspaceAction],
   );
 
   const handleRevokeInvite = useCallback(
     (inviteId: string) => {
-      void runWorkspaceAction(() => revokeInvite(inviteId));
+      void runWorkspaceAction(
+        workspaceActionKey('revoke-invite', inviteId),
+        () => revokeInvite(inviteId),
+      );
     },
     [revokeInvite, runWorkspaceAction],
   );
 
   const handleUpdateMemberRole = useCallback(
     (memberUserId: string, role: WorkspaceRole) => {
-      void runWorkspaceAction(() => updateMemberRole(memberUserId, role));
+      void runWorkspaceAction(
+        workspaceActionKey('update-member-role', memberUserId),
+        () => updateMemberRole(memberUserId, role),
+      );
     },
     [runWorkspaceAction, updateMemberRole],
   );
@@ -204,6 +249,25 @@ export function useWorkspaceSharingSettings() {
     inviteOpen,
     invites,
     isOwner,
+    isAcceptingDomainInvite: (inviteId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('accept-domain-invite', inviteId)),
+    isAcceptingInvite: (inviteId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('accept-invite', inviteId)),
+    isCreatingWorkspace: isWorkspaceActionPending(CREATE_WORKSPACE_ACTION),
+    isRemovingMember: (memberUserId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('remove-member', memberUserId)),
+    isRemovingWorkspace: (workspaceId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('workspace-delete', workspaceId))
+      || isWorkspaceActionPending(workspaceActionKey('workspace-leave', workspaceId)),
+    isRenamingWorkspace: isWorkspaceActionPending(RENAME_WORKSPACE_ACTION),
+    isRevokingDomainInvite: (inviteId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('revoke-domain-invite', inviteId)),
+    isRevokingInvite: (inviteId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('revoke-invite', inviteId)),
+    isSwitchingWorkspace: (workspaceId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('switch-workspace', workspaceId)),
+    isUpdatingMemberRole: (memberUserId: string) =>
+      isWorkspaceActionPending(workspaceActionKey('update-member-role', memberUserId)),
     members,
     memberships,
     mode,
@@ -218,7 +282,7 @@ export function useWorkspaceSharingSettings() {
     setNewWorkspaceName,
     setRemovalIntent,
     setWorkspaceNameDraft,
-    submittingDomain,
+    submittingDomain: isWorkspaceActionPending(CREATE_DOMAIN_INVITE_ACTION),
     userId,
     workspaceName: workspaceNameDraft,
     workspaces,

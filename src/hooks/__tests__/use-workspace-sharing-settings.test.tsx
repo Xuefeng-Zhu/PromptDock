@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FormEvent } from 'react';
 import type { IWorkspaceRepository } from '../../repositories/interfaces';
@@ -67,6 +67,16 @@ function memberFor(workspace: Workspace, role: WorkspaceMember['role']): Workspa
 
 function submitEvent(): FormEvent<HTMLFormElement> {
   return { preventDefault: vi.fn() } as unknown as FormEvent<HTMLFormElement>;
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
 }
 
 function createRepo(overrides: Partial<IWorkspaceRepository> = {}): IWorkspaceRepository {
@@ -177,6 +187,88 @@ describe('useWorkspaceSharingSettings', () => {
     });
 
     expect(result.current.error).toBe('members unavailable');
+  });
+
+  it('ignores repeated pending invite accept actions', async () => {
+    const invite: WorkspaceInvite = {
+      id: 'invite-1',
+      workspaceId: teamWorkspace.id,
+      workspaceName: teamWorkspace.name,
+      email: user.email,
+      role: 'viewer',
+      status: 'pending',
+      invitedBy: 'owner-1',
+      createdAt: new Date('2024-01-04'),
+      updatedAt: new Date('2024-01-04'),
+      acceptedAt: null,
+      acceptedBy: null,
+    };
+    const acceptGate = createDeferred<WorkspaceMember>();
+    const repo = createRepo({
+      acceptInvite: vi.fn(async () => {
+        await acceptGate.promise;
+        return memberFor(teamWorkspace, 'viewer');
+      }),
+    });
+    const { workspaceStore } = setupStores(repo);
+    workspaceStore.setState({ pendingInvites: [invite] });
+    const { result } = renderHook(() => useWorkspaceSharingSettings());
+
+    await act(async () => {
+      result.current.handleAcceptInvite(invite.id);
+      result.current.handleAcceptInvite(invite.id);
+      await Promise.resolve();
+    });
+
+    expect(repo.acceptInvite).toHaveBeenCalledTimes(1);
+    expect(result.current.isAcceptingInvite(invite.id)).toBe(true);
+
+    await act(async () => {
+      acceptGate.resolve(memberFor(teamWorkspace, 'viewer'));
+    });
+
+    await waitFor(() => {
+      expect(result.current.isAcceptingInvite(invite.id)).toBe(false);
+    });
+  });
+
+  it('ignores repeated member role updates while one is pending', async () => {
+    const teammate: WorkspaceMember = {
+      ...memberFor(personalWorkspace, 'editor'),
+      id: 'member-2',
+      userId: 'member-2',
+      email: 'member@example.com',
+      displayName: 'Member Two',
+    };
+    const updateGate = createDeferred<WorkspaceMember>();
+    const repo = createRepo({
+      updateMemberRole: vi.fn(async () => {
+        await updateGate.promise;
+        return { ...teammate, role: 'viewer' as const };
+      }),
+    });
+    const { workspaceStore } = setupStores(repo);
+    workspaceStore.setState({
+      members: [memberFor(personalWorkspace, 'owner'), teammate],
+    });
+    const { result } = renderHook(() => useWorkspaceSharingSettings());
+
+    await act(async () => {
+      result.current.handleUpdateMemberRole(teammate.userId, 'viewer');
+      result.current.handleUpdateMemberRole(teammate.userId, 'viewer');
+      await Promise.resolve();
+    });
+
+    expect(repo.updateMemberRole).toHaveBeenCalledTimes(1);
+    expect(result.current.isUpdatingMemberRole(teammate.userId)).toBe(true);
+
+    await act(async () => {
+      updateGate.resolve({ ...teammate, role: 'viewer' as const });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isUpdatingMemberRole(teammate.userId)).toBe(false);
+    });
   });
 
   it('keeps the workspace name draft in sync with the active workspace', () => {

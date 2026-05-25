@@ -275,10 +275,7 @@ function App() {
     <AppModeProvider>
       <ThemeManager />
       <ErrorBoundary>
-        <AppShell
-          authService={authServiceInstance ?? undefined}
-          syncService={syncServiceInstance ?? undefined}
-        />
+        <AppShell authService={authServiceInstance ?? undefined} />
       </ErrorBoundary>
     </AppModeProvider>
   );

@@ -46,6 +46,9 @@ For Tauri desktop e2e on supported platforms, install `tauri-driver` with
 `cargo install tauri-driver --locked`. Linux also needs `WebKitWebDriver`
 available on `PATH`, for example through the Debian/Ubuntu
 `webkit2gtk-driver` package.
+The desktop e2e harness allocates available loopback ports for `tauri-driver`.
+Set `PROMPTDOCK_TAURI_DRIVER_PORT` and `PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT`
+when a CI runner needs explicit ports.
 
 ## Browser E2E Coverage Matrix
 

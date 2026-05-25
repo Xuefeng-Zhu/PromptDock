@@ -9,9 +9,35 @@ import type { PromptStore } from '../stores/prompt-store';
 import type { SettingsStore } from '../stores/settings-store';
 import type { WorkspaceStore } from '../stores/workspace-store';
 import type { IFolderRepository, IPromptRepository } from '../repositories/interfaces';
-import type { AuthUser } from '../types/index';
+import type { AuthUser, Folder, PromptRecipe } from '../types/index';
 
 type FirestoreDelegate = IPromptRepository & IFolderRepository;
+
+function rejectWorkspaceTransition<T>(workspaceId: string): Promise<T> {
+  return Promise.reject(
+    new Error(`Workspace ${workspaceId} is still syncing. Try again when sync completes.`),
+  );
+}
+
+function createBlockedFirestoreDelegate(workspaceId: string): FirestoreDelegate {
+  return {
+    create: () => rejectWorkspaceTransition<PromptRecipe>(workspaceId),
+    getById: () => rejectWorkspaceTransition<PromptRecipe | null>(workspaceId),
+    getAll: () => rejectWorkspaceTransition<PromptRecipe[]>(workspaceId),
+    reloadAll: () => rejectWorkspaceTransition<PromptRecipe[]>(workspaceId),
+    update: () => rejectWorkspaceTransition<PromptRecipe>(workspaceId),
+    delete: () => rejectWorkspaceTransition<void>(workspaceId),
+    softDelete: () => rejectWorkspaceTransition<void>(workspaceId),
+    restore: () => rejectWorkspaceTransition<void>(workspaceId),
+    duplicate: () => rejectWorkspaceTransition<PromptRecipe>(workspaceId),
+    duplicateToWorkspace: () => rejectWorkspaceTransition<PromptRecipe>(workspaceId),
+    toggleFavorite: () => rejectWorkspaceTransition<PromptRecipe>(workspaceId),
+    createFolder: () => rejectWorkspaceTransition<Folder>(workspaceId),
+    deleteFolder: () => rejectWorkspaceTransition<void>(workspaceId),
+    getAllFolders: () => rejectWorkspaceTransition<Folder[]>(workspaceId),
+    reloadAllFolders: () => rejectWorkspaceTransition<Folder[]>(workspaceId),
+  };
+}
 
 export interface SyncLifecycleService {
   transitionToSynced: (
@@ -56,6 +82,7 @@ export interface AppSyncLifecycleOptions {
 export async function restoreAppAuthSession(
   authService: Pick<IAuthService, 'restoreSession'>,
   appModeStore: StoreApi<AppModeStore>,
+  logger: Pick<Console, 'error'> = console,
 ): Promise<void> {
   const applyRestoredAuth = (result: Awaited<ReturnType<IAuthService['restoreSession']>>) => {
     if (result?.success) {
@@ -69,7 +96,8 @@ export async function restoreAppAuthSession(
   try {
     const result = await authService.restoreSession(applyRestoredAuth);
     applyRestoredAuth(result);
-  } catch {
+  } catch (err) {
+    logger.error('Failed to restore auth session:', err);
     // Session restore failure is non-fatal; app startup remains in local mode.
   }
 }
@@ -87,6 +115,7 @@ export class AppSyncLifecycle {
   private readonly createSyncService: (options: SyncServiceOptions) => SyncLifecycleService;
   private readonly logger: Pick<Console, 'error'>;
   private isApplyingWorkspace = false;
+  private workspaceTransitionToken = 0;
 
   constructor(private readonly options: AppSyncLifecycleOptions) {
     this.createSyncService = options.createSyncService ?? ((syncOptions) => new SyncService(syncOptions));
@@ -128,7 +157,11 @@ export class AppSyncLifecycle {
   }
 
   async restoreAuthSession(): Promise<void> {
-    await restoreAppAuthSession(this.options.authService, this.options.appModeStore);
+    await restoreAppAuthSession(
+      this.options.authService,
+      this.options.appModeStore,
+      this.logger,
+    );
   }
 
   private getCurrentAuthUser(): AuthUser | null {
@@ -189,7 +222,8 @@ export class AppSyncLifecycle {
 
     this.syncService = service;
     onSyncServiceChange?.(service);
-    this.wireFirestoreDelegates(service.getFirestoreBackend());
+    const transitionToken = ++this.workspaceTransitionToken;
+    this.wireFirestoreDelegates(service.getFirestoreBackend(), workspaceId);
 
     this.applyWorkspaceTarget(workspaceId);
     const currentPrompts = promptStore.getState().prompts;
@@ -204,13 +238,13 @@ export class AppSyncLifecycle {
         currentFolders,
       )
       .then(() => {
-        if (this.syncService === service) {
-          this.wireFirestoreDelegates(service.getFirestoreBackend());
+        if (this.syncService === service && this.workspaceTransitionToken === transitionToken) {
+          this.wireFirestoreDelegates(service.getFirestoreBackend(), workspaceId);
         }
       })
       .catch((err) => {
         this.logger.error('Failed to transition to synced mode:', err);
-        if (this.syncService === service) {
+        if (this.syncService === service && this.workspaceTransitionToken === transitionToken) {
           this.teardownSyncedMode();
           const appMode = appModeStore.getState();
           appMode.setMode('local');
@@ -237,25 +271,40 @@ export class AppSyncLifecycle {
     const service = this.syncService;
     if (!user || !service) return;
 
+    const transitionToken = ++this.workspaceTransitionToken;
     this.applyWorkspaceTarget(workspaceId);
+    this.wireFirestoreDelegates(null, workspaceId);
     this.options.conflictService?.clearAll();
     this.options.promptStore.setState({ prompts: [], selectedPromptId: null });
     this.options.folderStore.getState().setFolders([]);
 
     try {
       await service.transitionToSynced(user.uid, workspaceId, [], 'fresh', []);
-      if (this.syncService === service) {
-        this.wireFirestoreDelegates(service.getFirestoreBackend());
+      if (this.syncService === service && this.workspaceTransitionToken === transitionToken) {
+        this.wireFirestoreDelegates(service.getFirestoreBackend(), workspaceId);
       }
     } catch (err) {
-      this.logger.error('Failed to switch workspace:', err);
+      if (this.syncService === service && this.workspaceTransitionToken === transitionToken) {
+        this.logger.error('Failed to switch workspace:', err);
+        const delegate = service.getFirestoreBackend();
+        if (delegate) {
+          this.wireFirestoreDelegates(delegate, workspaceId);
+        } else {
+          this.clearFirestoreDelegates();
+        }
+      }
     }
   }
 
-  private wireFirestoreDelegates(delegate: FirestoreDelegate | null): void {
-    if (!delegate) return;
-    this.options.promptRepository.setFirestoreDelegate(delegate);
-    this.options.folderRepository.setFirestoreDelegate(delegate);
+  private wireFirestoreDelegates(delegate: FirestoreDelegate | null, workspaceId: string): void {
+    const targetDelegate = delegate ?? createBlockedFirestoreDelegate(workspaceId);
+    this.options.promptRepository.setFirestoreDelegate(targetDelegate);
+    this.options.folderRepository.setFirestoreDelegate(targetDelegate);
+  }
+
+  private clearFirestoreDelegates(): void {
+    this.options.promptRepository.setFirestoreDelegate(null);
+    this.options.folderRepository.setFirestoreDelegate(null);
   }
 
   private teardownSyncedMode(): void {
@@ -263,10 +312,10 @@ export class AppSyncLifecycle {
     if (!service) return;
 
     this.syncService = null;
+    this.workspaceTransitionToken += 1;
     this.options.onSyncServiceChange?.(null);
     service.dispose();
-    this.options.promptRepository.setFirestoreDelegate(null);
-    this.options.folderRepository.setFirestoreDelegate(null);
+    this.clearFirestoreDelegates();
     this.options.promptStore.getState().setActiveWorkspaceId('local');
     this.options.folderStore.getState().setActiveWorkspaceId('local');
     this.options.workspaceStore.getState().resetLocal();

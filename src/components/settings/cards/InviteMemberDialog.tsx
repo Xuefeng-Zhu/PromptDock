@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import type { WorkspaceInviteRole } from '../../../types/index';
+import { formatErrorMessage } from '../../../utils/error-message';
 
 interface InviteMemberDialogProps {
   onCancel: () => void;
@@ -22,7 +23,7 @@ export function InviteMemberDialog({ onCancel, onInvite }: InviteMemberDialogPro
       await onInvite(email, role);
       onCancel();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatErrorMessage(err));
     } finally {
       setSubmitting(false);
     }

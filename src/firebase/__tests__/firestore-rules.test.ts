@@ -9,6 +9,7 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   collection,
+  deleteDoc,
   doc,
   getDocs,
   query,
@@ -56,6 +57,26 @@ function viewerMemberPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function promptPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    workspaceId,
+    title: 'Launch copy',
+    description: '',
+    body: 'Write concise launch copy.',
+    tags: ['marketing'],
+    folderId: null,
+    favorite: false,
+    archived: false,
+    archivedAt: null,
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    lastUsedAt: null,
+    createdBy: 'owner-1',
+    version: 1,
+    ...overrides,
+  };
+}
+
 async function seedWorkspace(testEnv: RulesTestEnvironment) {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -87,7 +108,20 @@ async function seedDomainInvite(testEnv: RulesTestEnvironment) {
   });
 }
 
-describeRules('firestore domain workspace invite rules', () => {
+async function seedPrompt(
+  testEnv: RulesTestEnvironment,
+  promptId = 'prompt-1',
+  overrides: Record<string, unknown> = {},
+) {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'workspaces', workspaceId, 'prompts', promptId),
+      promptPayload(overrides),
+    );
+  });
+}
+
+describeRules('firestore workspace rules', () => {
   let testEnv: RulesTestEnvironment;
 
   beforeAll(async () => {
@@ -204,6 +238,69 @@ describeRules('firestore domain workspace invite rules', () => {
         revokedBy: 'owner-1',
         updatedAt: new Date('2024-01-02T00:00:00.000Z'),
       },
+    ));
+  });
+
+  it('allows prompt creation when the payload workspace matches the path', async () => {
+    const db = testEnv.authenticatedContext('owner-1', {
+      email: 'owner@example.com',
+    }).firestore();
+
+    await assertSucceeds(setDoc(
+      doc(db, 'workspaces', workspaceId, 'prompts', 'prompt-1'),
+      promptPayload(),
+    ));
+  });
+
+  it('denies prompt creation when the payload workspace differs from the path', async () => {
+    const db = testEnv.authenticatedContext('owner-1', {
+      email: 'owner@example.com',
+    }).firestore();
+
+    await assertFails(setDoc(
+      doc(db, 'workspaces', workspaceId, 'prompts', 'prompt-1'),
+      promptPayload({ workspaceId: 'workspace-2' }),
+    ));
+  });
+
+  it('denies prompt updates that would move the payload workspace', async () => {
+    await seedPrompt(testEnv);
+    const db = testEnv.authenticatedContext('owner-1', {
+      email: 'owner@example.com',
+    }).firestore();
+
+    await assertFails(updateDoc(
+      doc(db, 'workspaces', workspaceId, 'prompts', 'prompt-1'),
+      {
+        workspaceId: 'workspace-2',
+        updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+      },
+    ));
+  });
+
+  it('denies updates to existing prompts with mismatched workspace metadata', async () => {
+    await seedPrompt(testEnv, 'prompt-1', { workspaceId: 'workspace-2' });
+    const db = testEnv.authenticatedContext('owner-1', {
+      email: 'owner@example.com',
+    }).firestore();
+
+    await assertFails(updateDoc(
+      doc(db, 'workspaces', workspaceId, 'prompts', 'prompt-1'),
+      {
+        title: 'Updated launch copy',
+        updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+      },
+    ));
+  });
+
+  it('allows deleting existing prompts with mismatched workspace metadata', async () => {
+    await seedPrompt(testEnv, 'prompt-1', { workspaceId: 'workspace-2' });
+    const db = testEnv.authenticatedContext('owner-1', {
+      email: 'owner@example.com',
+    }).firestore();
+
+    await assertSucceeds(deleteDoc(
+      doc(db, 'workspaces', workspaceId, 'prompts', 'prompt-1'),
     ));
   });
 

@@ -3,6 +3,7 @@ import { trackPromptAction } from '../../services/analytics-service';
 import type { PromptStore } from '../../stores/prompt-store';
 import type { ToastStore } from '../../stores/toast-store';
 import type { AppMode, PromptRecipe } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
 import type { PromptExecutionResult, PromptExecutionSource } from '../use-prompt-execution';
 import type { Screen } from '../../components/app-shell/types';
 
@@ -114,7 +115,7 @@ export function usePromptCrudActions({
         return;
       }
       toggleFavorite(id).catch((err: unknown) => {
-        addToast(`Failed to toggle favorite: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to toggle favorite: ${formatErrorMessage(err)}`, 'error');
       });
     },
     [addToast, canEditWorkspace, toggleFavorite],
@@ -139,7 +140,7 @@ export function usePromptCrudActions({
         setEditorHasUnsavedChanges(false);
         setScreen({ name: 'library' });
       } catch (err) {
-        addToast(`Failed to save prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        addToast(`Failed to save prompt: ${formatErrorMessage(err)}`, 'error');
         throw err;
       }
     },
@@ -166,7 +167,7 @@ export function usePromptCrudActions({
       archivePrompt(id)
         .then(() => trackPromptAction('archived'))
         .catch((err: unknown) => {
-          addToast(`Failed to archive prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to archive prompt: ${formatErrorMessage(err)}`, 'error');
         });
       if (selectedPromptId === id) {
         setSelectedPromptId(null);
@@ -184,7 +185,7 @@ export function usePromptCrudActions({
       restorePrompt(id)
         .then(() => trackPromptAction('restored'))
         .catch((err: unknown) => {
-          addToast(`Failed to restore prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to restore prompt: ${formatErrorMessage(err)}`, 'error');
         });
       if (selectedPromptId === id) {
         setSelectedPromptId(null);
@@ -209,7 +210,7 @@ export function usePromptCrudActions({
       deletePrompt(id)
         .then(() => trackPromptAction('deleted'))
         .catch((err: unknown) => {
-          addToast(`Failed to delete prompt: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to delete prompt: ${formatErrorMessage(err)}`, 'error');
         });
       if (selectedPromptId === id) {
         setSelectedPromptId(null);
@@ -256,7 +257,7 @@ export function usePromptCrudActions({
           trackPromptAction('updated');
         })
         .catch((err: unknown) => {
-          addToast(`Failed to update tags: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to update tags: ${formatErrorMessage(err)}`, 'error');
         })
         .finally(() => {
           if (pendingTagUpdatesRef.current.get(id) === queuedUpdate) {
@@ -281,7 +282,7 @@ export function usePromptCrudActions({
       updatePrompt(id, { folderId })
         .then(() => trackPromptAction('updated'))
         .catch((err: unknown) => {
-          addToast(`Failed to update folder: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to update folder: ${formatErrorMessage(err)}`, 'error');
         });
     },
     [addToast, canEditWorkspace, updatePrompt],
@@ -294,7 +295,7 @@ export function usePromptCrudActions({
           addToast('Prompt body copied to clipboard', 'success');
         })
         .catch((err: unknown) => {
-          addToast(`Failed to copy: ${err instanceof Error ? err.message : String(err)}`, 'error');
+          addToast(`Failed to copy: ${formatErrorMessage(err)}`, 'error');
         });
     },
     [addToast, copyText],

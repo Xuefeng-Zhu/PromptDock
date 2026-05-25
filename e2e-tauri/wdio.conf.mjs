@@ -1,15 +1,18 @@
 import { existsSync } from 'node:fs';
-import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  readConfiguredTauriDriverPorts,
+  resolveTauriDriverPorts,
+  waitForTcpPort,
+} from './tauri-e2e-ports.mjs';
 
 const rootDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const appBinary = process.platform === 'win32' ? 'prompt-dock.exe' : 'prompt-dock';
 const appPath = path.join(rootDir, 'src-tauri', 'target', 'debug', appBinary);
 const tauriDriverPath = process.env.TAURI_DRIVER;
-const tauriDriverPort = 4444;
 const storePrefix =
   process.env.PROMPTDOCK_TAURI_E2E_STORE_PREFIX ?? `e2e-${Date.now()}-${process.pid}-`;
 
@@ -21,29 +24,10 @@ function closeTauriDriver() {
   tauriDriver = null;
 }
 
-function waitForTcpPort(port, host = '127.0.0.1', timeoutMs = 10_000) {
-  const startedAt = Date.now();
-
-  return new Promise((resolve, reject) => {
-    const attempt = () => {
-      const socket = net.createConnection({ host, port }, () => {
-        socket.end();
-        resolve();
-      });
-
-      socket.once('error', () => {
-        socket.destroy();
-        if (Date.now() - startedAt > timeoutMs) {
-          reject(new Error(`Timed out waiting for tauri-driver on ${host}:${port}`));
-          return;
-        }
-        setTimeout(attempt, 100);
-      });
-    };
-
-    attempt();
-  });
-}
+const {
+  configuredTauriDriverPort,
+  configuredNativeDriverPort,
+} = readConfiguredTauriDriverPorts();
 
 function buildTauriApp() {
   if (process.env.PROMPTDOCK_TAURI_E2E_SKIP_BUILD === '1') {
@@ -72,6 +56,7 @@ function buildTauriApp() {
       env: {
         ...process.env,
         VITE_FIREBASE_ANALYTICS_ENABLED: 'false',
+        VITE_PROMPTDOCK_TAURI_E2E: 'true',
         VITE_PROMPTDOCK_STORE_PREFIX: storePrefix,
       },
       stdio: 'inherit',
@@ -91,7 +76,7 @@ process.once('exit', closeTauriDriver);
 export const config = {
   runner: 'local',
   host: '127.0.0.1',
-  port: tauriDriverPort,
+  port: configuredTauriDriverPort ?? 0,
   specs: [path.join(rootDir, 'e2e-tauri', 'specs', '**', '*.e2e.mjs')],
   maxInstances: 1,
   capabilities: [
@@ -113,12 +98,24 @@ export const config = {
     defaultTimeoutInterval: 120_000,
   },
   onPrepare: buildTauriApp,
-  beforeSession: async () => {
+  beforeSession: async (wdioConfig) => {
     if (!tauriDriverPath) {
       throw new Error('TAURI_DRIVER must point to a tauri-driver executable.');
     }
 
-    tauriDriver = spawn(tauriDriverPath, [], {
+    const { driverPort, nativeDriverPort } = await resolveTauriDriverPorts({
+      configuredTauriDriverPort,
+      configuredNativeDriverPort,
+    });
+    config.port = driverPort;
+    wdioConfig.port = driverPort;
+
+    tauriDriver = spawn(tauriDriverPath, [
+      '--port',
+      String(driverPort),
+      '--native-port',
+      String(nativeDriverPort),
+    ], {
       env: {
         ...process.env,
         PROMPTDOCK_TAURI_E2E: 'true',
@@ -130,7 +127,7 @@ export const config = {
       throw error;
     });
 
-    await waitForTcpPort(tauriDriverPort);
+    await waitForTcpPort(driverPort);
   },
   afterSession: closeTauriDriver,
   onComplete: closeTauriDriver,

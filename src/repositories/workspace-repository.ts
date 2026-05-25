@@ -2,10 +2,8 @@ import type {
   AuthUser,
   Workspace,
   WorkspaceDomainInvite,
-  WorkspaceDomainInviteStatus,
   WorkspaceInvite,
   WorkspaceInviteRole,
-  WorkspaceInviteStatus,
   WorkspaceMember,
   WorkspaceMembership,
   WorkspaceRole,
@@ -16,228 +14,30 @@ import {
   getWorkspaceDomainFromEmail,
   workspaceDomainInviteId,
 } from '../utils/workspace-domain';
-
-interface FirestoreTimestamp {
-  seconds: number;
-  nanoseconds: number;
-  toDate(): Date;
-}
-
-function timestampToDate(timestamp: FirestoreTimestamp | Date | null | undefined): Date {
-  if (!timestamp) return new Date();
-  if (timestamp instanceof Date) return timestamp;
-  if (typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
-  }
-  return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1_000_000);
-}
+import {
+  createPersonalWorkspaceRecord,
+  createWorkspaceMemberPayload,
+  createWorkspaceMembershipPayload,
+  normalizeWorkspaceEmail,
+  workspaceMembershipId,
+} from '../utils/workspace-records';
+import {
+  type FirestoreWorkspaceDoc,
+  type FirestoreWorkspaceDomainInviteDoc,
+  type FirestoreWorkspaceInviteDoc,
+  type FirestoreWorkspaceMemberDoc,
+  type FirestoreWorkspaceMembershipDoc,
+  toWorkspace,
+  toWorkspaceDomainInvite,
+  toWorkspaceInvite,
+  toWorkspaceMember,
+  toWorkspaceMembership,
+} from './workspace-firestore-converters';
 
 const LOCAL_WORKSPACE_ID = 'local';
 
-interface FirestoreWorkspaceDoc {
-  name: string;
-  ownerId: string;
-  createdAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-}
-
-interface FirestoreWorkspaceMemberDoc {
-  id?: string;
-  workspaceId: string;
-  userId: string;
-  role: WorkspaceRole;
-  email?: string;
-  displayName?: string | null;
-  joinedAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  acceptedInviteId?: string;
-  acceptedDomainInviteId?: string;
-}
-
-interface FirestoreWorkspaceMembershipDoc {
-  id?: string;
-  workspaceId: string;
-  userId: string;
-  role: WorkspaceRole;
-  email?: string;
-  displayName?: string | null;
-  workspaceName?: string;
-  ownerId?: string;
-  joinedAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  acceptedInviteId?: string;
-  acceptedDomainInviteId?: string;
-}
-
-interface FirestoreWorkspaceInviteDoc {
-  workspaceId: string;
-  workspaceName?: string;
-  email: string;
-  role: WorkspaceInviteRole;
-  status: WorkspaceInviteStatus;
-  invitedBy: string;
-  createdAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  acceptedAt?: FirestoreTimestamp | null;
-  acceptedBy?: string | null;
-}
-
-interface FirestoreWorkspaceDomainInviteDoc {
-  workspaceId: string;
-  workspaceName?: string;
-  ownerId?: string;
-  domain: string;
-  role: 'viewer';
-  status: WorkspaceDomainInviteStatus;
-  invitedBy: string;
-  createdAt?: FirestoreTimestamp;
-  updatedAt?: FirestoreTimestamp;
-  revokedAt?: FirestoreTimestamp | null;
-  revokedBy?: string | null;
-}
-
-interface AcceptedInviteMetadata {
-  acceptedInviteId?: string;
-  acceptedDomainInviteId?: string;
-}
-
-function workspaceMembershipId(workspaceId: string, userId: string): string {
-  return `${workspaceId}_${userId}`;
-}
-
-function normalizeInviteEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-function toWorkspace(id: string, data: FirestoreWorkspaceDoc): Workspace {
-  return {
-    id,
-    name: data.name,
-    ownerId: data.ownerId,
-    createdAt: timestampToDate(data.createdAt),
-    updatedAt: timestampToDate(data.updatedAt),
-  };
-}
-
-function toWorkspaceMember(id: string, data: FirestoreWorkspaceMemberDoc): WorkspaceMember {
-  return {
-    id: data.id ?? id,
-    workspaceId: data.workspaceId,
-    userId: data.userId,
-    role: data.role,
-    email: data.email ?? '',
-    displayName: data.displayName ?? null,
-    joinedAt: timestampToDate(data.joinedAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    ...(data.acceptedInviteId ? { acceptedInviteId: data.acceptedInviteId } : {}),
-    ...(data.acceptedDomainInviteId ? { acceptedDomainInviteId: data.acceptedDomainInviteId } : {}),
-  };
-}
-
-function toWorkspaceMembership(
-  id: string,
-  data: FirestoreWorkspaceMembershipDoc,
-): WorkspaceMembership {
-  return {
-    id: data.id ?? id,
-    workspaceId: data.workspaceId,
-    userId: data.userId,
-    role: data.role,
-    email: data.email ?? '',
-    displayName: data.displayName ?? null,
-    workspaceName: data.workspaceName ?? 'Workspace',
-    ownerId: data.ownerId ?? '',
-    joinedAt: timestampToDate(data.joinedAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    ...(data.acceptedInviteId ? { acceptedInviteId: data.acceptedInviteId } : {}),
-    ...(data.acceptedDomainInviteId ? { acceptedDomainInviteId: data.acceptedDomainInviteId } : {}),
-  };
-}
-
-function toWorkspaceInvite(id: string, data: FirestoreWorkspaceInviteDoc): WorkspaceInvite {
-  return {
-    id,
-    workspaceId: data.workspaceId,
-    workspaceName: data.workspaceName ?? 'Workspace',
-    email: data.email,
-    role: data.role,
-    status: data.status,
-    invitedBy: data.invitedBy,
-    createdAt: timestampToDate(data.createdAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    acceptedAt: data.acceptedAt ? timestampToDate(data.acceptedAt) : null,
-    acceptedBy: data.acceptedBy ?? null,
-  };
-}
-
-function toWorkspaceDomainInvite(
-  id: string,
-  data: FirestoreWorkspaceDomainInviteDoc,
-): WorkspaceDomainInvite {
-  return {
-    id,
-    workspaceId: data.workspaceId,
-    workspaceName: data.workspaceName ?? 'Workspace',
-    ownerId: data.ownerId ?? '',
-    domain: data.domain,
-    role: 'viewer',
-    status: data.status,
-    invitedBy: data.invitedBy,
-    createdAt: timestampToDate(data.createdAt),
-    updatedAt: timestampToDate(data.updatedAt),
-    revokedAt: data.revokedAt ? timestampToDate(data.revokedAt) : null,
-    revokedBy: data.revokedBy ?? null,
-  };
-}
-
-function createMemberPayload(
-  workspace: Workspace,
-  user: AuthUser,
-  role: WorkspaceRole,
-  timestamp: unknown,
-  acceptedMetadata: AcceptedInviteMetadata = {},
-) {
-  return {
-    id: user.uid,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: normalizeInviteEmail(user.email),
-    displayName: user.displayName,
-    joinedAt: timestamp,
-    updatedAt: timestamp,
-    ...(acceptedMetadata.acceptedInviteId
-      ? { acceptedInviteId: acceptedMetadata.acceptedInviteId }
-      : {}),
-    ...(acceptedMetadata.acceptedDomainInviteId
-      ? { acceptedDomainInviteId: acceptedMetadata.acceptedDomainInviteId }
-      : {}),
-  };
-}
-
-function createMembershipPayload(
-  workspace: Workspace,
-  user: AuthUser,
-  role: WorkspaceRole,
-  timestamp: unknown,
-  acceptedMetadata: AcceptedInviteMetadata = {},
-) {
-  return {
-    ...createMemberPayload(workspace, user, role, timestamp, acceptedMetadata),
-    workspaceName: workspace.name,
-    ownerId: workspace.ownerId,
-  };
-}
-
 function createPersonalWorkspaceFallback(userId: string): Workspace {
-  const now = new Date();
-  return {
-    id: userId,
-    name: 'Personal Workspace',
-    ownerId: userId,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return createPersonalWorkspaceRecord(userId);
 }
 
 function createPersonalMembershipFallback(userId: string): WorkspaceMembership {
@@ -359,25 +159,9 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const firestore = await getFirebaseFirestore();
     const timestamp = serverTimestamp();
     const workspaceRef = doc(firestore, 'workspaces', user.uid);
-    const existingWorkspaceSnapshot = await getDoc(workspaceRef).catch((err) => {
-      console.error('Failed to read personal workspace metadata before bootstrap:', err);
-      return null;
-    });
-    const existingWorkspace = existingWorkspaceSnapshot?.exists()
-      ? toWorkspace(
-        existingWorkspaceSnapshot.id,
-        existingWorkspaceSnapshot.data() as FirestoreWorkspaceDoc,
-      )
-      : null;
-    const workspace: Workspace = {
-      id: user.uid,
-      name: 'Personal Workspace',
-      ownerId: user.uid,
-      createdAt: existingWorkspace?.createdAt ?? new Date(),
-      updatedAt: new Date(),
-    };
-    const memberPayload = createMemberPayload(workspace, user, 'owner', timestamp);
-    const membershipPayload = createMembershipPayload(workspace, user, 'owner', timestamp);
+    const workspace = createPersonalWorkspaceRecord(user.uid);
+    const memberPayload = createWorkspaceMemberPayload(workspace, user, 'owner', timestamp);
+    const membershipPayload = createWorkspaceMembershipPayload(workspace, user, 'owner', timestamp);
 
     const memberRef = doc(firestore, 'workspaces', user.uid, 'members', user.uid);
     const membershipRef = doc(
@@ -390,47 +174,46 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       ownerId: workspace.ownerId,
       updatedAt: timestamp,
     };
-    if (!existingWorkspace) {
-      workspacePayload.createdAt = timestamp;
-    }
 
     await setDoc(
       workspaceRef,
       workspacePayload,
       { merge: true },
-    ).catch((err) => {
-      console.error('Failed to bootstrap personal workspace metadata:', err);
-    });
+    );
 
-    await setDoc(memberRef, memberPayload, { merge: true }).catch((err) => {
-      console.error('Failed to bootstrap personal workspace member:', err);
-    });
+    await setDoc(memberRef, memberPayload, { merge: true });
+    await setDoc(membershipRef, membershipPayload, { merge: true });
 
-    await setDoc(membershipRef, membershipPayload, { merge: true }).catch((err) => {
-      console.error('Failed to bootstrap personal workspace membership index:', err);
-    });
+    const workspaceSnapshot = await getDoc(workspaceRef);
+    if (!workspaceSnapshot.exists()) {
+      await setDoc(workspaceRef, { createdAt: timestamp }, { merge: true });
+      return workspace;
+    }
 
-    return workspace;
+    const workspaceData = workspaceSnapshot.data() as FirestoreWorkspaceDoc;
+    const syncedWorkspace = toWorkspace(workspaceSnapshot.id, workspaceData);
+    if (!workspaceData.createdAt) {
+      await setDoc(workspaceRef, { createdAt: timestamp }, { merge: true });
+    }
+
+    return syncedWorkspace;
   }
 
   async listMembershipsForUser(userId: string): Promise<WorkspaceMembership[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const membershipsCol = collection(firestore, 'workspaceMemberships');
-      const q = query(membershipsCol, where('userId', '==', userId));
-      const snapshot = await getDocs(q);
-      const memberships = snapshot.docs.map((docSnap) =>
-        toWorkspaceMembership(docSnap.id, docSnap.data() as FirestoreWorkspaceMembershipDoc),
-      );
+    const firestore = await getFirebaseFirestore();
+    const membershipsCol = collection(firestore, 'workspaceMemberships');
+    const q = query(membershipsCol, where('userId', '==', userId));
+    const snapshot = await getDocs(q).catch(() => null);
+    if (!snapshot) return [createPersonalMembershipFallback(userId)];
 
-      return memberships.length > 0 ? memberships : [createPersonalMembershipFallback(userId)];
-    } catch (err) {
-      console.error('Failed to list workspace membership index; using personal workspace fallback:', err);
-      return [createPersonalMembershipFallback(userId)];
-    }
+    const memberships = snapshot.docs.map((docSnap) =>
+      toWorkspaceMembership(docSnap.id, docSnap.data() as FirestoreWorkspaceMembershipDoc),
+    );
+
+    return memberships.length > 0 ? memberships : [createPersonalMembershipFallback(userId)];
   }
 
   async listPendingDomainInvitesForEmail(email: string): Promise<WorkspaceDomainInvite[]> {
@@ -440,29 +223,25 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceDomainInvites');
-      const q = query(
-        invitesCol,
-        where('domain', '==', domain),
-        where('status', '==', 'active'),
-        where('role', '==', 'viewer'),
-      );
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceDomainInvites');
+    const q = query(
+      invitesCol,
+      where('domain', '==', domain),
+      where('status', '==', 'active'),
+      where('role', '==', 'viewer'),
+    );
+    const snapshot = await getDocs(q).catch(() => null);
+    if (!snapshot) return [];
 
-      return snapshot.docs
-        .map((docSnap) =>
-          toWorkspaceDomainInvite(
-            docSnap.id,
-            docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
-          ),
-        )
-        .filter((invite) => invite.status === 'active' && invite.role === 'viewer');
-    } catch (err) {
-      console.error('Failed to list pending workspace domain invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) =>
+        toWorkspaceDomainInvite(
+          docSnap.id,
+          docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
+        ),
+      )
+      .filter((invite) => invite.status === 'active' && invite.role === 'viewer');
   }
 
   async listSyncedWorkspacesForUser(userId: string): Promise<Workspace[]> {
@@ -473,15 +252,11 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const memberships = await this.listMembershipsForUser(userId);
     const workspaces = await Promise.all(
       memberships.map(async (membership) => {
-        try {
-          const workspaceRef = doc(firestore, 'workspaces', membership.workspaceId);
-          const snapshot = await getDoc(workspaceRef);
-          if (!snapshot.exists()) return null;
-          return toWorkspace(snapshot.id, snapshot.data() as FirestoreWorkspaceDoc);
-        } catch (err) {
-          console.error('Failed to read workspace metadata:', err);
-          return null;
-        }
+        const workspaceRef = doc(firestore, 'workspaces', membership.workspaceId);
+        const snapshot = await getDoc(workspaceRef).catch(() => null);
+        if (!snapshot) return null;
+        if (!snapshot.exists()) return null;
+        return toWorkspace(snapshot.id, snapshot.data() as FirestoreWorkspaceDoc);
       }),
     );
 
@@ -492,90 +267,74 @@ export class WorkspaceRepository implements IWorkspaceRepository {
   }
 
   async listPendingInvitesForEmail(email: string): Promise<WorkspaceInvite[]> {
-    const normalizedEmail = normalizeInviteEmail(email);
+    const normalizedEmail = normalizeWorkspaceEmail(email);
     if (!normalizedEmail) return [];
 
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceInvites');
-      const q = query(invitesCol, where('email', '==', normalizedEmail));
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceInvites');
+    const q = query(invitesCol, where('email', '==', normalizedEmail));
+    const snapshot = await getDocs(q).catch(() => null);
+    if (!snapshot) return [];
 
-      return snapshot.docs
-        .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
-        .filter((invite) => invite.status === 'pending');
-    } catch (err) {
-      console.error('Failed to list pending workspace invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
+      .filter((invite) => invite.status === 'pending');
   }
 
   async listMembers(workspaceId: string): Promise<WorkspaceMember[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const membersCol = collection(firestore, 'workspaces', workspaceId, 'members');
-      const snapshot = await getDocs(membersCol);
+    const firestore = await getFirebaseFirestore();
+    const membersCol = collection(firestore, 'workspaces', workspaceId, 'members');
+    const snapshot = await getDocs(membersCol).catch(() => null);
+    if (!snapshot) return [];
 
-      return snapshot.docs.map((docSnap) =>
-        toWorkspaceMember(docSnap.id, docSnap.data() as FirestoreWorkspaceMemberDoc),
-      );
-    } catch (err) {
-      console.error('Failed to list workspace members:', err);
-      return [];
-    }
+    return snapshot.docs.map((docSnap) =>
+      toWorkspaceMember(docSnap.id, docSnap.data() as FirestoreWorkspaceMemberDoc),
+    );
   }
 
   async listInvites(workspaceId: string): Promise<WorkspaceInvite[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceInvites');
-      const q = query(invitesCol, where('workspaceId', '==', workspaceId));
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceInvites');
+    const q = query(invitesCol, where('workspaceId', '==', workspaceId));
+    const snapshot = await getDocs(q).catch(() => null);
+    if (!snapshot) return [];
 
-      return snapshot.docs
-        .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
-        .filter((invite) => invite.status === 'pending');
-    } catch (err) {
-      console.error('Failed to list outgoing workspace invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) => toWorkspaceInvite(docSnap.id, docSnap.data() as FirestoreWorkspaceInviteDoc))
+      .filter((invite) => invite.status === 'pending');
   }
 
   async listDomainInvites(workspaceId: string): Promise<WorkspaceDomainInvite[]> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const invitesCol = collection(firestore, 'workspaceDomainInvites');
-      const q = query(
-        invitesCol,
-        where('workspaceId', '==', workspaceId),
-        where('status', '==', 'active'),
-      );
-      const snapshot = await getDocs(q);
+    const firestore = await getFirebaseFirestore();
+    const invitesCol = collection(firestore, 'workspaceDomainInvites');
+    const q = query(
+      invitesCol,
+      where('workspaceId', '==', workspaceId),
+      where('status', '==', 'active'),
+    );
+    const snapshot = await getDocs(q).catch(() => null);
+    if (!snapshot) return [];
 
-      return snapshot.docs
-        .map((docSnap) =>
-          toWorkspaceDomainInvite(
-            docSnap.id,
-            docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
-          ),
-        )
-        .filter((invite) => invite.status === 'active');
-    } catch (err) {
-      console.error('Failed to list workspace domain invites:', err);
-      return [];
-    }
+    return snapshot.docs
+      .map((docSnap) =>
+        toWorkspaceDomainInvite(
+          docSnap.id,
+          docSnap.data() as FirestoreWorkspaceDomainInviteDoc,
+        ),
+      )
+      .filter((invite) => invite.status === 'active');
   }
 
   async createSyncedWorkspace(
@@ -599,8 +358,8 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       createdAt: now,
       updatedAt: now,
     };
-    const memberPayload = createMemberPayload(workspace, owner, 'owner', timestamp);
-    const membershipPayload = createMembershipPayload(workspace, owner, 'owner', timestamp);
+    const memberPayload = createWorkspaceMemberPayload(workspace, owner, 'owner', timestamp);
+    const membershipPayload = createWorkspaceMembershipPayload(workspace, owner, 'owner', timestamp);
     const memberRef = doc(firestore, 'workspaces', workspace.id, 'members', owner.uid);
     const membershipRef = doc(
       firestore,
@@ -635,7 +394,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     role: WorkspaceInviteRole,
     invitedBy: string,
   ): Promise<WorkspaceInvite> {
-    const normalizedEmail = normalizeInviteEmail(email);
+    const normalizedEmail = normalizeWorkspaceEmail(email);
     if (!normalizedEmail) throw new Error('Invite email is required.');
 
     const existing = (await this.listInvites(workspace.id)).find(
@@ -765,14 +524,14 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       workspaceSnapshot.data() as FirestoreWorkspaceDoc,
     );
     const timestamp = serverTimestamp();
-    const memberPayload = createMemberPayload(
+    const memberPayload = createWorkspaceMemberPayload(
       workspace,
       user,
       invite.role,
       timestamp,
       { acceptedInviteId: invite.id },
     );
-    const membershipPayload = createMembershipPayload(
+    const membershipPayload = createWorkspaceMembershipPayload(
       workspace,
       user,
       invite.role,
@@ -830,14 +589,14 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     };
     const timestamp = serverTimestamp();
     const acceptedMetadata = { acceptedDomainInviteId: invite.id };
-    const memberPayload = createMemberPayload(
+    const memberPayload = createWorkspaceMemberPayload(
       workspace,
       user,
       'viewer',
       timestamp,
       acceptedMetadata,
     );
-    const membershipPayload = createMembershipPayload(
+    const membershipPayload = createWorkspaceMembershipPayload(
       workspace,
       user,
       'viewer',

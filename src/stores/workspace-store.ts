@@ -10,6 +10,7 @@ import type {
   WorkspaceMembership,
   WorkspaceRole,
 } from '../types/index';
+import { getWorkspaceRole } from '../utils/workspace-role';
 
 const LOCAL_WORKSPACE: Workspace = {
   id: 'local',
@@ -48,13 +49,6 @@ function chooseActiveWorkspace(
   return workspaces[0]?.id ?? fallbackWorkspaceId;
 }
 
-function roleForWorkspace(
-  memberships: WorkspaceMembership[],
-  workspaceId: string,
-): WorkspaceRole | null {
-  return memberships.find((membership) => membership.workspaceId === workspaceId)?.role ?? null;
-}
-
 export interface WorkspaceStore {
   activeWorkspaceId: string;
   currentRole: WorkspaceRole | null;
@@ -83,6 +77,40 @@ export interface WorkspaceStore {
   revokeInvite: (inviteId: string) => Promise<void>;
   switchWorkspace: (workspaceId: string) => Promise<void>;
   updateMemberRole: (userId: string, role: WorkspaceRole) => Promise<void>;
+}
+
+type WorkspaceRemovalState = Pick<
+  WorkspaceStore,
+  | 'activeWorkspaceId'
+  | 'currentRole'
+  | 'domainInvites'
+  | 'invites'
+  | 'members'
+  | 'memberships'
+  | 'workspaces'
+>;
+
+function removeWorkspaceFromState(
+  state: WorkspaceStore,
+  workspaceId: string,
+  fallbackWorkspaceId: string,
+): WorkspaceRemovalState {
+  const wasActive = state.activeWorkspaceId === workspaceId;
+  const nextWorkspaces = state.workspaces.filter((item) => item.id !== workspaceId);
+  const nextMemberships = state.memberships.filter((item) => item.workspaceId !== workspaceId);
+  const nextActiveWorkspaceId = wasActive
+    ? chooseActiveWorkspace(nextWorkspaces, undefined, fallbackWorkspaceId)
+    : state.activeWorkspaceId;
+
+  return {
+    activeWorkspaceId: nextActiveWorkspaceId,
+    currentRole: getWorkspaceRole(nextMemberships, nextActiveWorkspaceId),
+    domainInvites: wasActive ? [] : state.domainInvites,
+    invites: wasActive ? [] : state.invites,
+    members: wasActive ? [] : state.members,
+    memberships: nextMemberships,
+    workspaces: nextWorkspaces,
+  };
 }
 
 /**
@@ -130,7 +158,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
 
         set({
           activeWorkspaceId,
-          currentRole: roleForWorkspace(memberships, activeWorkspaceId),
+          currentRole: getWorkspaceRole(memberships, activeWorkspaceId),
           isLoading: false,
           memberships,
           pendingDomainInvites: filteredDomainInvites,
@@ -148,13 +176,22 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
     async loadWorkspaceDetails(workspaceId = get().activeWorkspaceId) {
       const user = get().currentUser;
       if (!user || workspaceId === 'local') return;
-      const currentRole = roleForWorkspace(get().memberships, workspaceId);
+      const currentRole = getWorkspaceRole(get().memberships, workspaceId);
 
       const [members, invites, domainInvites] = await Promise.all([
         repo.listMembers(workspaceId),
         currentRole === 'owner' ? repo.listInvites(workspaceId) : Promise.resolve([]),
         currentRole === 'owner' ? repo.listDomainInvites(workspaceId) : Promise.resolve([]),
       ]);
+
+      const latestState = get();
+      if (
+        latestState.activeWorkspaceId !== workspaceId
+        || latestState.currentUser?.uid !== user.uid
+        || getWorkspaceRole(latestState.memberships, workspaceId) !== currentRole
+      ) {
+        return;
+      }
 
       set({
         domainInvites,
@@ -172,7 +209,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
 
       set({
         activeWorkspaceId: workspaceId,
-        currentRole: roleForWorkspace(memberships, workspaceId),
+        currentRole: getWorkspaceRole(memberships, workspaceId),
       });
       await get().loadWorkspaceDetails(workspaceId);
     },
@@ -208,23 +245,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       await repo.deleteSyncedWorkspace(workspaceId);
 
       const wasActive = get().activeWorkspaceId === workspaceId;
-      set((state) => {
-        const nextWorkspaces = state.workspaces.filter((item) => item.id !== workspaceId);
-        const nextMemberships = state.memberships.filter((item) => item.workspaceId !== workspaceId);
-        const nextActiveWorkspaceId = wasActive
-          ? chooseActiveWorkspace(nextWorkspaces, undefined, currentUser.uid)
-          : state.activeWorkspaceId;
-
-        return {
-          activeWorkspaceId: nextActiveWorkspaceId,
-          currentRole: roleForWorkspace(nextMemberships, nextActiveWorkspaceId),
-          domainInvites: wasActive ? [] : state.domainInvites,
-          invites: wasActive ? [] : state.invites,
-          members: wasActive ? [] : state.members,
-          memberships: nextMemberships,
-          workspaces: nextWorkspaces,
-        };
-      });
+      set((state) => removeWorkspaceFromState(state, workspaceId, currentUser.uid));
 
       if (wasActive && get().workspaces.some((item) => item.id === get().activeWorkspaceId)) {
         await get().loadWorkspaceDetails();
@@ -247,23 +268,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       await repo.leaveSyncedWorkspace(workspaceId, currentUser.uid);
 
       const wasActive = get().activeWorkspaceId === workspaceId;
-      set((state) => {
-        const nextWorkspaces = state.workspaces.filter((item) => item.id !== workspaceId);
-        const nextMemberships = state.memberships.filter((item) => item.workspaceId !== workspaceId);
-        const nextActiveWorkspaceId = wasActive
-          ? chooseActiveWorkspace(nextWorkspaces, undefined, currentUser.uid)
-          : state.activeWorkspaceId;
-
-        return {
-          activeWorkspaceId: nextActiveWorkspaceId,
-          currentRole: roleForWorkspace(nextMemberships, nextActiveWorkspaceId),
-          domainInvites: wasActive ? [] : state.domainInvites,
-          invites: wasActive ? [] : state.invites,
-          members: wasActive ? [] : state.members,
-          memberships: nextMemberships,
-          workspaces: nextWorkspaces,
-        };
-      });
+      set((state) => removeWorkspaceFromState(state, workspaceId, currentUser.uid));
 
       if (wasActive && get().workspaces.some((item) => item.id === get().activeWorkspaceId)) {
         await get().loadWorkspaceDetails();

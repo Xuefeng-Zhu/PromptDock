@@ -13,8 +13,27 @@ import {
 
 /**
  * Schema version for the export JSON format.
+ * Version 1.0 allows additive optional prompt fields, including `variables`.
+ * Bump this only for required fields, type changes, or incompatible semantics.
  */
 const EXPORT_SCHEMA_VERSION = '1.0';
+const DUPLICATE_MATCH_PRIORITY: Record<DuplicateInfo['matchedOn'], number> = {
+  body: 1,
+  title: 2,
+  both: 3,
+};
+
+function isStrongerDuplicateMatch(candidate: DuplicateInfo, current: DuplicateInfo | null): boolean {
+  if (current === null) return true;
+
+  const candidatePriority = DUPLICATE_MATCH_PRIORITY[candidate.matchedOn];
+  const currentPriority = DUPLICATE_MATCH_PRIORITY[current.matchedOn];
+  if (candidatePriority !== currentPriority) {
+    return candidatePriority > currentPriority;
+  }
+
+  return candidate.existing.id < current.existing.id;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -26,6 +45,22 @@ function isValidDateString(value: unknown): value is string {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function duplicateInfoFor(incoming: PromptRecipe, existing: PromptRecipe): DuplicateInfo | null {
+  const titleMatch = incoming.title === existing.title;
+  const bodyMatch = incoming.body === existing.body;
+
+  if (titleMatch && bodyMatch) {
+    return { incoming, existing, matchedOn: 'both' };
+  }
+  if (titleMatch) {
+    return { incoming, existing, matchedOn: 'title' };
+  }
+  if (bodyMatch) {
+    return { incoming, existing, matchedOn: 'body' };
+  }
+  return null;
 }
 
 /**
@@ -57,6 +92,7 @@ interface ExportedPrompt {
  * Service for importing and exporting PromptRecipe collections as JSON.
  *
  * - Export serializes non-archived prompts with schema version "1.0" and an ISO timestamp.
+ * - Optional prompt fields can be added without changing the schema version.
  * - Import validates JSON structure against the export schema before returning parsed prompts.
  * - Duplicate detection compares incoming prompts against existing ones by title and body.
  */
@@ -191,24 +227,26 @@ export class ImportExportService implements IImportExportService {
 
   /**
    * Compare incoming prompts against existing prompts by title and body.
-   * Returns a DuplicateInfo entry for each incoming prompt that matches
-   * an existing prompt on title, body, or both.
+   * Returns at most one DuplicateInfo entry for each matching incoming prompt.
+   * When one incoming prompt matches multiple existing prompts, exact matches
+   * win over title matches, which win over body matches. Same-strength matches
+   * are selected by existing prompt id so unordered backends remain stable.
    */
   detectDuplicates(incoming: PromptRecipe[], existing: PromptRecipe[]): DuplicateInfo[] {
     const duplicates: DuplicateInfo[] = [];
 
     for (const inc of incoming) {
-      for (const ext of existing) {
-        const titleMatch = inc.title === ext.title;
-        const bodyMatch = inc.body === ext.body;
+      let bestMatch: DuplicateInfo | null = null;
 
-        if (titleMatch && bodyMatch) {
-          duplicates.push({ incoming: inc, existing: ext, matchedOn: 'both' });
-        } else if (titleMatch) {
-          duplicates.push({ incoming: inc, existing: ext, matchedOn: 'title' });
-        } else if (bodyMatch) {
-          duplicates.push({ incoming: inc, existing: ext, matchedOn: 'body' });
+      for (const ext of existing) {
+        const match = duplicateInfoFor(inc, ext);
+        if (match && isStrongerDuplicateMatch(match, bestMatch)) {
+          bestMatch = match;
         }
+      }
+
+      if (bestMatch) {
+        duplicates.push(bestMatch);
       }
     }
 

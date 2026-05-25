@@ -9,8 +9,6 @@ import type {
   Workspace,
   WorkspaceDomainInvite,
   WorkspaceInvite,
-  WorkspaceMember,
-  WorkspaceMembership,
 } from '../../types/index';
 import type {
   IPromptRepository,
@@ -30,7 +28,13 @@ import {
   createPromptStore,
   type PromptStore,
 } from '../../stores/prompt-store';
-import { initWorkspaceStore } from '../../stores/workspace-store';
+import { initWorkspaceStore, type WorkspaceStore } from '../../stores/workspace-store';
+import {
+  makeTestAuthUser,
+  makeTestWorkspace as makeWorkspace,
+  makeTestWorkspaceMember as makeWorkspaceMember,
+  makeTestWorkspaceMembership as makeWorkspaceMembership,
+} from '../../test-utils/workspace-fixtures';
 import { SettingsScreen } from '../settings';
 
 // ─── Mock SettingsStore module ─────────────────────────────────────────────────
@@ -42,49 +46,32 @@ let testPromptStore: StoreApi<PromptStore>;
 let mockRepo: ISettingsRepository;
 let mockPromptRepo: IPromptRepository;
 
-function makeWorkspace(user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' }): Workspace {
-  return {
-    id: user.uid,
-    name: 'Personal Workspace',
-    ownerId: user.uid,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  };
-}
-
-function makeWorkspaceMembership(
-  workspace: Workspace,
+function configureSyncedWorkspace(
+  repo: IWorkspaceRepository,
   user: AuthUser,
-  role: WorkspaceMembership['role'],
-): WorkspaceMembership {
-  return {
-    id: `${workspace.id}_${user.uid}`,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: user.email,
-    displayName: user.displayName,
-    workspaceName: workspace.name,
-    ownerId: workspace.ownerId,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
+  workspace: Workspace,
+  overrides: Partial<WorkspaceStore> = {},
+) {
+  const workspaceStore = initWorkspaceStore(repo);
+  workspaceStore.setState({
+    activeWorkspaceId: workspace.id,
+    currentRole: 'owner',
+    currentUser: user,
+    members: [makeWorkspaceMember(workspace, user, 'owner')],
+    memberships: [makeWorkspaceMembership(workspace, user, 'owner')],
+    workspaces: [workspace],
+    ...overrides,
+  });
+  testAppModeStore.getState().setUserId(user.uid);
+  testAppModeStore.getState().setMode('synced');
+  return workspaceStore;
 }
 
 function createMockWorkspaceRepo(): IWorkspaceRepository {
-  const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+  const user = makeTestAuthUser();
   const workspace = makeWorkspace(user);
   const membership = makeWorkspaceMembership(workspace, user, 'owner');
-  const member: WorkspaceMember = {
-    id: user.uid,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role: 'owner',
-    email: user.email,
-    displayName: user.displayName,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
+  const member = makeWorkspaceMember(workspace, user, 'owner');
 
   return {
     create: vi.fn(async () => workspace),
@@ -379,7 +366,7 @@ describe('SettingsScreen', () => {
   });
 
   it('allows owners to delete a non-personal workspace from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const personalWorkspace = makeWorkspace(user);
     const teamWorkspace: Workspace = {
       id: 'team-workspace',
@@ -417,7 +404,7 @@ describe('SettingsScreen', () => {
   });
 
   it('allows members to leave a shared workspace from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const personalWorkspace = makeWorkspace(user);
     const sharedWorkspace: Workspace = {
       id: 'shared-workspace',
@@ -455,7 +442,7 @@ describe('SettingsScreen', () => {
   });
 
   it('allows owners to add and revoke domain access from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const domainInvite: WorkspaceDomainInvite = {
       id: `${workspace.id}_example.com`,
@@ -507,7 +494,7 @@ describe('SettingsScreen', () => {
   });
 
   it('shows eligible domain invites and accepts them from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const domainInvite: WorkspaceDomainInvite = {
       id: 'shared-workspace_example.com',
@@ -559,7 +546,7 @@ describe('SettingsScreen', () => {
   });
 
   it('does not show domain access management to non-owner members', () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const workspaceStore = initWorkspaceStore(createMockWorkspaceRepo());
     workspaceStore.setState({
@@ -576,6 +563,137 @@ describe('SettingsScreen', () => {
 
     expect(screen.queryByText('Domain access')).toBeNull();
     expect(screen.queryByLabelText('Allowed email domain')).toBeNull();
+  });
+
+  it('displays errors when accepting a pending workspace invite fails', async () => {
+    const user = makeTestAuthUser();
+    const workspace = makeWorkspace(user);
+    const invite: WorkspaceInvite = {
+      id: 'invite-1',
+      workspaceId: 'shared-workspace',
+      workspaceName: 'Shared Ops',
+      email: user.email,
+      role: 'viewer',
+      status: 'pending',
+      invitedBy: 'owner-2',
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      acceptedAt: null,
+      acceptedBy: null,
+    };
+    const repo = createMockWorkspaceRepo();
+    repo.acceptInvite = vi.fn(async () => {
+      throw new Error('Invite is no longer available.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      pendingInvites: [invite],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Invite is no longer available.');
+    });
+  });
+
+  it('displays errors when revoking a pending outgoing invite fails', async () => {
+    const user = makeTestAuthUser();
+    const workspace = makeWorkspace(user);
+    const invite: WorkspaceInvite = {
+      id: 'invite-1',
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      email: 'teammate@example.com',
+      role: 'editor',
+      status: 'pending',
+      invitedBy: user.uid,
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-05'),
+      acceptedAt: null,
+      acceptedBy: null,
+    };
+    const repo = createMockWorkspaceRepo();
+    repo.revokeInvite = vi.fn(async () => {
+      throw new Error('Unable to revoke invite.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      invites: [invite],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Unable to revoke invite.');
+    });
+  });
+
+  it('displays errors when member role updates fail', async () => {
+    const user = makeTestAuthUser();
+    const workspace = makeWorkspace(user);
+    const teammateUser = makeTestAuthUser({ uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' });
+    const teammate = makeWorkspaceMember(workspace, teammateUser, 'editor');
+    const repo = createMockWorkspaceRepo();
+    repo.updateMemberRole = vi.fn(async () => {
+      throw new Error('Unable to update member role.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      members: [
+        makeWorkspaceMember(workspace, user, 'owner'),
+        teammate,
+      ],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Role for teammate@example.com'), {
+        target: { value: 'viewer' },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Unable to update member role.');
+    });
+  });
+
+  it('displays errors when removing a member fails', async () => {
+    const user = makeTestAuthUser();
+    const workspace = makeWorkspace(user);
+    const teammateUser = makeTestAuthUser({ uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' });
+    const teammate = makeWorkspaceMember(workspace, teammateUser, 'viewer');
+    const repo = createMockWorkspaceRepo();
+    repo.removeMember = vi.fn(async () => {
+      throw new Error('Unable to remove member.');
+    });
+    configureSyncedWorkspace(repo, user, workspace, {
+      members: [
+        makeWorkspaceMember(workspace, user, 'owner'),
+        teammate,
+      ],
+    });
+
+    render(<SettingsScreen onBack={() => {}} initialSection="workspaces-sharing" />);
+
+    const removeButton = screen
+      .getAllByRole('button', { name: 'Remove' })
+      .find((button) => !(button as HTMLButtonElement).disabled);
+    expect(removeButton).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(removeButton!);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('Unable to remove member.');
+    });
   });
 
   it('keeps settings content in a dedicated scroll pane', () => {

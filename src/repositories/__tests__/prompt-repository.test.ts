@@ -192,6 +192,26 @@ describe('PromptRepository', () => {
       expect(result.version).toBe(2);
     });
 
+    it('should advance updatedAt when the system clock has not moved', async () => {
+      vi.useFakeTimers();
+      try {
+        const timestamp = new Date('2024-01-02T00:00:00.000Z');
+        vi.setSystemTime(timestamp);
+        const original = makePromptRecipe({
+          id: 'same-ms-update',
+          updatedAt: timestamp,
+          version: 1,
+        });
+        (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
+
+        const result = await repo.update('same-ms-update', { title: 'Updated Title' });
+
+        expect(result.updatedAt.getTime()).toBe(timestamp.getTime() + 1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('should increment version on each update', async () => {
       const original = makePromptRecipe({ id: 'v-test', version: 5 });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
@@ -231,6 +251,7 @@ describe('PromptRepository', () => {
         id: 'archive-me',
         archived: false,
         archivedAt: null,
+        version: 4,
       });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
 
@@ -244,6 +265,7 @@ describe('PromptRepository', () => {
       expect(archived.archived).toBe(true);
       expect(archived.archivedAt).toBeInstanceOf(Date);
       expect(archived.archivedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(archived.version).toBe(5);
     });
 
     it('should throw when prompt not found', async () => {
@@ -282,6 +304,7 @@ describe('PromptRepository', () => {
         id: 'restore-me',
         archived: true,
         archivedAt: new Date('2024-06-01T00:00:00.000Z'),
+        version: 7,
       });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
 
@@ -292,6 +315,7 @@ describe('PromptRepository', () => {
 
       expect(restored.archived).toBe(false);
       expect(restored.archivedAt).toBeNull();
+      expect(restored.version).toBe(8);
     });
 
     it('should throw when prompt not found', async () => {
@@ -379,11 +403,12 @@ describe('PromptRepository', () => {
 
   describe('toggleFavorite', () => {
     it('should flip favorite from false to true', async () => {
-      const original = makePromptRecipe({ id: 'fav-me', favorite: false });
+      const original = makePromptRecipe({ id: 'fav-me', favorite: false, version: 2 });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
 
       const result = await repo.toggleFavorite('fav-me');
       expect(result.favorite).toBe(true);
+      expect(result.version).toBe(3);
     });
 
     it('should flip favorite from true to false', async () => {
@@ -503,9 +528,6 @@ describe('Feature: prompt-dock, Property 14: Update Sets updatedAt Timestamp', (
           // Create a prompt — its updatedAt is set to "now"
           const created = await repo.create(input);
           const originalUpdatedAt = created.updatedAt.getTime();
-
-          // Small delay to ensure Date.now() advances (sub-ms resolution can be equal)
-          await new Promise((resolve) => setTimeout(resolve, 2));
 
           // Update with a new title
           const updated = await repo.update(created.id, { title: newTitle });

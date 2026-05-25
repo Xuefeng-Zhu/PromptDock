@@ -90,6 +90,53 @@ describe('AuthService', () => {
     consoleError.mockRestore();
   });
 
+  it('logs every failed Firebase workspace bootstrap write', async () => {
+    const logger = { error: vi.fn() };
+    const userRecordError = new Error('user write denied');
+    const workspaceMetadataError = new Error('workspace write denied');
+    const memberError = new Error('member write denied');
+    const membershipError = new Error('membership write denied');
+    firebaseAuthMocks.signInWithEmailAndPassword.mockResolvedValue({
+      user: {
+        uid: 'user-123',
+        email: 'user@example.com',
+        displayName: 'Test User',
+      },
+    });
+    firebaseFirestoreMocks.setDoc
+      .mockRejectedValueOnce(userRecordError)
+      .mockRejectedValueOnce(workspaceMetadataError)
+      .mockRejectedValueOnce(memberError)
+      .mockRejectedValueOnce(membershipError);
+
+    await expect(new AuthService({ logger }).signIn('user@example.com', 'password123')).resolves.toEqual({
+      success: true,
+      user: {
+        uid: 'user-123',
+        email: 'user@example.com',
+        displayName: 'Test User',
+      },
+    });
+    await vi.dynamicImportSettled();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase user record:',
+      userRecordError,
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase workspace metadata:',
+      workspaceMetadataError,
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase workspace member:',
+      memberError,
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase workspace membership index:',
+      membershipError,
+    );
+  });
+
   it('returns sign-up success even if workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -145,6 +192,19 @@ describe('AuthService', () => {
 
     await expect(result).resolves.toBeNull();
     expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('logs Firebase auth restore setup failures before falling back to local mode', async () => {
+    const error = new Error('auth unavailable');
+    const logger = { error: vi.fn() };
+    firebaseConfigMocks.getFirebaseAuth.mockRejectedValueOnce(error);
+
+    await expect(new AuthService({ logger }).restoreSession()).resolves.toBeNull();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to restore Firebase auth session:',
+      error,
+    );
   });
 
   it('delivers a late restored session after the startup timeout once bootstrap succeeds', async () => {
@@ -206,5 +266,23 @@ describe('AuthService', () => {
       },
     });
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs Firebase auth listener setup failures before reporting local mode', async () => {
+    const error = new Error('listener unavailable');
+    const logger = { error: vi.fn() };
+    const callback = vi.fn();
+    firebaseConfigMocks.getFirebaseAuth.mockRejectedValueOnce(error);
+
+    const unsubscribe = new AuthService({ logger }).onAuthStateChanged(callback);
+    await vi.dynamicImportSettled();
+
+    expect(callback).toHaveBeenCalledWith(null);
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to subscribe to Firebase auth state:',
+      error,
+    );
+
+    unsubscribe();
   });
 });

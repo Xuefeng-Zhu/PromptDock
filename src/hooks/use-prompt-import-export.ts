@@ -1,15 +1,17 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ImportExportService } from '../services/import-export';
 import { useAppModeStore } from '../stores/app-mode-store';
 import { usePromptStore, type CreatePromptData } from '../stores/prompt-store';
 import { canEditWorkspace, useWorkspaceStore } from '../stores/workspace-store';
+import { formatPrefixedErrorMessage } from '../utils/error-message';
 import { openFile, saveFile } from '../utils/file-dialog';
 import type { DuplicateInfo, PromptRecipe } from '../types/index';
 
 const importExportService = new ImportExportService();
+type DuplicateResolutionAction = 'skip' | 'overwrite' | null;
 
 function formatImportError(prefix: string, err: unknown): string {
-  return `${prefix}: ${err instanceof Error ? err.message : String(err)}`;
+  return formatPrefixedErrorMessage(prefix, err);
 }
 
 /**
@@ -56,13 +58,32 @@ export function usePromptImportExport() {
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
   const [pendingNonDuplicates, setPendingNonDuplicates] = useState<PromptRecipe[]>([]);
+  const [duplicateResolutionAction, setDuplicateResolutionAction] =
+    useState<DuplicateResolutionAction>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const duplicateResolutionInFlightRef = useRef(false);
 
   const clearMessages = useCallback(() => {
     setImportErrors([]);
     setSuccessMessage(null);
+  }, []);
+
+  const beginDuplicateResolution = useCallback((action: Exclude<DuplicateResolutionAction, null>) => {
+    if (duplicateResolutionInFlightRef.current) {
+      return false;
+    }
+
+    duplicateResolutionInFlightRef.current = true;
+    setDuplicateResolutionAction(action);
+    clearMessages();
+    return true;
+  }, [clearMessages]);
+
+  const finishDuplicateResolution = useCallback(() => {
+    duplicateResolutionInFlightRef.current = false;
+    setDuplicateResolutionAction(null);
   }, []);
 
   const targetWorkspaceId = mode !== 'local' && userId ? activeWorkspaceId : 'local';
@@ -103,6 +124,7 @@ export function usePromptImportExport() {
   }, [clearMessages, prompts]);
 
   const handleImport = useCallback(async () => {
+    if (duplicateResolutionInFlightRef.current) return;
     clearMessages();
     setDuplicates([]);
     setPendingNonDuplicates([]);
@@ -141,6 +163,8 @@ export function usePromptImportExport() {
   }, [clearMessages, importPrompts, prompts]);
 
   const handleSkipAll = useCallback(async () => {
+    if (!beginDuplicateResolution('skip')) return;
+
     try {
       await importPrompts(pendingNonDuplicates);
       const count = pendingNonDuplicates.length;
@@ -153,10 +177,14 @@ export function usePromptImportExport() {
       );
     } catch (err) {
       setImportErrors([formatImportError('Import failed', err)]);
+    } finally {
+      finishDuplicateResolution();
     }
-  }, [duplicates.length, importPrompts, pendingNonDuplicates]);
+  }, [beginDuplicateResolution, duplicates.length, finishDuplicateResolution, importPrompts, pendingNonDuplicates]);
 
   const handleOverwriteAll = useCallback(async () => {
+    if (!beginDuplicateResolution('overwrite')) return;
+
     try {
       for (const dupe of duplicates) {
         const changes: Partial<PromptRecipe> = {
@@ -179,11 +207,14 @@ export function usePromptImportExport() {
       setSuccessMessage(`Imported ${total} prompt(s), overwrote ${duplicates.length} duplicate(s).`);
     } catch (err) {
       setImportErrors([formatImportError('Import failed', err)]);
+    } finally {
+      finishDuplicateResolution();
     }
-  }, [duplicates, importPrompts, pendingNonDuplicates, updatePrompt]);
+  }, [beginDuplicateResolution, duplicates, finishDuplicateResolution, importPrompts, pendingNonDuplicates, updatePrompt]);
 
   return {
     canImport,
+    duplicateResolutionAction,
     duplicates,
     importErrors,
     isExporting,

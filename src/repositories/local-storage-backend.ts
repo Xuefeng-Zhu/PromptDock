@@ -90,7 +90,8 @@ function deserializeWorkspace(raw: SerializedWorkspace): Workspace {
 
 function storeFileName(fileName: string): string {
   const prefix = import.meta.env.VITE_PROMPTDOCK_STORE_PREFIX;
-  if (!prefix) return fileName;
+  const isTauriE2E = import.meta.env.VITE_PROMPTDOCK_TAURI_E2E === 'true';
+  if (!isTauriE2E || !prefix) return fileName;
 
   // Desktop E2E builds use prefixed store files so they never touch a
   // developer's regular PromptDock data inside the Tauri app data directory.
@@ -285,9 +286,8 @@ export class LocalStorageBackend {
   // ─── Settings ──────────────────────────────────────────────────────────────
 
   async readSettings(): Promise<UserSettings> {
-    const raw = await this.readFromStore<UserSettings>(STORE_FILES.settings);
-    if (!raw) return { ...DEFAULT_SETTINGS };
-    return raw;
+    const raw = await this.readFromStore<Partial<UserSettings>>(STORE_FILES.settings);
+    return { ...DEFAULT_SETTINGS, ...(raw ?? {}) };
   }
 
   async writeSettings(settings: UserSettings): Promise<void> {

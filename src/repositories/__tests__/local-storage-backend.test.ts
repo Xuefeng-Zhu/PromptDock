@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import type { PromptRecipe, Folder, UserSettings, Workspace } from '../../types/index';
 
@@ -44,6 +44,23 @@ import {
 
 // ─── Test Helpers ──────────────────────────────────────────────────────────────
 
+const DEFAULT_STORE_FILES = {
+  prompts: 'prompts.json',
+  folders: 'folders.json',
+  settings: 'settings.json',
+  workspace: 'workspace.json',
+} as const;
+
+async function loadStoreFilesForCurrentEnv() {
+  vi.resetModules();
+  const module = await import('../local-storage-backend');
+  return module.STORE_FILES;
+}
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 function makePromptRecipe(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
   return {
     id: 'test-id-1',
@@ -87,6 +104,26 @@ function makeWorkspace(overrides: Partial<Workspace> = {}): Workspace {
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────
+
+describe('LocalStorageBackend store file names', () => {
+  it('ignores the E2E store prefix outside desktop E2E builds', async () => {
+    vi.stubEnv('VITE_PROMPTDOCK_STORE_PREFIX', 'qa-');
+
+    await expect(loadStoreFilesForCurrentEnv()).resolves.toEqual(DEFAULT_STORE_FILES);
+  });
+
+  it('applies the E2E store prefix for desktop E2E builds', async () => {
+    vi.stubEnv('VITE_PROMPTDOCK_TAURI_E2E', 'true');
+    vi.stubEnv('VITE_PROMPTDOCK_STORE_PREFIX', 'qa-');
+
+    await expect(loadStoreFilesForCurrentEnv()).resolves.toEqual({
+      prompts: 'qa-prompts.json',
+      folders: 'qa-folders.json',
+      settings: 'qa-settings.json',
+      workspace: 'qa-workspace.json',
+    });
+  });
+});
 
 describe('LocalStorageBackend', () => {
   let backend: LocalStorageBackend;
@@ -241,6 +278,17 @@ describe('LocalStorageBackend', () => {
 
       const settings = await backend.readSettings();
       expect(settings).toEqual(DEFAULT_SETTINGS);
+    });
+
+    it('should merge missing stored settings with desktop defaults', async () => {
+      const store = mockStores.get('settings.json')!;
+      store._data.set('data', { theme: 'dark' });
+
+      const settings = await backend.readSettings();
+      expect(settings).toEqual({
+        ...DEFAULT_SETTINGS,
+        theme: 'dark',
+      });
     });
 
     it('should write and read settings', async () => {

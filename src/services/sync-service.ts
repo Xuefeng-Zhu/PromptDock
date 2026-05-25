@@ -32,6 +32,23 @@ export interface SyncServiceOptions {
 
 export type MigrationChoice = 'migrate' | 'fresh';
 
+type MigrationFailure = {
+  label: string;
+  error: unknown;
+};
+
+class SyncMigrationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncMigrationError';
+  }
+}
+
+function formatMigrationFailure(failure: MigrationFailure): string {
+  const detail = failure.error instanceof Error ? failure.error.message : String(failure.error);
+  return `${failure.label}: ${detail}`;
+}
+
 // ─── SyncService ───────────────────────────────────────────────────────────────
 
 export class SyncService {
@@ -90,12 +107,21 @@ export class SyncService {
       const { FirestoreBackend } = await import('../repositories/firestore-backend');
       this.firestoreBackend = new FirestoreBackend(workspaceId);
 
+      const migrationFailures: MigrationFailure[] = [];
+
       // Migrate local prompts if requested
       if (migrationChoice === 'migrate' && localPrompts.length > 0) {
-        await this.migrateLocalPrompts(localPrompts);
+        await this.migrateLocalPrompts(localPrompts, migrationFailures);
       }
       if (migrationChoice === 'migrate' && localFolders.length > 0) {
-        await this.migrateLocalFolders(localFolders);
+        await this.migrateLocalFolders(localFolders, migrationFailures);
+      }
+      if (migrationFailures.length > 0) {
+        throw new SyncMigrationError(
+          `Sync migration failed for ${migrationFailures.length} item(s): ${
+            migrationFailures.map(formatMigrationFailure).join('; ')
+          }`,
+        );
       }
 
       // Start real-time listeners
@@ -117,6 +143,9 @@ export class SyncService {
         // Complete failure — stay in local mode
         this.appModeStore.setMode('local');
         this.appModeStore.setSyncStatus('local');
+      }
+      if (error instanceof SyncMigrationError) {
+        throw error;
       }
     }
   }
@@ -329,7 +358,10 @@ export class SyncService {
    *
    * Requirement: 2.3
    */
-  private async migrateLocalPrompts(localPrompts: PromptRecipe[]): Promise<void> {
+  private async migrateLocalPrompts(
+    localPrompts: PromptRecipe[],
+    failures: MigrationFailure[],
+  ): Promise<void> {
     if (!this.firestoreBackend || !this.currentWorkspaceId) return;
 
     const { getFirebaseFirestore } = await import('../firebase/config');
@@ -373,6 +405,7 @@ export class SyncService {
         });
       } catch (error) {
         console.error(`Failed to migrate prompt "${prompt.title}":`, error);
+        failures.push({ label: `prompt "${prompt.title}"`, error });
       }
     }
   }
@@ -382,7 +415,10 @@ export class SyncService {
    * Duplicate checks use normalized names so casing or spacing differences do
    * not create multiple folders that look identical in the UI.
    */
-  private async migrateLocalFolders(localFolders: Folder[]): Promise<void> {
+  private async migrateLocalFolders(
+    localFolders: Folder[],
+    failures: MigrationFailure[],
+  ): Promise<void> {
     if (!this.firestoreBackend || !this.currentWorkspaceId) return;
 
     const { getFirebaseFirestore } = await import('../firebase/config');
@@ -429,6 +465,7 @@ export class SyncService {
         remoteFolderNames.add(normalizedName);
       } catch (error) {
         console.error(`Failed to migrate folder "${folder.name}":`, error);
+        failures.push({ label: `folder "${folder.name}"`, error });
       }
     }
   }

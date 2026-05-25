@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SyncService } from '../sync-service';
 import type { AppModeStore } from '../../stores/app-mode-store';
 import type { Folder, PromptRecipe } from '../../types/index';
@@ -140,8 +140,13 @@ function makePrompt(overrides: Partial<PromptRecipe> = {}): PromptRecipe {
 describe('SyncService folder migration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    firestoreMocks.setDoc.mockResolvedValue(undefined);
     firestoreMocks.state.remoteFolderDocs = [];
     firestoreMocks.state.remotePromptDocs = [];
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('skips local folders whose normalized name already exists remotely', async () => {
@@ -235,5 +240,73 @@ describe('SyncService folder migration', () => {
       expect.objectContaining({ id: 'local-fresh-id' }),
       expect.objectContaining({ title: 'Fresh Prompt' }),
     );
+  });
+
+  it('does not report synced when any prompt migration write fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const appModeStore = createMockAppModeStore();
+    const service = new SyncService({ appModeStore });
+    firestoreMocks.setDoc
+      .mockRejectedValueOnce(new Error('permission denied'))
+      .mockResolvedValueOnce(undefined);
+
+    await expect(service.transitionToSynced(
+      'user-1',
+      'workspace-1',
+      [
+        makePrompt({ id: 'failing-prompt', title: 'Failing prompt' }),
+        makePrompt({ id: 'migrated-prompt', title: 'Migrated prompt' }),
+      ],
+      'migrate',
+    )).rejects.toThrow('Sync migration failed for 1 item(s)');
+
+    expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(2);
+    expect(firestoreMocks.onSnapshot).not.toHaveBeenCalled();
+    expect(appModeStore.mode).toBe('offline-synced');
+    expect(appModeStore.syncStatus).toBe('offline');
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to migrate prompt "Failing prompt":',
+      expect.any(Error),
+    );
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to transition to Synced Mode:',
+      expect.objectContaining({
+        message: expect.stringContaining('prompt "Failing prompt": permission denied'),
+      }),
+    );
+
+    consoleError.mockRestore();
+  });
+
+  it('does not report synced when any folder migration write fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const appModeStore = createMockAppModeStore();
+    const service = new SyncService({ appModeStore });
+    firestoreMocks.setDoc.mockRejectedValueOnce(new Error('quota exceeded'));
+
+    await expect(service.transitionToSynced(
+      'user-1',
+      'workspace-1',
+      [],
+      'migrate',
+      [makeFolder({ id: 'failing-folder', name: 'Failing folder' })],
+    )).rejects.toThrow('Sync migration failed for 1 item(s)');
+
+    expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(1);
+    expect(firestoreMocks.onSnapshot).not.toHaveBeenCalled();
+    expect(appModeStore.mode).toBe('offline-synced');
+    expect(appModeStore.syncStatus).toBe('offline');
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to migrate folder "Failing folder":',
+      expect.any(Error),
+    );
+    expect(consoleError).toHaveBeenCalledWith(
+      'Failed to transition to Synced Mode:',
+      expect.objectContaining({
+        message: expect.stringContaining('folder "Failing folder": quota exceeded'),
+      }),
+    );
+
+    consoleError.mockRestore();
   });
 });

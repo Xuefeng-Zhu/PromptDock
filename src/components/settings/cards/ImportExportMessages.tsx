@@ -4,6 +4,7 @@ import { Button } from '../../ui/Button';
 
 interface ImportExportMessagesProps {
   duplicates: DuplicateInfo[];
+  duplicateResolutionAction: 'skip' | 'overwrite' | null;
   importErrors: string[];
   successMessage: string | null;
   onOverwriteAll: () => void | Promise<void>;
@@ -12,11 +13,14 @@ interface ImportExportMessagesProps {
 
 export function ImportExportMessages({
   duplicates,
+  duplicateResolutionAction,
   importErrors,
   successMessage,
   onOverwriteAll,
   onSkipAll,
 }: ImportExportMessagesProps) {
+  const isResolvingDuplicates = duplicateResolutionAction !== null;
+
   return (
     <>
       {successMessage && (
@@ -62,16 +66,18 @@ export function ImportExportMessages({
               size="sm"
               onClick={onSkipAll}
               aria-label="Skip duplicates"
+              disabled={isResolvingDuplicates}
             >
-              Skip Duplicates
+              {duplicateResolutionAction === 'skip' ? 'Skipping...' : 'Skip Duplicates'}
             </Button>
             <Button
               variant="primary"
               size="sm"
               onClick={onOverwriteAll}
               aria-label="Overwrite duplicates"
+              disabled={isResolvingDuplicates}
             >
-              Overwrite Duplicates
+              {duplicateResolutionAction === 'overwrite' ? 'Overwriting...' : 'Overwrite Duplicates'}
             </Button>
           </div>
         </div>

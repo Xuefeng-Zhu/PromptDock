@@ -2,8 +2,11 @@ import { useCallback, useRef, useState, type FormEvent } from 'react';
 import { Check, ChevronDown, Plus, Settings } from 'lucide-react';
 import { useWorkspaceStore } from '../../stores/workspace-store';
 import type { WorkspaceRole } from '../../types/index';
+import { formatErrorMessage } from '../../utils/error-message';
+import { formatNullableWorkspaceRole, getWorkspaceRole } from '../../utils/workspace-role';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { getListboxOptionClass } from '../ui/listbox/listbox-option-class';
 import { useDismissablePopover } from '../ui/listbox/use-dismissable-popover';
 import { WorkspaceColorMark } from './WorkspaceColorMark';
 
@@ -11,15 +14,10 @@ interface WorkspaceSwitcherProps {
   onManageSharing?: () => void;
 }
 
-function roleLabel(role: WorkspaceRole | null): string {
-  if (!role) return 'Member';
-  return role.charAt(0).toUpperCase() + role.slice(1);
-}
-
 function RoleBadge({ role }: { role: WorkspaceRole | null }) {
   return (
     <span className="rounded-full bg-[var(--color-primary-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-primary)]">
-      {roleLabel(role)}
+      {formatNullableWorkspaceRole(role)}
     </span>
   );
 }
@@ -61,7 +59,7 @@ export function WorkspaceSwitcher({ onManageSharing }: WorkspaceSwitcherProps) {
       setNewWorkspaceName('');
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formatErrorMessage(err));
     }
   };
 
@@ -93,20 +91,15 @@ export function WorkspaceSwitcher({ onManageSharing }: WorkspaceSwitcherProps) {
           <div className="max-h-64 overflow-y-auto">
             {workspaces.map((workspace) => {
               const selected = workspace.id === activeWorkspaceId;
-              const role = memberships.find((item) => item.workspaceId === workspace.id)?.role ?? null;
+              const role = getWorkspaceRole(memberships, workspace.id);
               return (
                 <button
                   key={workspace.id}
                   type="button"
-                  className={[
-                    'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors',
-                    selected
-                      ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                      : 'text-[var(--color-text-main)] hover:bg-gray-50',
-                  ].join(' ')}
+                  className={getListboxOptionClass({ active: selected })}
                   onClick={() => {
                     void switchWorkspace(workspace.id).then(close).catch((err) => {
-                      setError(err instanceof Error ? err.message : String(err));
+                      setError(formatErrorMessage(err));
                     });
                   }}
                 >

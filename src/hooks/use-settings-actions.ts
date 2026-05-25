@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSettingsStore } from '../stores/settings-store';
+import { formatErrorMessage } from '../utils/error-message';
 import { registerHotkey } from '../utils/hotkey';
 import { isTauriRuntime } from '../utils/runtime';
 import {
@@ -36,7 +37,7 @@ export function useSettingsActions() {
         await updateSettings({ theme });
       } catch (err) {
         setSettingsError(
-          `Failed to save theme: ${err instanceof Error ? err.message : String(err)}`,
+          `Failed to save theme: ${formatErrorMessage(err)}`,
         );
       }
     },
@@ -52,7 +53,7 @@ export function useSettingsActions() {
         return true;
       } catch (err) {
         setHotkeyError(
-          `Failed to register hotkey: ${err instanceof Error ? err.message : String(err)}`,
+          `Failed to register hotkey: ${formatErrorMessage(err)}`,
         );
         return false;
       }
@@ -68,7 +69,7 @@ export function useSettingsActions() {
         await updateSettings({ defaultAction });
       } catch (err) {
         setSettingsError(
-          `Failed to save default action: ${err instanceof Error ? err.message : String(err)}`,
+          `Failed to save default action: ${formatErrorMessage(err)}`,
         );
       }
     },

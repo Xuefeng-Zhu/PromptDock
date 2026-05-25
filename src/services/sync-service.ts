@@ -37,6 +37,13 @@ type MigrationFailure = {
   error: unknown;
 };
 
+class SyncMigrationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncMigrationError';
+  }
+}
+
 function formatMigrationFailure(failure: MigrationFailure): string {
   const detail = failure.error instanceof Error ? failure.error.message : String(failure.error);
   return `${failure.label}: ${detail}`;
@@ -110,7 +117,7 @@ export class SyncService {
         await this.migrateLocalFolders(localFolders, migrationFailures);
       }
       if (migrationFailures.length > 0) {
-        throw new Error(
+        throw new SyncMigrationError(
           `Sync migration failed for ${migrationFailures.length} item(s): ${
             migrationFailures.map(formatMigrationFailure).join('; ')
           }`,
@@ -136,6 +143,9 @@ export class SyncService {
         // Complete failure — stay in local mode
         this.appModeStore.setMode('local');
         this.appModeStore.setSyncStatus('local');
+      }
+      if (error instanceof SyncMigrationError) {
+        throw error;
       }
     }
   }

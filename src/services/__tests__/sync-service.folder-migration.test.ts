@@ -250,7 +250,7 @@ describe('SyncService folder migration', () => {
       .mockRejectedValueOnce(new Error('permission denied'))
       .mockResolvedValueOnce(undefined);
 
-    await service.transitionToSynced(
+    await expect(service.transitionToSynced(
       'user-1',
       'workspace-1',
       [
@@ -258,7 +258,7 @@ describe('SyncService folder migration', () => {
         makePrompt({ id: 'migrated-prompt', title: 'Migrated prompt' }),
       ],
       'migrate',
-    );
+    )).rejects.toThrow('Sync migration failed for 1 item(s)');
 
     expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(2);
     expect(firestoreMocks.onSnapshot).not.toHaveBeenCalled();
@@ -284,13 +284,13 @@ describe('SyncService folder migration', () => {
     const service = new SyncService({ appModeStore });
     firestoreMocks.setDoc.mockRejectedValueOnce(new Error('quota exceeded'));
 
-    await service.transitionToSynced(
+    await expect(service.transitionToSynced(
       'user-1',
       'workspace-1',
       [],
       'migrate',
       [makeFolder({ id: 'failing-folder', name: 'Failing folder' })],
-    );
+    )).rejects.toThrow('Sync migration failed for 1 item(s)');
 
     expect(firestoreMocks.setDoc).toHaveBeenCalledTimes(1);
     expect(firestoreMocks.onSnapshot).not.toHaveBeenCalled();

@@ -11,7 +11,7 @@ Users create, organize, and reuse AI prompt templates with `{{variable}}` placeh
 | Layer | Technology |
 |---|---|
 | Desktop shell | Tauri 2 (Rust) |
-| Frontend | React 19.2.6, TypeScript 6.0.3, Vite 8.0.12 |
+| Frontend | React 19.2.6, TypeScript 6.0.3, Vite 8.0.13 |
 | Styling | Tailwind CSS v4 (`@tailwindcss/vite` plugin) |
 | State management | Zustand 5 |
 | Persistence (desktop) | `@tauri-apps/plugin-store` (JSON files on disk) |

@@ -18,18 +18,19 @@ import type {
 import { cleanFolderName, normalizeFolderName } from '../utils/folder-names';
 import type { IFolderRepository, IPromptRepository } from './interfaces';
 import { resolvePromptVariables } from '../utils/prompt-variables';
+import {
+  dateToTimestamp,
+  nullableTimestampToDate,
+  timestampToDate,
+  type FirestoreTimestamp,
+} from './firestore-timestamps';
+
+export { dateToTimestamp, timestampToDate } from './firestore-timestamps';
+export type { FirestoreTimestamp } from './firestore-timestamps';
 
 // ─── Firestore Document Types ──────────────────────────────────────────────────
 // These represent the shape of documents stored in Firestore, where Date fields
 // are stored as Firestore Timestamps.
-
-export interface FirestoreTimestamp {
-  seconds: number;
-  nanoseconds: number;
-  toDate(): Date;
-}
-
-type FirestoreDateValue = FirestoreTimestamp | Date | null | undefined;
 
 export interface FirestorePromptDoc {
   title: string;
@@ -72,46 +73,6 @@ export interface FirestoreUserSettingsDoc {
 }
 
 // ─── Converter Functions ───────────────────────────────────────────────────────
-
-/**
- * Convert a Date to a Firestore Timestamp-like object.
- * In production, use firebase/firestore Timestamp.fromDate().
- * This function creates a plain object for testability.
- */
-export function dateToTimestamp(date: Date): FirestoreTimestamp {
-  const ms = date.getTime();
-  const seconds = Math.floor(ms / 1000);
-  const nanoseconds = (ms % 1000) * 1_000_000;
-  return {
-    seconds,
-    nanoseconds,
-    toDate() {
-      return new Date(this.seconds * 1000 + this.nanoseconds / 1_000_000);
-    },
-  };
-}
-
-/**
- * Convert a FirestoreTimestamp back to a Date.
- */
-export function timestampToDate(timestamp: FirestoreDateValue): Date {
-  if (!timestamp) return new Date();
-  if (timestamp instanceof Date) return timestamp;
-  if (typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
-  }
-  if (
-    typeof timestamp.seconds === 'number' &&
-    typeof timestamp.nanoseconds === 'number'
-  ) {
-    return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1_000_000);
-  }
-  return new Date();
-}
-
-function nullableTimestampToDate(timestamp: FirestoreDateValue): Date | null {
-  return timestamp ? timestampToDate(timestamp) : null;
-}
 
 /**
  * Convert a PromptRecipe TypeScript object to a Firestore document.

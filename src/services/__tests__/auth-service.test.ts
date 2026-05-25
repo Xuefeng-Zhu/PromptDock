@@ -90,6 +90,53 @@ describe('AuthService', () => {
     consoleError.mockRestore();
   });
 
+  it('logs every failed Firebase workspace bootstrap write', async () => {
+    const logger = { error: vi.fn() };
+    const userRecordError = new Error('user write denied');
+    const workspaceMetadataError = new Error('workspace write denied');
+    const memberError = new Error('member write denied');
+    const membershipError = new Error('membership write denied');
+    firebaseAuthMocks.signInWithEmailAndPassword.mockResolvedValue({
+      user: {
+        uid: 'user-123',
+        email: 'user@example.com',
+        displayName: 'Test User',
+      },
+    });
+    firebaseFirestoreMocks.setDoc
+      .mockRejectedValueOnce(userRecordError)
+      .mockRejectedValueOnce(workspaceMetadataError)
+      .mockRejectedValueOnce(memberError)
+      .mockRejectedValueOnce(membershipError);
+
+    await expect(new AuthService({ logger }).signIn('user@example.com', 'password123')).resolves.toEqual({
+      success: true,
+      user: {
+        uid: 'user-123',
+        email: 'user@example.com',
+        displayName: 'Test User',
+      },
+    });
+    await vi.dynamicImportSettled();
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase user record:',
+      userRecordError,
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase workspace metadata:',
+      workspaceMetadataError,
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase workspace member:',
+      memberError,
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      'Failed to write Firebase workspace membership index:',
+      membershipError,
+    );
+  });
+
   it('returns sign-up success even if workspace bootstrap times out', async () => {
     vi.useFakeTimers();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});

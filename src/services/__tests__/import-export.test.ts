@@ -133,6 +133,7 @@ describe('ImportExportService — Unit Tests', () => {
 
     const parsed = JSON.parse(service.exportToJSON(prompts));
 
+    expect(parsed.version).toBe('1.0');
     expect(parsed.prompts[0].variables).toEqual([
       {
         name: 'tone',

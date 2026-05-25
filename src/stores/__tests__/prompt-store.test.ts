@@ -50,8 +50,30 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
       return updated;
     }),
     delete: vi.fn(async () => {}),
-    softDelete: vi.fn(async () => {}),
-    restore: vi.fn(async () => {}),
+    softDelete: vi.fn(async (id) => {
+      const idx = prompts.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error(`Prompt not found: ${id}`);
+      const now = new Date();
+      prompts[idx] = {
+        ...prompts[idx],
+        archived: true,
+        archivedAt: now,
+        updatedAt: now,
+        version: prompts[idx].version + 1,
+      };
+    }),
+    restore: vi.fn(async (id) => {
+      const idx = prompts.findIndex((p) => p.id === id);
+      if (idx === -1) throw new Error(`Prompt not found: ${id}`);
+      const now = new Date();
+      prompts[idx] = {
+        ...prompts[idx],
+        archived: false,
+        archivedAt: null,
+        updatedAt: now,
+        version: prompts[idx].version + 1,
+      };
+    }),
     duplicate: vi.fn(async (id) => {
       const original = prompts.find((p) => p.id === id);
       if (!original) throw new Error(`Prompt not found: ${id}`);
@@ -89,7 +111,12 @@ function createMockRepo(initialPrompts: PromptRecipe[] = []): IPromptRepository 
     toggleFavorite: vi.fn(async (id) => {
       const idx = prompts.findIndex((p) => p.id === id);
       if (idx === -1) throw new Error(`Prompt not found: ${id}`);
-      prompts[idx] = { ...prompts[idx], favorite: !prompts[idx].favorite };
+      prompts[idx] = {
+        ...prompts[idx],
+        favorite: !prompts[idx].favorite,
+        updatedAt: new Date(),
+        version: prompts[idx].version + 1,
+      };
       return prompts[idx];
     }),
     getById: vi.fn(async (id) => prompts.find((p) => p.id === id) ?? null),
@@ -407,7 +434,9 @@ describe('PromptStore', () => {
 
       // p1 starts as favorite: false
       await store.getState().toggleFavorite('p1');
-      expect(store.getState().prompts.find((p) => p.id === 'p1')?.favorite).toBe(true);
+      const prompt = store.getState().prompts.find((p) => p.id === 'p1');
+      expect(prompt?.favorite).toBe(true);
+      expect(prompt?.version).toBe(2);
       expect(repo.toggleFavorite).toHaveBeenCalledWith('p1');
     });
   });
@@ -439,7 +468,9 @@ describe('PromptStore', () => {
       expect(archived).toBeDefined();
       expect(archived?.archived).toBe(true);
       expect(archived?.archivedAt).toBeInstanceOf(Date);
+      expect(archived?.version).toBe(2);
       expect(repo.softDelete).toHaveBeenCalledWith('p1');
+      expect(repo.getById).toHaveBeenCalledWith('p1');
     });
 
     it('should clear selectedPromptId if the archived prompt was selected', async () => {

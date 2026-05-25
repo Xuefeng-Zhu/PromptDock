@@ -16,6 +16,14 @@ import {
   getWorkspaceDomainFromEmail,
   workspaceDomainInviteId,
 } from '../utils/workspace-domain';
+import {
+  PERSONAL_WORKSPACE_NAME,
+  createPersonalWorkspaceRecord,
+  createWorkspaceMemberPayload,
+  createWorkspaceMembershipPayload,
+  normalizeWorkspaceEmail,
+  workspaceMembershipId,
+} from '../utils/workspace-records';
 
 interface FirestoreTimestamp {
   seconds: number;
@@ -94,19 +102,6 @@ interface FirestoreWorkspaceDomainInviteDoc {
   updatedAt?: FirestoreTimestamp;
   revokedAt?: FirestoreTimestamp | null;
   revokedBy?: string | null;
-}
-
-interface AcceptedInviteMetadata {
-  acceptedInviteId?: string;
-  acceptedDomainInviteId?: string;
-}
-
-function workspaceMembershipId(workspaceId: string, userId: string): string {
-  return `${workspaceId}_${userId}`;
-}
-
-function normalizeInviteEmail(email: string): string {
-  return email.trim().toLowerCase();
 }
 
 function toWorkspace(id: string, data: FirestoreWorkspaceDoc): Workspace {
@@ -190,54 +185,8 @@ function toWorkspaceDomainInvite(
   };
 }
 
-function createMemberPayload(
-  workspace: Workspace,
-  user: AuthUser,
-  role: WorkspaceRole,
-  timestamp: unknown,
-  acceptedMetadata: AcceptedInviteMetadata = {},
-) {
-  return {
-    id: user.uid,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: normalizeInviteEmail(user.email),
-    displayName: user.displayName,
-    joinedAt: timestamp,
-    updatedAt: timestamp,
-    ...(acceptedMetadata.acceptedInviteId
-      ? { acceptedInviteId: acceptedMetadata.acceptedInviteId }
-      : {}),
-    ...(acceptedMetadata.acceptedDomainInviteId
-      ? { acceptedDomainInviteId: acceptedMetadata.acceptedDomainInviteId }
-      : {}),
-  };
-}
-
-function createMembershipPayload(
-  workspace: Workspace,
-  user: AuthUser,
-  role: WorkspaceRole,
-  timestamp: unknown,
-  acceptedMetadata: AcceptedInviteMetadata = {},
-) {
-  return {
-    ...createMemberPayload(workspace, user, role, timestamp, acceptedMetadata),
-    workspaceName: workspace.name,
-    ownerId: workspace.ownerId,
-  };
-}
-
 function createPersonalWorkspaceFallback(userId: string): Workspace {
-  const now = new Date();
-  return {
-    id: userId,
-    name: 'Personal Workspace',
-    ownerId: userId,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return createPersonalWorkspaceRecord(userId);
 }
 
 function createPersonalMembershipFallback(userId: string): WorkspaceMembership {
@@ -371,13 +320,13 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       : null;
     const workspace: Workspace = {
       id: user.uid,
-      name: 'Personal Workspace',
+      name: PERSONAL_WORKSPACE_NAME,
       ownerId: user.uid,
       createdAt: existingWorkspace?.createdAt ?? new Date(),
       updatedAt: new Date(),
     };
-    const memberPayload = createMemberPayload(workspace, user, 'owner', timestamp);
-    const membershipPayload = createMembershipPayload(workspace, user, 'owner', timestamp);
+    const memberPayload = createWorkspaceMemberPayload(workspace, user, 'owner', timestamp);
+    const membershipPayload = createWorkspaceMembershipPayload(workspace, user, 'owner', timestamp);
 
     const memberRef = doc(firestore, 'workspaces', user.uid, 'members', user.uid);
     const membershipRef = doc(
@@ -492,7 +441,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
   }
 
   async listPendingInvitesForEmail(email: string): Promise<WorkspaceInvite[]> {
-    const normalizedEmail = normalizeInviteEmail(email);
+    const normalizedEmail = normalizeWorkspaceEmail(email);
     if (!normalizedEmail) return [];
 
     const { getFirebaseFirestore } = await import('../firebase/config');
@@ -599,8 +548,8 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       createdAt: now,
       updatedAt: now,
     };
-    const memberPayload = createMemberPayload(workspace, owner, 'owner', timestamp);
-    const membershipPayload = createMembershipPayload(workspace, owner, 'owner', timestamp);
+    const memberPayload = createWorkspaceMemberPayload(workspace, owner, 'owner', timestamp);
+    const membershipPayload = createWorkspaceMembershipPayload(workspace, owner, 'owner', timestamp);
     const memberRef = doc(firestore, 'workspaces', workspace.id, 'members', owner.uid);
     const membershipRef = doc(
       firestore,
@@ -635,7 +584,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     role: WorkspaceInviteRole,
     invitedBy: string,
   ): Promise<WorkspaceInvite> {
-    const normalizedEmail = normalizeInviteEmail(email);
+    const normalizedEmail = normalizeWorkspaceEmail(email);
     if (!normalizedEmail) throw new Error('Invite email is required.');
 
     const existing = (await this.listInvites(workspace.id)).find(
@@ -765,14 +714,14 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       workspaceSnapshot.data() as FirestoreWorkspaceDoc,
     );
     const timestamp = serverTimestamp();
-    const memberPayload = createMemberPayload(
+    const memberPayload = createWorkspaceMemberPayload(
       workspace,
       user,
       invite.role,
       timestamp,
       { acceptedInviteId: invite.id },
     );
-    const membershipPayload = createMembershipPayload(
+    const membershipPayload = createWorkspaceMembershipPayload(
       workspace,
       user,
       invite.role,
@@ -830,14 +779,14 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     };
     const timestamp = serverTimestamp();
     const acceptedMetadata = { acceptedDomainInviteId: invite.id };
-    const memberPayload = createMemberPayload(
+    const memberPayload = createWorkspaceMemberPayload(
       workspace,
       user,
       'viewer',
       timestamp,
       acceptedMetadata,
     );
-    const membershipPayload = createMembershipPayload(
+    const membershipPayload = createWorkspaceMembershipPayload(
       workspace,
       user,
       'viewer',

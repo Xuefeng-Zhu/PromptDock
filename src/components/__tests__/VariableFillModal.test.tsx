@@ -18,6 +18,28 @@ const defaultProps = {
   onPaste: vi.fn(),
 };
 
+function createDeferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
+}
+
+function fillAllVariables() {
+  fireEvent.change(screen.getByLabelText('Value for variable audience'), {
+    target: { value: 'developers' },
+  });
+  fireEvent.change(screen.getByLabelText('Value for variable text'), {
+    target: { value: 'Hello world' },
+  });
+  fireEvent.change(screen.getByLabelText('Value for variable format'), {
+    target: { value: 'markdown' },
+  });
+}
+
 describe('VariableFillModal', () => {
   it('renders the prompt title in the header', () => {
     render(<VariableFillModal {...defaultProps} />);
@@ -151,16 +173,7 @@ describe('VariableFillModal', () => {
   it('calls onCopy with rendered text when Copy button is clicked', async () => {
     const onCopy = vi.fn();
     render(<VariableFillModal {...defaultProps} onCopy={onCopy} />);
-    // Fill all variables
-    fireEvent.change(screen.getByLabelText('Value for variable audience'), {
-      target: { value: 'developers' },
-    });
-    fireEvent.change(screen.getByLabelText('Value for variable text'), {
-      target: { value: 'Hello world' },
-    });
-    fireEvent.change(screen.getByLabelText('Value for variable format'), {
-      target: { value: 'markdown' },
-    });
+    fillAllVariables();
 
     const copyButton = screen.getByRole('button', {
       name: /Copy to Clipboard/i,
@@ -173,6 +186,57 @@ describe('VariableFillModal', () => {
     expect(renderedText).toContain('developers');
     expect(renderedText).toContain('Hello world');
     expect(renderedText).toContain('markdown');
+  });
+
+  it('guards the copy action while the current copy is pending', async () => {
+    const copyGate = createDeferred();
+    const onCopy = vi.fn(() => copyGate.promise);
+    render(<VariableFillModal {...defaultProps} onCopy={onCopy} />);
+    fillAllVariables();
+
+    const copyButton = screen.getByRole('button', {
+      name: /Copy to Clipboard/i,
+    });
+    await act(async () => {
+      fireEvent.click(copyButton);
+      fireEvent.click(copyButton);
+      await Promise.resolve();
+    });
+
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    const pendingButton = screen.getByRole('button', { name: /Copying/i });
+    expect(pendingButton.hasAttribute('disabled')).toBe(true);
+
+    await act(async () => {
+      copyGate.resolve();
+      await copyGate.promise;
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Copied!')).toBeDefined();
+  });
+
+  it('releases the copy guard when the copy callback throws synchronously', async () => {
+    const onCopy = vi.fn(() => {
+      throw new Error('copy failed');
+    });
+    render(<VariableFillModal {...defaultProps} onCopy={onCopy} />);
+    fillAllVariables();
+
+    const copyButton = screen.getByRole('button', {
+      name: /Copy to Clipboard/i,
+    });
+    await act(async () => {
+      fireEvent.click(copyButton);
+      await Promise.resolve();
+    });
+
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    const readyButton = screen.getByRole('button', {
+      name: /Copy to Clipboard/i,
+    });
+    expect(readyButton.hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByText('Copied!')).toBeNull();
   });
 
   it('uses Paste into Active App as the primary action when configured', async () => {
@@ -237,6 +301,63 @@ describe('VariableFillModal', () => {
     });
 
     expect(onPaste).toHaveBeenCalledTimes(1);
+  });
+
+  it('guards the paste shortcut while the current paste is pending', async () => {
+    const pasteGate = createDeferred();
+    const onPaste = vi.fn(() => pasteGate.promise);
+    render(
+      <VariableFillModal
+        {...defaultProps}
+        defaultAction="paste"
+        onPaste={onPaste}
+      />,
+    );
+    fillAllVariables();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+      fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+      await Promise.resolve();
+    });
+
+    expect(onPaste).toHaveBeenCalledTimes(1);
+    const pendingButton = screen.getByRole('button', { name: /Pasting/i });
+    expect(pendingButton.hasAttribute('disabled')).toBe(true);
+
+    await act(async () => {
+      pasteGate.resolve();
+      await pasteGate.promise;
+      await Promise.resolve();
+    });
+  });
+
+  it('releases the paste guard when the paste callback throws synchronously', async () => {
+    const onPaste = vi.fn(() => {
+      throw new Error('paste failed');
+    });
+    render(
+      <VariableFillModal
+        {...defaultProps}
+        defaultAction="paste"
+        onPaste={onPaste}
+      />,
+    );
+    fillAllVariables();
+
+    const pasteButton = screen.getByRole('button', {
+      name: /Paste into Active App/i,
+    });
+    await act(async () => {
+      fireEvent.click(pasteButton);
+      await Promise.resolve();
+    });
+
+    expect(onPaste).toHaveBeenCalledTimes(1);
+    const readyButton = screen.getByRole('button', {
+      name: /Paste into Active App/i,
+    });
+    expect(readyButton.hasAttribute('disabled')).toBe(false);
   });
 
   describe('Copied! success state', () => {

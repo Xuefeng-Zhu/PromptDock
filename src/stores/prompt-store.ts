@@ -163,10 +163,24 @@ export function createPromptStore(repo: IPromptRepository) {
 
     async archivePrompt(id: string) {
       await repo.softDelete(id);
-      const archivedAt = new Date();
+      let archivedPrompt: PromptRecipe | null = null;
+      try {
+        archivedPrompt = await repo.getById(id);
+      } catch {
+        // The mutation already succeeded; fall back to a local optimistic shape
+        // if a follow-up read is unavailable.
+      }
+      const archivedAt = archivedPrompt?.archivedAt ?? new Date();
+      const fallbackArchivedPrompt = (prompt: PromptRecipe): PromptRecipe => ({
+        ...prompt,
+        archived: true,
+        archivedAt,
+        updatedAt: archivedAt,
+        version: prompt.version + 1,
+      });
       set((state) => ({
         prompts: state.prompts.map((p) =>
-          p.id === id ? { ...p, archived: true, archivedAt, updatedAt: archivedAt } : p,
+          p.id === id ? (archivedPrompt ?? fallbackArchivedPrompt(p)) : p,
         ),
         selectedPromptId:
           state.selectedPromptId === id ? null : state.selectedPromptId,

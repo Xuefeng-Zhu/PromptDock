@@ -35,10 +35,12 @@ export function useVariableFill({
     return initial;
   });
   const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const firstInputRef = useRef<
     HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   >(null);
   const mountedRef = useRef(true);
+  const submittingRef = useRef(false);
   const variableNames = useMemo(
     () => variables.map((variable) => variable.name),
     [variables],
@@ -73,10 +75,26 @@ export function useVariableFill({
     setValues((prev) => ({ ...prev, [variableName]: value }));
   }, []);
 
-  const handleCopy = useCallback(() => {
-    if (!isComplete) return;
+  const beginSubmit = useCallback(() => {
+    if (!isComplete || submittingRef.current) return false;
 
-    Promise.resolve(onCopy(renderedText))
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    return true;
+  }, [isComplete]);
+
+  const finishSubmit = useCallback(() => {
+    submittingRef.current = false;
+    if (mountedRef.current) {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    if (!beginSubmit()) return;
+
+    Promise.resolve()
+      .then(() => onCopy(renderedText))
       .then(() => {
         if (!mountedRef.current) return;
         setCopied(true);
@@ -92,19 +110,22 @@ export function useVariableFill({
         if (mountedRef.current) {
           setCopied(false);
         }
-      });
-  }, [isComplete, renderedText, onCopy]);
+      })
+      .finally(finishSubmit);
+  }, [beginSubmit, finishSubmit, renderedText, onCopy]);
 
   const handlePrimaryAction = useCallback(() => {
-    if (!isComplete) return;
-
     if (isPasteAction) {
-      Promise.resolve(onPaste(renderedText)).catch(() => {});
+      if (!beginSubmit()) return;
+      Promise.resolve()
+        .then(() => onPaste(renderedText))
+        .catch(() => {})
+        .finally(finishSubmit);
       return;
     }
 
     handleCopy();
-  }, [handleCopy, isComplete, isPasteAction, onPaste, renderedText]);
+  }, [beginSubmit, finishSubmit, handleCopy, isPasteAction, onPaste, renderedText]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -142,6 +163,7 @@ export function useVariableFill({
     handleValueChange,
     isComplete,
     isPasteAction,
+    isSubmitting,
     renderedText,
     values,
   };

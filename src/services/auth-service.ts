@@ -85,9 +85,19 @@ function toAuthUser(firebaseUser: { uid: string; email: string | null; displayNa
   };
 }
 
+interface AuthServiceOptions {
+  logger?: Pick<Console, 'error'>;
+}
+
 // ─── AuthService ───────────────────────────────────────────────────────────────
 
 export class AuthService implements IAuthService {
+  private readonly logger: Pick<Console, 'error'>;
+
+  constructor(options: AuthServiceOptions = {}) {
+    this.logger = options.logger ?? console;
+  }
+
   isConfigured(): boolean {
     return isFirebaseCoreConfigured();
   }
@@ -148,7 +158,7 @@ export class AuthService implements IAuthService {
 
     metadataResults.forEach((result) => {
       if (result.status === 'rejected') {
-        console.error('Failed to write Firebase workspace metadata:', result.reason);
+        this.logger.error('Failed to write Firebase workspace metadata:', result.reason);
       }
     });
   }
@@ -159,7 +169,7 @@ export class AuthService implements IAuthService {
       WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
       'Firebase workspace bootstrap timed out.',
     ).catch((error) => {
-      console.error('Failed to bootstrap Firebase user workspace:', error);
+      this.logger.error('Failed to bootstrap Firebase user workspace:', error);
     });
   }
 
@@ -309,8 +319,8 @@ export class AuthService implements IAuthService {
           unsubscribe();
         }
       });
-    } catch {
-      // Silently fall back to Local Mode on any failure
+    } catch (error) {
+      this.logger.error('Failed to restore Firebase auth session:', error);
       return null;
     }
   }
@@ -357,8 +367,8 @@ export class AuthService implements IAuthService {
             callback(null);
           }
         });
-      } catch {
-        // If Firebase init fails, report null (Local Mode)
+      } catch (error) {
+        this.logger.error('Failed to subscribe to Firebase auth state:', error);
         if (!disposed) {
           callback(null);
         }

@@ -1,9 +1,13 @@
 import { existsSync } from 'node:fs';
-import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  readConfiguredTauriDriverPorts,
+  resolveTauriDriverPorts,
+  waitForTcpPort,
+} from './tauri-e2e-ports.mjs';
 
 const rootDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const appBinary = process.platform === 'win32' ? 'prompt-dock.exe' : 'prompt-dock';
@@ -20,105 +24,10 @@ function closeTauriDriver() {
   tauriDriver = null;
 }
 
-function waitForTcpPort(port, host = '127.0.0.1', timeoutMs = 10_000) {
-  const startedAt = Date.now();
-
-  return new Promise((resolve, reject) => {
-    const attempt = () => {
-      const socket = net.createConnection({ host, port }, () => {
-        socket.end();
-        resolve();
-      });
-
-      socket.once('error', () => {
-        socket.destroy();
-        if (Date.now() - startedAt > timeoutMs) {
-          reject(new Error(`Timed out waiting for tauri-driver on ${host}:${port}`));
-          return;
-        }
-        setTimeout(attempt, 100);
-      });
-    };
-
-    attempt();
-  });
-}
-
-function parseTcpPort(value, envName) {
-  if (value === undefined || value === '') return null;
-  const port = Number(value);
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error(`${envName} must be an integer between 1 and 65535.`);
-  }
-  return port;
-}
-
-function listenOnRandomPort(host = '127.0.0.1') {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.unref();
-    server.once('error', reject);
-    server.listen(0, host, () => {
-      resolve(server);
-    });
-  });
-}
-
-function closeServer(server) {
-  return new Promise((resolve, reject) => {
-    server.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-async function findAvailableTcpPort(host = '127.0.0.1', excludedPorts = new Set()) {
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const server = await listenOnRandomPort(host);
-    const address = server.address();
-    await closeServer(server);
-
-    if (!address || typeof address === 'string') {
-      throw new Error(`Could not allocate a TCP port on ${host}.`);
-    }
-    if (!excludedPorts.has(address.port)) {
-      return address.port;
-    }
-  }
-  throw new Error(`Could not allocate a TCP port on ${host} outside the excluded set.`);
-}
-
-const configuredTauriDriverPort = parseTcpPort(
-  process.env.PROMPTDOCK_TAURI_DRIVER_PORT,
-  'PROMPTDOCK_TAURI_DRIVER_PORT',
-);
-const configuredNativeDriverPort = parseTcpPort(
-  process.env.PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT,
-  'PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT',
-);
-
-if (
-  configuredTauriDriverPort !== null
-  && configuredTauriDriverPort === configuredNativeDriverPort
-) {
-  throw new Error('PROMPTDOCK_TAURI_DRIVER_PORT and PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT must differ.');
-}
-
-async function resolveTauriDriverPorts() {
-  const driverPort = configuredTauriDriverPort ?? await findAvailableTcpPort();
-  const nativeDriverPort = configuredNativeDriverPort
-    ?? await findAvailableTcpPort('127.0.0.1', new Set([driverPort]));
-
-  if (driverPort === nativeDriverPort) {
-    throw new Error('PROMPTDOCK_TAURI_DRIVER_PORT and PROMPTDOCK_TAURI_NATIVE_DRIVER_PORT must differ.');
-  }
-
-  return { driverPort, nativeDriverPort };
-}
+const {
+  configuredTauriDriverPort,
+  configuredNativeDriverPort,
+} = readConfiguredTauriDriverPorts();
 
 function buildTauriApp() {
   if (process.env.PROMPTDOCK_TAURI_E2E_SKIP_BUILD === '1') {
@@ -194,7 +103,10 @@ export const config = {
       throw new Error('TAURI_DRIVER must point to a tauri-driver executable.');
     }
 
-    const { driverPort, nativeDriverPort } = await resolveTauriDriverPorts();
+    const { driverPort, nativeDriverPort } = await resolveTauriDriverPorts({
+      configuredTauriDriverPort,
+      configuredNativeDriverPort,
+    });
     config.port = driverPort;
     wdioConfig.port = driverPort;
 

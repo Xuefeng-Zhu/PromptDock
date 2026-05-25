@@ -90,7 +90,8 @@ function deserializeWorkspace(raw: SerializedWorkspace): Workspace {
 
 function storeFileName(fileName: string): string {
   const prefix = import.meta.env.VITE_PROMPTDOCK_STORE_PREFIX;
-  if (!prefix) return fileName;
+  const isTauriE2E = import.meta.env.VITE_PROMPTDOCK_TAURI_E2E === 'true';
+  if (!isTauriE2E || !prefix) return fileName;
 
   // Desktop E2E builds use prefixed store files so they never touch a
   // developer's regular PromptDock data inside the Tauri app data directory.

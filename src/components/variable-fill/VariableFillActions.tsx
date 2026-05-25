@@ -5,6 +5,7 @@ interface VariableFillActionsProps {
   copied: boolean;
   isComplete: boolean;
   isPasteAction: boolean;
+  isSubmitting: boolean;
   onCancel: () => void;
   onPrimaryAction: () => void;
 }
@@ -13,10 +14,12 @@ export function VariableFillActions({
   copied,
   isComplete,
   isPasteAction,
+  isSubmitting,
   onCancel,
   onPrimaryAction,
 }: VariableFillActionsProps) {
   const primaryActionLabel = isPasteAction ? 'Paste into Active App' : 'Copy to Clipboard';
+  const submittingLabel = isPasteAction ? 'Pasting...' : 'Copying...';
 
   return (
     <div
@@ -42,13 +45,22 @@ export function VariableFillActions({
           variant="primary"
           size="sm"
           onClick={onPrimaryAction}
-          disabled={!isComplete}
+          disabled={!isComplete || isSubmitting}
           className={[
             'w-full sm:w-auto',
-            !isPasteAction && copied ? 'bg-green-600 hover:bg-green-700' : '',
+            !isSubmitting && !isPasteAction && copied ? 'bg-green-600 hover:bg-green-700' : '',
           ].filter(Boolean).join(' ')}
         >
-          {!isPasteAction && copied ? (
+          {isSubmitting ? (
+            <>
+              {isPasteAction ? (
+                <ClipboardPaste className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {submittingLabel}
+            </>
+          ) : !isPasteAction && copied ? (
             <>
               <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
               Copied!

@@ -82,6 +82,7 @@ export function VariableFillModal({
           copied={variableFill.copied}
           isComplete={variableFill.isComplete}
           isPasteAction={variableFill.isPasteAction}
+          isSubmitting={variableFill.isSubmitting}
           onCancel={onCancel}
           onPrimaryAction={variableFill.handlePrimaryAction}
         />

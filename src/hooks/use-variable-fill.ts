@@ -93,7 +93,8 @@ export function useVariableFill({
   const handleCopy = useCallback(() => {
     if (!beginSubmit()) return;
 
-    Promise.resolve(onCopy(renderedText))
+    Promise.resolve()
+      .then(() => onCopy(renderedText))
       .then(() => {
         if (!mountedRef.current) return;
         setCopied(true);
@@ -116,7 +117,8 @@ export function useVariableFill({
   const handlePrimaryAction = useCallback(() => {
     if (isPasteAction) {
       if (!beginSubmit()) return;
-      Promise.resolve(onPaste(renderedText))
+      Promise.resolve()
+        .then(() => onPaste(renderedText))
         .catch(() => {})
         .finally(finishSubmit);
       return;

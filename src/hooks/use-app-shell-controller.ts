@@ -14,6 +14,7 @@ import { canEditWorkspace as canEditRole, useWorkspaceStore } from '../stores/wo
 import type { Folder } from '../types/index';
 import { formatErrorMessage } from '../utils/error-message';
 import { isTauriRuntime } from '../utils/runtime';
+import { getWorkspaceRole } from '../utils/workspace-role';
 import { hideMainWindow } from '../utils/window';
 import { useLibraryData } from './use-library-data';
 import { usePromptExecution } from './use-prompt-execution';
@@ -135,7 +136,7 @@ export function useAppShellController({
     workspaces.flatMap((workspace) => {
       const role = workspace.id === activeWorkspaceId
         ? currentWorkspaceRole
-        : memberships.find((membership) => membership.workspaceId === workspace.id)?.role ?? null;
+        : getWorkspaceRole(memberships, workspace.id);
 
       if (role !== 'owner' && role !== 'editor') return [];
 

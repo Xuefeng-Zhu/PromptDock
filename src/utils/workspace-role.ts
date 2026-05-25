@@ -1,4 +1,4 @@
-import type { WorkspaceRole } from '../types/index';
+import type { WorkspaceMembership, WorkspaceRole } from '../types/index';
 
 export function formatWorkspaceRole(role: WorkspaceRole): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
@@ -9,6 +9,13 @@ export function formatNullableWorkspaceRole(
   fallback = 'Member',
 ): string {
   return role ? formatWorkspaceRole(role) : fallback;
+}
+
+export function getWorkspaceRole(
+  memberships: WorkspaceMembership[],
+  workspaceId: string,
+): WorkspaceRole | null {
+  return memberships.find((membership) => membership.workspaceId === workspaceId)?.role ?? null;
 }
 
 export function workspaceRoleBadgeClass(role: WorkspaceRole): string {

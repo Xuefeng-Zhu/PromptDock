@@ -10,6 +10,7 @@ import type {
   WorkspaceMembership,
   WorkspaceRole,
 } from '../types/index';
+import { getWorkspaceRole } from '../utils/workspace-role';
 
 const LOCAL_WORKSPACE: Workspace = {
   id: 'local',
@@ -46,13 +47,6 @@ function chooseActiveWorkspace(
     return fallbackWorkspaceId;
   }
   return workspaces[0]?.id ?? fallbackWorkspaceId;
-}
-
-function roleForWorkspace(
-  memberships: WorkspaceMembership[],
-  workspaceId: string,
-): WorkspaceRole | null {
-  return memberships.find((membership) => membership.workspaceId === workspaceId)?.role ?? null;
 }
 
 export interface WorkspaceStore {
@@ -130,7 +124,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
 
         set({
           activeWorkspaceId,
-          currentRole: roleForWorkspace(memberships, activeWorkspaceId),
+          currentRole: getWorkspaceRole(memberships, activeWorkspaceId),
           isLoading: false,
           memberships,
           pendingDomainInvites: filteredDomainInvites,
@@ -148,7 +142,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
     async loadWorkspaceDetails(workspaceId = get().activeWorkspaceId) {
       const user = get().currentUser;
       if (!user || workspaceId === 'local') return;
-      const currentRole = roleForWorkspace(get().memberships, workspaceId);
+      const currentRole = getWorkspaceRole(get().memberships, workspaceId);
 
       const [members, invites, domainInvites] = await Promise.all([
         repo.listMembers(workspaceId),
@@ -160,7 +154,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
       if (
         latestState.activeWorkspaceId !== workspaceId
         || latestState.currentUser?.uid !== user.uid
-        || roleForWorkspace(latestState.memberships, workspaceId) !== currentRole
+        || getWorkspaceRole(latestState.memberships, workspaceId) !== currentRole
       ) {
         return;
       }
@@ -181,7 +175,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
 
       set({
         activeWorkspaceId: workspaceId,
-        currentRole: roleForWorkspace(memberships, workspaceId),
+        currentRole: getWorkspaceRole(memberships, workspaceId),
       });
       await get().loadWorkspaceDetails(workspaceId);
     },
@@ -226,7 +220,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
 
         return {
           activeWorkspaceId: nextActiveWorkspaceId,
-          currentRole: roleForWorkspace(nextMemberships, nextActiveWorkspaceId),
+          currentRole: getWorkspaceRole(nextMemberships, nextActiveWorkspaceId),
           domainInvites: wasActive ? [] : state.domainInvites,
           invites: wasActive ? [] : state.invites,
           members: wasActive ? [] : state.members,
@@ -265,7 +259,7 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
 
         return {
           activeWorkspaceId: nextActiveWorkspaceId,
-          currentRole: roleForWorkspace(nextMemberships, nextActiveWorkspaceId),
+          currentRole: getWorkspaceRole(nextMemberships, nextActiveWorkspaceId),
           domainInvites: wasActive ? [] : state.domainInvites,
           invites: wasActive ? [] : state.invites,
           members: wasActive ? [] : state.members,

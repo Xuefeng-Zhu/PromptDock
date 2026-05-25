@@ -9,19 +9,12 @@ import type {
   WorkspaceRemovalIntent,
   WorkspaceRole,
 } from '../../../types/index';
-import { formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
+import { getWorkspaceRole, formatWorkspaceRole, workspaceRoleBadgeClass } from '../../../utils/workspace-role';
 import { Button } from '../../ui/Button';
 import { Input } from '../../ui/Input';
 import { WorkspaceColorMark } from '../../workspaces';
 
 export const MEMBER_ROLE_OPTIONS: WorkspaceRole[] = ['owner', 'editor', 'viewer'];
-
-export function roleForWorkspace(
-  memberships: WorkspaceMembership[],
-  workspaceId: string,
-): WorkspaceRole | null {
-  return memberships.find((membership) => membership.workspaceId === workspaceId)?.role ?? null;
-}
 
 function WorkspaceRoleBadge({ role }: { role: WorkspaceRole | null }) {
   if (!role) return null;
@@ -120,7 +113,7 @@ export function WorkspaceListSection({
       <div className="mt-2 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)]">
         {workspaces.map((workspace) => {
           const selected = workspace.id === activeWorkspaceId;
-          const role = roleForWorkspace(memberships, workspace.id);
+          const role = getWorkspaceRole(memberships, workspace.id);
           const isPersonalWorkspace = workspace.id === userId;
           const canDeleteWorkspace = role === 'owner' && workspace.ownerId === userId && !isPersonalWorkspace;
           const canLeaveWorkspace = role !== null && role !== 'owner';

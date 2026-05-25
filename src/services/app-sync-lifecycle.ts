@@ -82,6 +82,7 @@ export interface AppSyncLifecycleOptions {
 export async function restoreAppAuthSession(
   authService: Pick<IAuthService, 'restoreSession'>,
   appModeStore: StoreApi<AppModeStore>,
+  logger: Pick<Console, 'error'> = console,
 ): Promise<void> {
   const applyRestoredAuth = (result: Awaited<ReturnType<IAuthService['restoreSession']>>) => {
     if (result?.success) {
@@ -95,7 +96,8 @@ export async function restoreAppAuthSession(
   try {
     const result = await authService.restoreSession(applyRestoredAuth);
     applyRestoredAuth(result);
-  } catch {
+  } catch (err) {
+    logger.error('Failed to restore auth session:', err);
     // Session restore failure is non-fatal; app startup remains in local mode.
   }
 }
@@ -155,7 +157,11 @@ export class AppSyncLifecycle {
   }
 
   async restoreAuthSession(): Promise<void> {
-    await restoreAppAuthSession(this.options.authService, this.options.appModeStore);
+    await restoreAppAuthSession(
+      this.options.authService,
+      this.options.appModeStore,
+      this.logger,
+    );
   }
 
   private getCurrentAuthUser(): AuthUser | null {

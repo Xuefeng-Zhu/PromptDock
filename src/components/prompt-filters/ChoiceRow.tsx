@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { SelectionIndicator } from '../ui/SelectionIndicator';
 
 interface ChoiceRowProps {
   label: string;
@@ -21,22 +21,7 @@ export function ChoiceRow({ label, selected, type, onClick }: ChoiceRowProps) {
           : 'text-[var(--color-text-muted)] hover:bg-gray-50 hover:text-[var(--color-text-main)]',
       ].join(' ')}
     >
-      <span
-        className={[
-          'flex h-4 w-4 shrink-0 items-center justify-center border',
-          type === 'radio' ? 'rounded-full' : 'rounded',
-          selected
-            ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
-            : 'border-[var(--color-border)] bg-[var(--color-panel)]',
-        ].join(' ')}
-        aria-hidden="true"
-      >
-        {selected && (
-          type === 'radio'
-            ? <span className="h-1.5 w-1.5 rounded-full bg-white" />
-            : <Check className="h-3 w-3" />
-        )}
-      </span>
+      <SelectionIndicator selected={selected} type={type} />
       <span className="min-w-0 truncate">{label}</span>
     </button>
   );

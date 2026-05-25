@@ -192,6 +192,26 @@ describe('PromptRepository', () => {
       expect(result.version).toBe(2);
     });
 
+    it('should advance updatedAt when the system clock has not moved', async () => {
+      vi.useFakeTimers();
+      try {
+        const timestamp = new Date('2024-01-02T00:00:00.000Z');
+        vi.setSystemTime(timestamp);
+        const original = makePromptRecipe({
+          id: 'same-ms-update',
+          updatedAt: timestamp,
+          version: 1,
+        });
+        (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
+
+        const result = await repo.update('same-ms-update', { title: 'Updated Title' });
+
+        expect(result.updatedAt.getTime()).toBe(timestamp.getTime() + 1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('should increment version on each update', async () => {
       const original = makePromptRecipe({ id: 'v-test', version: 5 });
       (backend.readPrompts as ReturnType<typeof vi.fn>).mockResolvedValueOnce([original]);
@@ -508,9 +528,6 @@ describe('Feature: prompt-dock, Property 14: Update Sets updatedAt Timestamp', (
           // Create a prompt — its updatedAt is set to "now"
           const created = await repo.create(input);
           const originalUpdatedAt = created.updatedAt.getTime();
-
-          // Small delay to ensure Date.now() advances (sub-ms resolution can be equal)
-          await new Promise((resolve) => setTimeout(resolve, 2));
 
           // Update with a new title
           const updated = await repo.update(created.id, { title: newTitle });

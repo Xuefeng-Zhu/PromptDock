@@ -144,12 +144,6 @@ export interface AppModeState {
 
 export type SyncStatus = 'local' | 'synced' | 'syncing' | 'offline' | 'pending-changes';
 
-// ─── Prompt Renderer ───────────────────────────────────────────────────────────
-
-export type RenderResult =
-  | { success: true; text: string }
-  | { success: false; missingVariables: string[] };
-
 // ─── Import/Export ─────────────────────────────────────────────────────────────
 
 export type ImportResult =

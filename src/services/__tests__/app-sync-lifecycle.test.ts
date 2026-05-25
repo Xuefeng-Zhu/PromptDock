@@ -262,6 +262,7 @@ interface HarnessOptions {
   firestoreDelegateBeforeTransition?: IPromptRepository & IFolderRepository;
   firestoreDelegateAfterTransition?: IPromptRepository & IFolderRepository;
   transitionRejects?: Error;
+  workspaceBootstrapRejects?: Error;
 }
 
 function createHarness(options: HarnessOptions = {}) {
@@ -271,6 +272,11 @@ function createHarness(options: HarnessOptions = {}) {
   const folderRepository = createFolderRepository(folders);
   const settingsRepository = createSettingsRepository();
   const workspaceRepository = createWorkspaceRepository();
+  if (options.workspaceBootstrapRejects) {
+    workspaceRepository.bootstrapPersonalWorkspace = vi.fn(async () => {
+      throw options.workspaceBootstrapRejects;
+    });
+  }
   const appModeStore = createAppModeStore();
   const promptStore = createPromptStore(promptRepository);
   const folderStore = createFolderStore(folderRepository);
@@ -381,6 +387,29 @@ describe('AppSyncLifecycle', () => {
     expect(harness.createSyncService).not.toHaveBeenCalled();
   });
 
+  it('surfaces workspace bootstrap failures after sign-in without clearing the account', async () => {
+    const error = new Error('permission-denied');
+    const harness = createHarness({ workspaceBootstrapRejects: error });
+    harness.lifecycle.start();
+
+    harness.appModeStore.getState().setUser(makeAuthUser('user-1'));
+    harness.appModeStore.getState().setSyncStatus('syncing');
+    harness.appModeStore.getState().setMode('synced');
+    await flushAsync();
+
+    expect(harness.logger.error).toHaveBeenCalledWith(
+      'Failed to load workspaces after sign-in:',
+      error,
+    );
+    expect(harness.appModeStore.getState().mode).toBe('local');
+    expect(harness.appModeStore.getState().syncStatus).toBe('local');
+    expect(harness.appModeStore.getState().userId).toBe('user-1');
+    expect(harness.appModeStore.getState().syncError).toBe(
+      'Could not enable sync: permission-denied',
+    );
+    expect(harness.createSyncService).not.toHaveBeenCalled();
+  });
+
   it('tears down sync state and reloads local data on sign-out', async () => {
     const firestoreDelegate = createFirestoreDelegate();
     const harness = createHarness({ firestoreDelegateBeforeTransition: firestoreDelegate });
@@ -427,6 +456,9 @@ describe('AppSyncLifecycle', () => {
     );
     expect(harness.appModeStore.getState().mode).toBe('local');
     expect(harness.appModeStore.getState().syncStatus).toBe('local');
+    expect(harness.appModeStore.getState().syncError).toBe(
+      'Could not enable sync: transition failed',
+    );
     expect(harness.syncService.dispose).toHaveBeenCalledTimes(1);
     expect(harness.promptRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(null);
     expect(harness.folderRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(null);

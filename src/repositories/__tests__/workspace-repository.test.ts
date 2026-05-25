@@ -313,6 +313,48 @@ describe('WorkspaceRepository', () => {
         { merge: true },
       );
     });
+
+    it('throws when required personal workspace writes fail', async () => {
+      const error = new Error('permission-denied');
+      firestoreMocks.setDoc.mockRejectedValueOnce(error);
+
+      await expect(
+        repo.bootstrapPersonalWorkspace({
+          uid: 'user-1',
+          email: 'user@example.com',
+          displayName: 'User One',
+        }),
+      ).rejects.toThrow('permission-denied');
+    });
+  });
+
+  describe('listMembershipsForUser', () => {
+    it('throws when the membership index cannot be read', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('permission-denied'));
+
+      await expect(repo.listMembershipsForUser('user-1')).rejects.toThrow('permission-denied');
+    });
+  });
+
+  describe('listSyncedWorkspacesForUser', () => {
+    it('throws instead of falling back when every workspace metadata read fails', async () => {
+      firestoreMocks.state.collectionDocs.set('workspaceMemberships', [
+        firestoreMocks.makeDoc('workspaceMemberships/team-1_user-1', {
+          workspaceId: 'team-1',
+          userId: 'user-1',
+          role: 'editor',
+          email: 'user@example.com',
+          displayName: 'User One',
+          workspaceName: 'Design Team',
+          ownerId: 'owner-1',
+        }),
+      ]);
+      firestoreMocks.getDoc.mockRejectedValueOnce(new Error('permission-denied'));
+
+      await expect(repo.listSyncedWorkspacesForUser('user-1')).rejects.toThrow(
+        'Failed to load workspace metadata',
+      );
+    });
   });
 
   describe('domain invites', () => {

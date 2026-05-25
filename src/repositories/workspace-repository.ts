@@ -308,10 +308,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const firestore = await getFirebaseFirestore();
     const timestamp = serverTimestamp();
     const workspaceRef = doc(firestore, 'workspaces', user.uid);
-    const existingWorkspaceSnapshot = await getDoc(workspaceRef).catch((err) => {
-      console.error('Failed to read personal workspace metadata before bootstrap:', err);
-      return null;
-    });
+    const existingWorkspaceSnapshot = await getDoc(workspaceRef);
     const existingWorkspace = existingWorkspaceSnapshot?.exists()
       ? toWorkspace(
         existingWorkspaceSnapshot.id,
@@ -343,21 +340,9 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       workspacePayload.createdAt = timestamp;
     }
 
-    await setDoc(
-      workspaceRef,
-      workspacePayload,
-      { merge: true },
-    ).catch((err) => {
-      console.error('Failed to bootstrap personal workspace metadata:', err);
-    });
-
-    await setDoc(memberRef, memberPayload, { merge: true }).catch((err) => {
-      console.error('Failed to bootstrap personal workspace member:', err);
-    });
-
-    await setDoc(membershipRef, membershipPayload, { merge: true }).catch((err) => {
-      console.error('Failed to bootstrap personal workspace membership index:', err);
-    });
+    await setDoc(workspaceRef, workspacePayload, { merge: true });
+    await setDoc(memberRef, memberPayload, { merge: true });
+    await setDoc(membershipRef, membershipPayload, { merge: true });
 
     return workspace;
   }
@@ -366,20 +351,15 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { collection, getDocs, query, where } = await import('firebase/firestore');
 
-    try {
-      const firestore = await getFirebaseFirestore();
-      const membershipsCol = collection(firestore, 'workspaceMemberships');
-      const q = query(membershipsCol, where('userId', '==', userId));
-      const snapshot = await getDocs(q);
-      const memberships = snapshot.docs.map((docSnap) =>
-        toWorkspaceMembership(docSnap.id, docSnap.data() as FirestoreWorkspaceMembershipDoc),
-      );
+    const firestore = await getFirebaseFirestore();
+    const membershipsCol = collection(firestore, 'workspaceMemberships');
+    const q = query(membershipsCol, where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    const memberships = snapshot.docs.map((docSnap) =>
+      toWorkspaceMembership(docSnap.id, docSnap.data() as FirestoreWorkspaceMembershipDoc),
+    );
 
-      return memberships.length > 0 ? memberships : [createPersonalMembershipFallback(userId)];
-    } catch (err) {
-      console.error('Failed to list workspace membership index; using personal workspace fallback:', err);
-      return [createPersonalMembershipFallback(userId)];
-    }
+    return memberships.length > 0 ? memberships : [createPersonalMembershipFallback(userId)];
   }
 
   async listPendingDomainInvitesForEmail(email: string): Promise<WorkspaceDomainInvite[]> {
@@ -420,24 +400,34 @@ export class WorkspaceRepository implements IWorkspaceRepository {
 
     const firestore = await getFirebaseFirestore();
     const memberships = await this.listMembershipsForUser(userId);
-    const workspaces = await Promise.all(
+    const workspaceReads = await Promise.all(
       memberships.map(async (membership) => {
         try {
           const workspaceRef = doc(firestore, 'workspaces', membership.workspaceId);
           const snapshot = await getDoc(workspaceRef);
-          if (!snapshot.exists()) return null;
-          return toWorkspace(snapshot.id, snapshot.data() as FirestoreWorkspaceDoc);
+          if (!snapshot.exists()) return { error: null, workspace: null };
+          return {
+            error: null,
+            workspace: toWorkspace(snapshot.id, snapshot.data() as FirestoreWorkspaceDoc),
+          };
         } catch (err) {
           console.error('Failed to read workspace metadata:', err);
-          return null;
+          return { error: err, workspace: null };
         }
       }),
     );
 
-    const availableWorkspaces = workspaces.filter((workspace): workspace is Workspace => workspace !== null);
-    return availableWorkspaces.length > 0
-      ? availableWorkspaces
-      : [createPersonalWorkspaceFallback(userId)];
+    const availableWorkspaces = workspaceReads
+      .map((result) => result.workspace)
+      .filter((workspace): workspace is Workspace => workspace !== null);
+    if (availableWorkspaces.length > 0) return availableWorkspaces;
+
+    const failedReads = workspaceReads.filter((result) => result.error !== null);
+    if (failedReads.length > 0) {
+      throw new Error('Failed to load workspace metadata for your synced workspaces.');
+    }
+
+    return [createPersonalWorkspaceFallback(userId)];
   }
 
   async listPendingInvitesForEmail(email: string): Promise<WorkspaceInvite[]> {

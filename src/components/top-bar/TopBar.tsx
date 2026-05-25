@@ -20,6 +20,8 @@ export interface TopBarProps {
   userId?: string | null;
   onAuthSuccess?: (user: AuthUser) => void;
   onSignOutSuccess?: () => void;
+  onRetrySync?: () => void;
+  syncError?: string | null;
   syncStatus?: SyncStatus;
 }
 
@@ -53,6 +55,8 @@ export function TopBar({
   userId = null,
   onAuthSuccess,
   onSignOutSuccess,
+  onRetrySync,
+  syncError,
   syncStatus,
 }: TopBarProps) {
   return (
@@ -92,6 +96,8 @@ export function TopBar({
         mode={mode}
         onAuthSuccess={onAuthSuccess}
         onSignOutSuccess={onSignOutSuccess}
+        onRetrySync={onRetrySync}
+        syncError={syncError}
         syncStatus={syncStatus}
         userId={userId}
         className="flex justify-self-end md:order-3"
@@ -114,6 +120,8 @@ interface TopBarActionsProps {
   mode: AppMode;
   onAuthSuccess?: (user: AuthUser) => void;
   onSignOutSuccess?: () => void;
+  onRetrySync?: () => void;
+  syncError?: string | null;
   syncStatus?: SyncStatus;
   userId: string | null;
 }
@@ -124,6 +132,8 @@ function TopBarActions({
   mode,
   onAuthSuccess,
   onSignOutSuccess,
+  onRetrySync,
+  syncError,
   syncStatus,
   userId,
 }: TopBarActionsProps) {
@@ -135,8 +145,10 @@ function TopBarActions({
         authService={authService}
         mode={mode}
         userId={userId}
+        syncError={syncError}
         syncStatus={syncStatus}
         onAuthSuccess={onAuthSuccess}
+        onRetrySync={onRetrySync}
         onSignOutSuccess={onSignOutSuccess}
       />
     </div>

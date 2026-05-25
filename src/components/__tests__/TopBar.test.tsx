@@ -245,6 +245,30 @@ describe('TopBar', () => {
     });
   });
 
+  it('shows sync setup failures for signed-in accounts that fell back to local mode', () => {
+    const onRetrySync = vi.fn();
+
+    render(
+      <TopBar
+        {...defaultProps}
+        authService={createMockAuthService()}
+        mode="local"
+        userId="user-123"
+        syncError="Could not enable sync: permission-denied"
+        syncStatus="local"
+        onRetrySync={onRetrySync}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+
+    expect(screen.getByText('Sync setup failed')).toBeDefined();
+    expect(screen.getByRole('alert').textContent).toBe('Could not enable sync: permission-denied');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }));
+    expect(onRetrySync).toHaveBeenCalledTimes(1);
+  });
+
   it('closes the workspace menu after opening sharing settings', () => {
     const onManageWorkspaces = vi.fn();
 

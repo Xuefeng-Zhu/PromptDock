@@ -30,6 +30,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     handleDuplicatePrompt,
     handleEditPrompt,
     handleOnboardingComplete,
+    handleRetrySync,
     handleRestorePrompt,
     handleSearchChange,
     handleSettingsOpen,
@@ -45,6 +46,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
     mode,
     screen,
     searchQuery,
+    syncError,
     syncStatus,
     theme,
     unresolvedConflictCount,
@@ -113,6 +115,8 @@ export function AppShellView({ controller }: AppShellViewProps) {
         userId={userId}
         onAuthSuccess={handleAuthSuccess}
         onSignOutSuccess={handleSignOutSuccess}
+        onRetrySync={handleRetrySync}
+        syncError={syncError}
         syncStatus={syncStatus}
       />
 

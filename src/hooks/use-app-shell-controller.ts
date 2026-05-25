@@ -73,10 +73,12 @@ export function useAppShellController({
   const mode = useAppModeStore((s) => s.mode);
   const userId = useAppModeStore((s) => s.userId);
   const setMode = useAppModeStore((s) => s.setMode);
+  const setSyncError = useAppModeStore((s) => s.setSyncError);
   const setSyncStatus = useAppModeStore((s) => s.setSyncStatus);
   const setUser = useAppModeStore((s) => s.setUser);
   const setUserId = useAppModeStore((s) => s.setUserId);
   const syncStatus = useAppModeStore((s) => s.syncStatus);
+  const syncError = useAppModeStore((s) => s.syncError);
   const addToast = useToastStore((s) => s.addToast);
   const [folderDeleteConfirmation, setFolderDeleteConfirmation] = useState<FolderDeleteConfirmation | null>(null);
   const [duplicatePromptId, setDuplicatePromptId] = useState<string | null>(null);
@@ -230,9 +232,11 @@ export function useAppShellController({
 
   const appModeActions = useAppModeActions({
     setMode,
+    setSyncError,
     setSyncStatus,
     setUser,
     setUserId,
+    userId,
   });
 
   const handleSearchChange = useCallback(
@@ -379,6 +383,7 @@ export function useAppShellController({
     handleFolderDeleteConfirm,
     handleNewPrompt: navigation.handleNewPrompt,
     handleOnboardingComplete: navigation.handleOnboardingComplete,
+    handleRetrySync: appModeActions.handleRetrySync,
     handleRestorePrompt: promptCrud.handleRestorePrompt,
     handleSearchChange,
     handleSelectPrompt: navigation.handleSelectPrompt,
@@ -403,6 +408,7 @@ export function useAppShellController({
     selectedPromptId,
     setEditorHasUnsavedChanges,
     showInspector,
+    syncError,
     syncStatus,
     theme,
     unresolvedConflictCount: conflict.unresolvedConflictCount,

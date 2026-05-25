@@ -10,6 +10,7 @@ import type { SettingsStore } from '../stores/settings-store';
 import type { WorkspaceStore } from '../stores/workspace-store';
 import type { IFolderRepository, IPromptRepository } from '../repositories/interfaces';
 import type { AuthUser, Folder, PromptRecipe } from '../types/index';
+import { formatErrorMessage } from '../utils/error-message';
 
 type FirestoreDelegate = IPromptRepository & IFolderRepository;
 
@@ -37,6 +38,10 @@ function createBlockedFirestoreDelegate(workspaceId: string): FirestoreDelegate 
     getAllFolders: () => rejectWorkspaceTransition<Folder[]>(workspaceId),
     reloadAllFolders: () => rejectWorkspaceTransition<Folder[]>(workspaceId),
   };
+}
+
+function formatSyncSetupError(error: unknown): string {
+  return `Could not enable sync: ${formatErrorMessage(error)}`;
 }
 
 export interface SyncLifecycleService {
@@ -87,6 +92,7 @@ export async function restoreAppAuthSession(
     if (result?.success) {
       const appMode = appModeStore.getState();
       appMode.setUser(result.user);
+      appMode.setSyncError(null);
       appMode.setSyncStatus('syncing');
       appMode.setMode('synced');
     }
@@ -186,6 +192,7 @@ export class AppSyncLifecycle {
       const appMode = appModeStore.getState();
       appMode.setMode('local');
       appMode.setSyncStatus('local');
+      appMode.setSyncError(null);
       return;
     }
 
@@ -198,6 +205,7 @@ export class AppSyncLifecycle {
       const appMode = appModeStore.getState();
       appMode.setMode('local');
       appMode.setSyncStatus('local');
+      appMode.setSyncError(formatSyncSetupError(err));
       return;
     }
 
@@ -233,6 +241,7 @@ export class AppSyncLifecycle {
       )
       .then(() => {
         if (this.syncService === service && this.workspaceTransitionToken === transitionToken) {
+          appModeStore.getState().setSyncError(null);
           this.wireFirestoreDelegates(service.getFirestoreBackend(), workspaceId);
         }
       })
@@ -243,6 +252,7 @@ export class AppSyncLifecycle {
           const appMode = appModeStore.getState();
           appMode.setMode('local');
           appMode.setSyncStatus('local');
+          appMode.setSyncError(formatSyncSetupError(err));
         }
       });
   }

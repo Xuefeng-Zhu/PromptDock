@@ -280,6 +280,12 @@ export class AppSyncLifecycle {
     } catch (err) {
       if (this.syncService === service && this.workspaceTransitionToken === transitionToken) {
         this.logger.error('Failed to switch workspace:', err);
+        const delegate = service.getFirestoreBackend();
+        if (delegate) {
+          this.wireFirestoreDelegates(delegate, workspaceId);
+        } else {
+          this.clearFirestoreDelegates();
+        }
       }
     }
   }

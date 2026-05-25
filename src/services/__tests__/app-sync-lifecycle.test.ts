@@ -528,4 +528,28 @@ describe('AppSyncLifecycle', () => {
     expect(harness.promptRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(latestDelegate);
     expect(harness.promptRepository.setFirestoreDelegate).not.toHaveBeenCalledWith(staleDelegate);
   });
+
+  it('restores a usable delegate when a workspace switch rejects', async () => {
+    const firestoreDelegate = createFirestoreDelegate();
+    const switchError = new Error('switch failed');
+    const harness = createHarness({ firestoreDelegateBeforeTransition: firestoreDelegate });
+    vi.mocked(harness.syncService.transitionToSynced).mockImplementation(async (_userId, workspaceId) => {
+      if (workspaceId === 'workspace-2') throw switchError;
+    });
+    harness.lifecycle.start();
+
+    harness.appModeStore.getState().setUserId('user-1');
+    harness.appModeStore.getState().setMode('synced');
+    await flushAsync();
+
+    harness.workspaceStore.setState({ activeWorkspaceId: 'workspace-2' });
+    await flushAsync();
+
+    expect(harness.logger.error).toHaveBeenCalledWith(
+      'Failed to switch workspace:',
+      switchError,
+    );
+    expect(harness.promptRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(firestoreDelegate);
+    expect(harness.folderRepository.setFirestoreDelegate).toHaveBeenLastCalledWith(firestoreDelegate);
+  });
 });

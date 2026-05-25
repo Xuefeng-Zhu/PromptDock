@@ -253,6 +253,14 @@ export function firestoreDocToUserSettings(doc: FirestoreUserSettingsDoc): UserS
 export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   constructor(private workspaceId: string) {}
 
+  private assertPromptWorkspace(workspaceId: string): void {
+    if (workspaceId !== this.workspaceId) {
+      throw new Error(
+        `Firestore prompt workspace mismatch: backend is scoped to ${this.workspaceId} but received ${workspaceId}.`,
+      );
+    }
+  }
+
   private buildDuplicateCreateInput(
     original: PromptRecipe,
     target: { workspaceId: string; createdBy: string },
@@ -293,6 +301,8 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   async create(
     recipe: Omit<PromptRecipe, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<PromptRecipe> {
+    this.assertPromptWorkspace(recipe.workspaceId);
+
     const { addDoc, serverTimestamp, Timestamp } = await import('firebase/firestore');
     const promptsCol = await this.getPromptsCollection();
 
@@ -344,6 +354,8 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   }
 
   async getAll(workspaceId: string): Promise<PromptRecipe[]> {
+    this.assertPromptWorkspace(workspaceId);
+
     const { query, where, getDocs } = await import('firebase/firestore');
     const promptsCol = await this.getPromptsCollection();
     const q = query(promptsCol, where('workspaceId', '==', workspaceId));
@@ -358,6 +370,10 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
   }
 
   async update(id: string, changes: Partial<PromptRecipe>): Promise<PromptRecipe> {
+    if (changes.workspaceId !== undefined) {
+      this.assertPromptWorkspace(changes.workspaceId);
+    }
+
     const { doc, updateDoc, getDoc, serverTimestamp, Timestamp, increment } = await import('firebase/firestore');
     const { getFirebaseFirestore } = await import('../firebase/config');
     const firestore = await getFirebaseFirestore();
@@ -382,6 +398,7 @@ export class FirestoreBackend implements IPromptRepository, IFolderRepository {
     // Remove immutable/generated fields from update data.
     delete updateData.id;
     delete updateData.createdAt;
+    delete updateData.workspaceId;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await updateDoc(docRef, updateData as Record<string, any>);

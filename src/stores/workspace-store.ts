@@ -156,6 +156,15 @@ export function createWorkspaceStore(repo: IWorkspaceRepository) {
         currentRole === 'owner' ? repo.listDomainInvites(workspaceId) : Promise.resolve([]),
       ]);
 
+      const latestState = get();
+      if (
+        latestState.activeWorkspaceId !== workspaceId
+        || latestState.currentUser?.uid !== user.uid
+        || roleForWorkspace(latestState.memberships, workspaceId) !== currentRole
+      ) {
+        return;
+      }
+
       set({
         domainInvites,
         members,

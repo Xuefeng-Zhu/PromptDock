@@ -23,6 +23,11 @@ const AUTH_RESTORE_TIMEOUT_MS = 3000;
 const AUTH_REQUEST_TIMEOUT_MS = 15000;
 const WORKSPACE_BOOTSTRAP_TIMEOUT_MS = 3000;
 
+interface WorkspaceBootstrapWrite {
+  label: string;
+  promise: Promise<unknown>;
+}
+
 function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -85,9 +90,19 @@ function toAuthUser(firebaseUser: { uid: string; email: string | null; displayNa
   };
 }
 
+interface AuthServiceOptions {
+  logger?: Pick<Console, 'error'>;
+}
+
 // ─── AuthService ───────────────────────────────────────────────────────────────
 
 export class AuthService implements IAuthService {
+  private readonly logger: Pick<Console, 'error'>;
+
+  constructor(options: AuthServiceOptions = {}) {
+    this.logger = options.logger ?? console;
+  }
+
   isConfigured(): boolean {
     return isFirebaseCoreConfigured();
   }
@@ -100,6 +115,16 @@ export class AuthService implements IAuthService {
    * user may be offline, or an existing self-owner member doc may be protected
    * from mutation. Those failures should degrade sync, not undo authentication.
    */
+  private async logWorkspaceBootstrapWrites(writes: WorkspaceBootstrapWrite[]): Promise<void> {
+    const results = await Promise.allSettled(writes.map((write) => write.promise));
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(`Failed to write Firebase ${writes[index].label}:`, result.reason);
+      }
+    });
+  }
+
   private async bootstrapUserWorkspace(user: AuthUser): Promise<void> {
     const { getFirebaseFirestore } = await import('../firebase/config');
     const { doc, serverTimestamp, setDoc } = await import('firebase/firestore');
@@ -118,39 +143,45 @@ export class AuthService implements IAuthService {
     const memberData = createWorkspaceMemberPayload(workspace, user, 'owner', timestamp);
     const membershipData = createWorkspaceMembershipPayload(workspace, user, 'owner', timestamp);
 
-    await Promise.allSettled([
-      setDoc(
-        userRef,
-        {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          lastSignedInAt: timestamp,
-        },
-        { merge: true },
-      ),
-      setDoc(
-        workspaceRef,
-        {
-          name: PERSONAL_WORKSPACE_NAME,
-          ownerId: user.uid,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        },
-        { merge: true },
-      ),
+    await this.logWorkspaceBootstrapWrites([
+      {
+        label: 'user record',
+        promise: setDoc(
+          userRef,
+          {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            lastSignedInAt: timestamp,
+          },
+          { merge: true },
+        ),
+      },
+      {
+        label: 'workspace metadata',
+        promise: setDoc(
+          workspaceRef,
+          {
+            name: PERSONAL_WORKSPACE_NAME,
+            ownerId: user.uid,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+          { merge: true },
+        ),
+      },
     ]);
 
-    const metadataResults = await Promise.allSettled([
-      setDoc(memberRef, memberData, { merge: true }),
-      setDoc(membershipRef, membershipData, { merge: true }),
+    await this.logWorkspaceBootstrapWrites([
+      {
+        label: 'workspace member',
+        promise: setDoc(memberRef, memberData, { merge: true }),
+      },
+      {
+        label: 'workspace membership index',
+        promise: setDoc(membershipRef, membershipData, { merge: true }),
+      },
     ]);
-
-    metadataResults.forEach((result) => {
-      if (result.status === 'rejected') {
-        console.error('Failed to write Firebase workspace metadata:', result.reason);
-      }
-    });
   }
 
   private queueWorkspaceBootstrap(user: AuthUser): void {
@@ -159,7 +190,7 @@ export class AuthService implements IAuthService {
       WORKSPACE_BOOTSTRAP_TIMEOUT_MS,
       'Firebase workspace bootstrap timed out.',
     ).catch((error) => {
-      console.error('Failed to bootstrap Firebase user workspace:', error);
+      this.logger.error('Failed to bootstrap Firebase user workspace:', error);
     });
   }
 
@@ -309,8 +340,8 @@ export class AuthService implements IAuthService {
           unsubscribe();
         }
       });
-    } catch {
-      // Silently fall back to Local Mode on any failure
+    } catch (error) {
+      this.logger.error('Failed to restore Firebase auth session:', error);
       return null;
     }
   }
@@ -357,8 +388,8 @@ export class AuthService implements IAuthService {
             callback(null);
           }
         });
-      } catch {
-        // If Firebase init fails, report null (Local Mode)
+      } catch (error) {
+        this.logger.error('Failed to subscribe to Firebase auth state:', error);
         if (!disposed) {
           callback(null);
         }

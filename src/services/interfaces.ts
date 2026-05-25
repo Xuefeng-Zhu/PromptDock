@@ -1,6 +1,5 @@
 import type {
   PromptRecipe,
-  RenderResult,
   ImportResult,
   DuplicateInfo,
   AuthResult,
@@ -12,14 +11,6 @@ import type {
 /** Extract unique variable names in order of first appearance */
 export interface IVariableParser {
   parse(template: string): string[];
-}
-
-/**
- * Substitute variables into template.
- * Returns rendered text or validation error with missing variable names.
- */
-export interface IPromptRenderer {
-  render(template: string, values: Record<string, string>): RenderResult;
 }
 
 /**

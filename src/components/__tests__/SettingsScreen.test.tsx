@@ -9,8 +9,6 @@ import type {
   Workspace,
   WorkspaceDomainInvite,
   WorkspaceInvite,
-  WorkspaceMember,
-  WorkspaceMembership,
 } from '../../types/index';
 import type {
   IPromptRepository,
@@ -31,6 +29,12 @@ import {
   type PromptStore,
 } from '../../stores/prompt-store';
 import { initWorkspaceStore, type WorkspaceStore } from '../../stores/workspace-store';
+import {
+  makeTestAuthUser,
+  makeTestWorkspace as makeWorkspace,
+  makeTestWorkspaceMember as makeWorkspaceMember,
+  makeTestWorkspaceMembership as makeWorkspaceMembership,
+} from '../../test-utils/workspace-fixtures';
 import { SettingsScreen } from '../settings';
 
 // ─── Mock SettingsStore module ─────────────────────────────────────────────────
@@ -41,52 +45,6 @@ let testAppModeStore: StoreApi<AppModeStore>;
 let testPromptStore: StoreApi<PromptStore>;
 let mockRepo: ISettingsRepository;
 let mockPromptRepo: IPromptRepository;
-
-function makeWorkspace(user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' }): Workspace {
-  return {
-    id: user.uid,
-    name: 'Personal Workspace',
-    ownerId: user.uid,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  };
-}
-
-function makeWorkspaceMembership(
-  workspace: Workspace,
-  user: AuthUser,
-  role: WorkspaceMembership['role'],
-): WorkspaceMembership {
-  return {
-    id: `${workspace.id}_${user.uid}`,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: user.email,
-    displayName: user.displayName,
-    workspaceName: workspace.name,
-    ownerId: workspace.ownerId,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
-}
-
-function makeWorkspaceMember(
-  workspace: Workspace,
-  user: AuthUser,
-  role: WorkspaceMember['role'],
-): WorkspaceMember {
-  return {
-    id: user.uid,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role,
-    email: user.email,
-    displayName: user.displayName,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
-}
 
 function configureSyncedWorkspace(
   repo: IWorkspaceRepository,
@@ -110,19 +68,10 @@ function configureSyncedWorkspace(
 }
 
 function createMockWorkspaceRepo(): IWorkspaceRepository {
-  const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+  const user = makeTestAuthUser();
   const workspace = makeWorkspace(user);
   const membership = makeWorkspaceMembership(workspace, user, 'owner');
-  const member: WorkspaceMember = {
-    id: user.uid,
-    workspaceId: workspace.id,
-    userId: user.uid,
-    role: 'owner',
-    email: user.email,
-    displayName: user.displayName,
-    joinedAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-  };
+  const member = makeWorkspaceMember(workspace, user, 'owner');
 
   return {
     create: vi.fn(async () => workspace),
@@ -417,7 +366,7 @@ describe('SettingsScreen', () => {
   });
 
   it('allows owners to delete a non-personal workspace from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const personalWorkspace = makeWorkspace(user);
     const teamWorkspace: Workspace = {
       id: 'team-workspace',
@@ -455,7 +404,7 @@ describe('SettingsScreen', () => {
   });
 
   it('allows members to leave a shared workspace from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const personalWorkspace = makeWorkspace(user);
     const sharedWorkspace: Workspace = {
       id: 'shared-workspace',
@@ -493,7 +442,7 @@ describe('SettingsScreen', () => {
   });
 
   it('allows owners to add and revoke domain access from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const domainInvite: WorkspaceDomainInvite = {
       id: `${workspace.id}_example.com`,
@@ -545,7 +494,7 @@ describe('SettingsScreen', () => {
   });
 
   it('shows eligible domain invites and accepts them from sharing settings', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const domainInvite: WorkspaceDomainInvite = {
       id: 'shared-workspace_example.com',
@@ -597,7 +546,7 @@ describe('SettingsScreen', () => {
   });
 
   it('does not show domain access management to non-owner members', () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const workspaceStore = initWorkspaceStore(createMockWorkspaceRepo());
     workspaceStore.setState({
@@ -617,7 +566,7 @@ describe('SettingsScreen', () => {
   });
 
   it('displays errors when accepting a pending workspace invite fails', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const invite: WorkspaceInvite = {
       id: 'invite-1',
@@ -652,7 +601,7 @@ describe('SettingsScreen', () => {
   });
 
   it('displays errors when revoking a pending outgoing invite fails', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
     const invite: WorkspaceInvite = {
       id: 'invite-1',
@@ -687,9 +636,9 @@ describe('SettingsScreen', () => {
   });
 
   it('displays errors when member role updates fail', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
-    const teammateUser: AuthUser = { uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' };
+    const teammateUser = makeTestAuthUser({ uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' });
     const teammate = makeWorkspaceMember(workspace, teammateUser, 'editor');
     const repo = createMockWorkspaceRepo();
     repo.updateMemberRole = vi.fn(async () => {
@@ -716,9 +665,9 @@ describe('SettingsScreen', () => {
   });
 
   it('displays errors when removing a member fails', async () => {
-    const user: AuthUser = { uid: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+    const user = makeTestAuthUser();
     const workspace = makeWorkspace(user);
-    const teammateUser: AuthUser = { uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' };
+    const teammateUser = makeTestAuthUser({ uid: 'member-2', email: 'teammate@example.com', displayName: 'Team Mate' });
     const teammate = makeWorkspaceMember(workspace, teammateUser, 'viewer');
     const repo = createMockWorkspaceRepo();
     repo.removeMember = vi.fn(async () => {

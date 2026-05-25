@@ -153,4 +153,70 @@ describe('useAuthForm', () => {
     expect(authService.signIn).not.toHaveBeenCalled();
     expect(result.current.authError).toContain('Firebase is not configured');
   });
+
+  it('ignores duplicate email auth submits while the first request is pending', async () => {
+    let resolveSignIn!: (result: AuthResult) => void;
+    const authService = makeAuthService({
+      signIn: vi.fn(() => new Promise<AuthResult>((resolve) => {
+        resolveSignIn = resolve;
+      })),
+    });
+    const onAuthSuccess = vi.fn();
+    const { result } = renderHook(() =>
+      useAuthForm({ authService, onAuthSuccess }),
+    );
+
+    act(() => {
+      result.current.setEmail('user@example.com');
+      result.current.setPassword('secret');
+    });
+
+    let firstSubmit!: Promise<void>;
+    let secondSubmit!: Promise<void>;
+    act(() => {
+      firstSubmit = result.current.handleEmailAuthSubmit(formEvent());
+      secondSubmit = result.current.handleEmailAuthSubmit(formEvent());
+    });
+
+    expect(authService.signIn).toHaveBeenCalledTimes(1);
+    expect(result.current.isSubmitting).toBe(true);
+
+    await act(async () => {
+      resolveSignIn({ success: true, user: makeUser() });
+      await Promise.all([firstSubmit, secondSubmit]);
+    });
+
+    expect(onAuthSuccess).toHaveBeenCalledTimes(1);
+    expect(result.current.isSubmitting).toBe(false);
+  });
+
+  it('uses one submission guard across email and Google auth actions', async () => {
+    let resolveSignIn!: (result: AuthResult) => void;
+    const authService = makeAuthService({
+      signIn: vi.fn(() => new Promise<AuthResult>((resolve) => {
+        resolveSignIn = resolve;
+      })),
+      signInWithGoogle: vi.fn(async (): Promise<AuthResult> => ({
+        success: true,
+        user: makeUser({ uid: 'google-user' }),
+      })),
+    });
+    const { result } = renderHook(() =>
+      useAuthForm({ authService, onAuthSuccess: vi.fn() }),
+    );
+
+    let emailSubmit!: Promise<void>;
+    act(() => {
+      emailSubmit = result.current.handleEmailAuthSubmit(formEvent());
+      void result.current.handleGoogleSignIn();
+    });
+
+    expect(authService.signIn).toHaveBeenCalledTimes(1);
+    expect(authService.signInWithGoogle).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveSignIn({ success: true, user: makeUser() });
+      await emailSubmit;
+    });
+  });
 });

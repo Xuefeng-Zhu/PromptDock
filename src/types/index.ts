@@ -46,6 +46,11 @@ export interface Workspace {
   updatedAt: Date;
 }
 
+export type WorkspaceRemovalIntent = {
+  action: 'delete' | 'leave';
+  workspace: Workspace;
+};
+
 export interface WorkspaceMember {
   id: string;
   workspaceId: string;
@@ -139,12 +144,6 @@ export interface AppModeState {
 // ─── Sync Status ───────────────────────────────────────────────────────────────
 
 export type SyncStatus = 'local' | 'synced' | 'syncing' | 'offline' | 'pending-changes';
-
-// ─── Prompt Renderer ───────────────────────────────────────────────────────────
-
-export type RenderResult =
-  | { success: true; text: string }
-  | { success: false; missingVariables: string[] };
 
 // ─── Import/Export ─────────────────────────────────────────────────────────────
 

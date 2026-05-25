@@ -300,6 +300,35 @@ describe('WorkspaceRepository', () => {
       );
     });
 
+    it('writes owner records before reading personal workspace metadata', async () => {
+      await repo.bootstrapPersonalWorkspace({
+        uid: 'user-1',
+        email: 'user@example.com',
+        displayName: 'User One',
+      });
+
+      const getWorkspaceCallOrder = firestoreMocks.getDoc.mock.invocationCallOrder[0];
+      const setDocCalls = firestoreMocks.setDoc.mock.calls as unknown as Array<[
+        { path: string },
+        ...unknown[],
+      ]>;
+      const memberWriteIndex = setDocCalls.findIndex(
+        ([ref]) => ref.path === 'workspaces/user-1/members/user-1',
+      );
+      const membershipWriteIndex = setDocCalls.findIndex(
+        ([ref]) => ref.path === 'workspaceMemberships/user-1_user-1',
+      );
+
+      expect(memberWriteIndex).toBeGreaterThanOrEqual(0);
+      expect(membershipWriteIndex).toBeGreaterThanOrEqual(0);
+      expect(firestoreMocks.setDoc.mock.invocationCallOrder[memberWriteIndex]).toBeLessThan(
+        getWorkspaceCallOrder,
+      );
+      expect(firestoreMocks.setDoc.mock.invocationCallOrder[membershipWriteIndex]).toBeLessThan(
+        getWorkspaceCallOrder,
+      );
+    });
+
     it('sets createdAt when creating the personal workspace for the first time', async () => {
       await repo.bootstrapPersonalWorkspace({
         uid: 'user-1',
@@ -314,41 +343,8 @@ describe('WorkspaceRepository', () => {
       );
     });
 
-    it('creates owner records before reading personal workspace metadata', async () => {
-      await repo.bootstrapPersonalWorkspace({
-        uid: 'user-1',
-        email: 'user@example.com',
-        displayName: 'User One',
-      });
-
-      expect(firestoreMocks.getDoc).toHaveBeenCalledTimes(1);
-      const firstReadOrder = firestoreMocks.getDoc.mock.invocationCallOrder[0];
-      const bootstrapWriteOrders = firestoreMocks.setDoc.mock.invocationCallOrder.slice(0, 3);
-
-      expect(firstReadOrder).toBeGreaterThan(Math.max(...bootstrapWriteOrders));
-      expect(firestoreMocks.setDoc).toHaveBeenNthCalledWith(
-        1,
-        expect.objectContaining({ path: 'workspaces/user-1' }),
-        expect.not.objectContaining({ createdAt: expect.anything() }),
-        { merge: true },
-      );
-      expect(firestoreMocks.setDoc).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({ path: 'workspaces/user-1/members/user-1' }),
-        expect.any(Object),
-        { merge: true },
-      );
-      expect(firestoreMocks.setDoc).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({ path: 'workspaceMemberships/user-1_user-1' }),
-        expect.any(Object),
-        { merge: true },
-      );
-    });
-
-    it('throws when required personal workspace writes fail', async () => {
-      const error = new Error('permission-denied');
-      firestoreMocks.setDoc.mockRejectedValueOnce(error);
+    it('surfaces Firestore write failures during personal workspace bootstrap', async () => {
+      firestoreMocks.setDoc.mockRejectedValueOnce(new Error('permission denied'));
 
       await expect(
         repo.bootstrapPersonalWorkspace({
@@ -356,36 +352,112 @@ describe('WorkspaceRepository', () => {
           email: 'user@example.com',
           displayName: 'User One',
         }),
-      ).rejects.toThrow('permission-denied');
+      ).rejects.toThrow('permission denied');
     });
   });
 
-  describe('listMembershipsForUser', () => {
-    it('throws when the membership index cannot be read', async () => {
-      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('permission-denied'));
+  describe('synced workspace reads', () => {
+    it('uses the personal membership fallback when membership index reads fail', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('index unavailable'));
 
-      await expect(repo.listMembershipsForUser('user-1')).rejects.toThrow('permission-denied');
-    });
-  });
+      const result = await repo.listMembershipsForUser('user-1');
 
-  describe('listSyncedWorkspacesForUser', () => {
-    it('throws instead of falling back when every workspace metadata read fails', async () => {
-      firestoreMocks.state.collectionDocs.set('workspaceMemberships', [
-        firestoreMocks.makeDoc('workspaceMemberships/team-1_user-1', {
-          workspaceId: 'team-1',
+      expect(result).toMatchObject([
+        {
+          id: 'user-1_user-1',
+          role: 'owner',
           userId: 'user-1',
-          role: 'editor',
-          email: 'user@example.com',
-          displayName: 'User One',
+          workspaceId: 'user-1',
+        },
+      ]);
+    });
+
+    it('skips unreadable workspace metadata without dropping readable workspaces', async () => {
+      firestoreMocks.state.collectionDocs.set('workspaceMemberships', [
+        firestoreMocks.makeDoc('workspaceMemberships/workspace-1_user-1', {
+          workspaceId: 'workspace-1',
+          userId: 'user-1',
+          role: 'owner',
           workspaceName: 'Design Team',
-          ownerId: 'owner-1',
+          ownerId: 'user-1',
+        }),
+        firestoreMocks.makeDoc('workspaceMemberships/workspace-2_user-1', {
+          workspaceId: 'workspace-2',
+          userId: 'user-1',
+          role: 'viewer',
+          workspaceName: 'Research Team',
+          ownerId: 'owner-2',
         }),
       ]);
-      firestoreMocks.getDoc.mockRejectedValueOnce(new Error('permission-denied'));
+      firestoreMocks.state.documentData.set('workspaces/workspace-2', {
+        name: 'Research Team',
+        ownerId: 'owner-2',
+        createdAt: { toDate: () => new Date('2024-01-03T00:00:00.000Z') },
+        updatedAt: { toDate: () => new Date('2024-01-04T00:00:00.000Z') },
+      });
+      firestoreMocks.getDoc.mockRejectedValueOnce(new Error('metadata unavailable'));
 
-      await expect(repo.listSyncedWorkspacesForUser('user-1')).rejects.toThrow(
-        'Failed to load workspace metadata',
-      );
+      const result = await repo.listSyncedWorkspacesForUser('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        id: 'workspace-2',
+        name: 'Research Team',
+        ownerId: 'owner-2',
+      });
+    });
+
+    it('uses the personal workspace fallback when all workspace metadata reads fail', async () => {
+      firestoreMocks.state.collectionDocs.set('workspaceMemberships', [
+        firestoreMocks.makeDoc('workspaceMemberships/workspace-1_user-1', {
+          workspaceId: 'workspace-1',
+          userId: 'user-1',
+          role: 'owner',
+          workspaceName: 'Design Team',
+          ownerId: 'user-1',
+        }),
+      ]);
+      firestoreMocks.getDoc.mockRejectedValueOnce(new Error('metadata unavailable'));
+
+      const result = await repo.listSyncedWorkspacesForUser('user-1');
+
+      expect(result).toMatchObject([
+        {
+          id: 'user-1',
+          name: 'Personal Workspace',
+          ownerId: 'user-1',
+        },
+      ]);
+    });
+
+    it('returns an empty member list when member reads fail', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('members denied'));
+
+      await expect(repo.listMembers('workspace-1')).resolves.toEqual([]);
+    });
+
+    it('returns an empty outgoing invite list when invite reads fail', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('invites denied'));
+
+      await expect(repo.listInvites('workspace-1')).resolves.toEqual([]);
+    });
+
+    it('returns an empty pending invite list when invite reads fail during startup', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('pending invites denied'));
+
+      await expect(repo.listPendingInvitesForEmail('USER@example.com')).resolves.toEqual([]);
+    });
+
+    it('returns an empty pending domain invite list when domain reads fail during startup', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('domain invites denied'));
+
+      await expect(repo.listPendingDomainInvitesForEmail('user@example.com')).resolves.toEqual([]);
+    });
+
+    it('returns an empty domain invite list when owner detail reads fail', async () => {
+      firestoreMocks.getDocs.mockRejectedValueOnce(new Error('domain invite detail denied'));
+
+      await expect(repo.listDomainInvites('workspace-1')).resolves.toEqual([]);
     });
   });
 

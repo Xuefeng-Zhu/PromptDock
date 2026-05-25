@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { UserPlus } from 'lucide-react';
-import { useAppModeStore } from '../../../stores/app-mode-store';
-import { canEditWorkspace, useWorkspaceStore } from '../../../stores/workspace-store';
-import type { Workspace } from '../../../types/index';
-import { formatErrorMessage } from '../../../utils/error-message';
+import { useWorkspaceSharingSettings } from '../../../hooks/use-workspace-sharing-settings';
+import type { WorkspaceRemovalIntent } from '../../../types/index';
 import { Button } from '../../ui/Button';
 import { Card } from '../../ui/Card';
+import { ConfirmationDialog } from '../../ui/ConfirmationDialog';
 import { SettingsCardTitle } from './SettingsCardTitle';
 import { InviteMemberDialog } from './InviteMemberDialog';
 import {
@@ -15,131 +13,61 @@ import {
   WorkspaceListSection,
   WorkspaceMembersSection,
   WorkspaceRenameSection,
-  type WorkspaceRemovalIntent,
 } from './WorkspaceSharingSettingsSections';
 
 export function WorkspaceSharingSettingsCard() {
-  const mode = useAppModeStore((s) => s.mode);
-  const userId = useAppModeStore((s) => s.userId);
-  const acceptDomainInvite = useWorkspaceStore((s) => s.acceptDomainInvite);
-  const acceptInvite = useWorkspaceStore((s) => s.acceptInvite);
-  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const createDomainInvite = useWorkspaceStore((s) => s.createDomainInvite);
-  const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
-  const currentRole = useWorkspaceStore((s) => s.currentRole);
-  const deleteWorkspace = useWorkspaceStore((s) => s.deleteWorkspace);
-  const domainInvites = useWorkspaceStore((s) => s.domainInvites);
-  const inviteMember = useWorkspaceStore((s) => s.inviteMember);
-  const invites = useWorkspaceStore((s) => s.invites);
-  const members = useWorkspaceStore((s) => s.members);
-  const memberships = useWorkspaceStore((s) => s.memberships);
-  const leaveWorkspace = useWorkspaceStore((s) => s.leaveWorkspace);
-  const pendingDomainInvites = useWorkspaceStore((s) => s.pendingDomainInvites);
-  const pendingInvites = useWorkspaceStore((s) => s.pendingInvites);
-  const removeMember = useWorkspaceStore((s) => s.removeMember);
-  const renameWorkspace = useWorkspaceStore((s) => s.renameWorkspace);
-  const revokeDomainInvite = useWorkspaceStore((s) => s.revokeDomainInvite);
-  const revokeInvite = useWorkspaceStore((s) => s.revokeInvite);
-  const switchWorkspace = useWorkspaceStore((s) => s.switchWorkspace);
-  const updateMemberRole = useWorkspaceStore((s) => s.updateMemberRole);
-  const workspaces = useWorkspaceStore((s) => s.workspaces);
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [newDomain, setNewDomain] = useState('');
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [removalIntent, setRemovalIntent] = useState<WorkspaceRemovalIntent | null>(null);
-  const [submittingDomain, setSubmittingDomain] = useState(false);
-  const [workspaceNameDraft, setWorkspaceNameDraft] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const activeWorkspace = useMemo(
-    () => workspaces.find((workspace) => workspace.id === activeWorkspaceId),
-    [activeWorkspaceId, workspaces],
-  );
-  const isOwner = currentRole === 'owner';
-  const canEdit = mode === 'local' || canEditWorkspace(currentRole);
-  const workspaceName = workspaceNameDraft;
-
-  useEffect(() => {
-    setWorkspaceNameDraft(activeWorkspace?.name ?? '');
-  }, [activeWorkspace?.id, activeWorkspace?.name]);
-
-  const handleCreateWorkspace = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    try {
-      await createWorkspace(newWorkspaceName);
-      setNewWorkspaceName('');
-      setCreateOpen(false);
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    }
-  };
-
-  const handleConfirmWorkspaceRemoval = async () => {
-    if (!removalIntent) return;
-
-    setError(null);
-    const intent = removalIntent;
-    setRemovalIntent(null);
-
-    try {
-      if (intent.action === 'delete') {
-        await deleteWorkspace(intent.workspace.id);
-      } else {
-        await leaveWorkspace(intent.workspace.id);
-      }
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    }
-  };
-
-  const handleCreateDomainInvite = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!newDomain.trim()) return;
-
-    setError(null);
-    setSubmittingDomain(true);
-    try {
-      await createDomainInvite(newDomain);
-      setNewDomain('');
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    } finally {
-      setSubmittingDomain(false);
-    }
-  };
-
-  const handleRenameWorkspace = async () => {
-    if (!workspaceName.trim() || workspaceName === activeWorkspace?.name) return;
-    setError(null);
-    try {
-      await renameWorkspace(workspaceName);
-      setWorkspaceNameDraft('');
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    }
-  };
-
-  const handleSwitchWorkspace = async (workspaceId: Workspace['id']) => {
-    if (workspaceId === activeWorkspaceId) return;
-    setError(null);
-    try {
-      await switchWorkspace(workspaceId);
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    }
-  };
-
-  const runWorkspaceAction = async (action: () => Promise<void>) => {
-    setError(null);
-    try {
-      await action();
-    } catch (err) {
-      setError(formatErrorMessage(err));
-    }
-  };
+  const sharing = useWorkspaceSharingSettings();
+  const {
+    activeWorkspace,
+    activeWorkspaceId,
+    canEdit,
+    createOpen,
+    domainInvites,
+    error,
+    handleAcceptDomainInvite,
+    handleAcceptInvite,
+    handleConfirmWorkspaceRemoval,
+    handleCreateDomainInvite,
+    handleCreateWorkspace,
+    handleRemoveMember,
+    handleRenameWorkspace,
+    handleRevokeDomainInvite,
+    handleRevokeInvite,
+    handleSwitchWorkspace,
+    handleUpdateMemberRole,
+    inviteMember,
+    inviteOpen,
+    invites,
+    isOwner,
+    isAcceptingDomainInvite,
+    isAcceptingInvite,
+    isCreatingWorkspace,
+    isRemovingMember,
+    isRemovingWorkspace,
+    isRenamingWorkspace,
+    isRevokingDomainInvite,
+    isRevokingInvite,
+    isSwitchingWorkspace,
+    isUpdatingMemberRole,
+    members,
+    memberships,
+    mode,
+    newDomain,
+    newWorkspaceName,
+    pendingDomainInvites,
+    pendingInvites,
+    removalIntent,
+    setCreateOpen,
+    setInviteOpen,
+    setNewDomain,
+    setNewWorkspaceName,
+    setRemovalIntent,
+    setWorkspaceNameDraft,
+    submittingDomain,
+    userId,
+    workspaceName,
+    workspaces,
+  } = sharing;
 
   if (mode === 'local') {
     return (
@@ -182,18 +110,19 @@ export function WorkspaceSharingSettingsCard() {
       <PendingWorkspaceInvitationsSection
         pendingDomainInvites={pendingDomainInvites}
         pendingInvites={pendingInvites}
-        onAcceptDomainInvite={(inviteId) => {
-          void runWorkspaceAction(() => acceptDomainInvite(inviteId));
-        }}
-        onAcceptInvite={(inviteId) => {
-          void runWorkspaceAction(() => acceptInvite(inviteId));
-        }}
+        isAcceptingDomainInvite={isAcceptingDomainInvite}
+        isAcceptingInvite={isAcceptingInvite}
+        onAcceptDomainInvite={handleAcceptDomainInvite}
+        onAcceptInvite={handleAcceptInvite}
       />
 
       <WorkspaceListSection
         activeWorkspaceId={activeWorkspaceId}
         createOpen={createOpen}
         memberships={memberships}
+        isCreatingWorkspace={isCreatingWorkspace}
+        isRemovingWorkspace={isRemovingWorkspace}
+        isSwitchingWorkspace={isSwitchingWorkspace}
         newWorkspaceName={newWorkspaceName}
         userId={userId}
         workspaces={workspaces}
@@ -202,14 +131,13 @@ export function WorkspaceSharingSettingsCard() {
         onNewWorkspaceNameChange={setNewWorkspaceName}
         onOpenCreate={() => setCreateOpen(true)}
         onRemoveWorkspace={setRemovalIntent}
-        onSwitchWorkspace={(workspaceId) => {
-          void handleSwitchWorkspace(workspaceId);
-        }}
+        onSwitchWorkspace={handleSwitchWorkspace}
       />
 
       {isOwner && (
         <WorkspaceRenameSection
           activeWorkspace={activeWorkspace}
+          isRenamingWorkspace={isRenamingWorkspace}
           workspaceName={workspaceName}
           onRenameWorkspace={() => {
             void handleRenameWorkspace();
@@ -221,34 +149,30 @@ export function WorkspaceSharingSettingsCard() {
       {isOwner && (
         <DomainAccessSection
           domainInvites={domainInvites}
+          isRevokingDomainInvite={isRevokingDomainInvite}
           newDomain={newDomain}
           submittingDomain={submittingDomain}
           onCreateDomainInvite={handleCreateDomainInvite}
           onNewDomainChange={setNewDomain}
-          onRevokeDomainInvite={(inviteId) => {
-            void runWorkspaceAction(() => revokeDomainInvite(inviteId));
-          }}
+          onRevokeDomainInvite={handleRevokeDomainInvite}
         />
       )}
 
       <WorkspaceMembersSection
         isOwner={isOwner}
+        isRemovingMember={isRemovingMember}
+        isUpdatingMemberRole={isUpdatingMemberRole}
         members={members}
         userId={userId}
-        onRemoveMember={(memberUserId) => {
-          void runWorkspaceAction(() => removeMember(memberUserId));
-        }}
-        onUpdateMemberRole={(memberUserId, role) => {
-          void runWorkspaceAction(() => updateMemberRole(memberUserId, role));
-        }}
+        onRemoveMember={handleRemoveMember}
+        onUpdateMemberRole={handleUpdateMemberRole}
       />
 
       <PendingInvitesSection
         invites={invites}
         isOwner={isOwner}
-        onRevokeInvite={(inviteId) => {
-          void runWorkspaceAction(() => revokeInvite(inviteId));
-        }}
+        isRevokingInvite={isRevokingInvite}
+        onRevokeInvite={handleRevokeInvite}
       />
 
       {!canEdit && (
@@ -294,48 +218,14 @@ function WorkspaceRemovalDialog({
   const actionLabel = isDelete ? 'Delete workspace' : 'Leave workspace';
 
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 px-4"
-      role="presentation"
-    >
-      <div
-        aria-describedby="workspace-removal-description"
-        aria-labelledby="workspace-removal-title"
-        aria-modal="true"
-        className="w-full max-w-sm rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-5 shadow-xl"
-        role="dialog"
-      >
-        <h3
-          className="text-base font-semibold text-[var(--color-text-main)]"
-          id="workspace-removal-title"
-        >
-          {title}
-        </h3>
-        <p
-          className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]"
-          id="workspace-removal-description"
-        >
-          {description}
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text-main)] transition-colors hover:bg-gray-50"
-            onClick={onCancel}
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
-            onClick={() => {
-              void onConfirm();
-            }}
-            type="button"
-          >
-            {actionLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmationDialog
+      confirmLabel={actionLabel}
+      description={description}
+      idPrefix="workspace-removal"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      title={title}
+      zIndexClassName="z-[90]"
+    />
   );
 }

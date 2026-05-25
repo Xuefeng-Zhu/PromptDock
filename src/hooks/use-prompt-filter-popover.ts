@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDismissablePopover } from '../components/ui/listbox/use-dismissable-popover';
 import {
   countActivePromptFilters,
   createDefaultPromptFilters,
@@ -46,6 +47,9 @@ export function usePromptFilterPopover({
     () => Object.fromEntries(tagOptions.map((option) => [option.value, option.label])),
     [tagOptions],
   );
+  const closeFilterPopover = useCallback(() => {
+    setFilterPopoverOpen(false);
+  }, []);
   const draftFilterChips = useMemo(
     () => getActiveFilterChips(draftFilters, folderLabels, tagLabels),
     [draftFilters, folderLabels, tagLabels],
@@ -57,28 +61,11 @@ export function usePromptFilterPopover({
     }
   }, [appliedFilters, filterPopoverOpen]);
 
-  useEffect(() => {
-    if (!filterPopoverOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (filterPopoverRef.current && !filterPopoverRef.current.contains(event.target as Node)) {
-        setFilterPopoverOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setFilterPopoverOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [filterPopoverOpen]);
+  useDismissablePopover({
+    containerRef: filterPopoverRef,
+    onDismiss: closeFilterPopover,
+    open: filterPopoverOpen,
+  });
 
   function handleFilterButtonClick() {
     setDraftFilters(appliedFilters);

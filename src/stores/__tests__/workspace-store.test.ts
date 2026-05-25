@@ -75,6 +75,14 @@ function memberFor(workspace: Workspace, role: WorkspaceMember['role']): Workspa
   };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 function createRepo(overrides: Partial<IWorkspaceRepository> = {}): IWorkspaceRepository {
   const workspaces = [personalWorkspace, teamWorkspace];
   const memberships = [
@@ -190,6 +198,58 @@ describe('WorkspaceStore', () => {
 
     expect(listInvites).not.toHaveBeenCalled();
     expect(store.getState().invites).toEqual([]);
+  });
+
+  it('ignores stale workspace detail loads after a newer workspace switch', async () => {
+    const researchWorkspace: Workspace = {
+      id: 'team-2',
+      name: 'Research Team',
+      ownerId: 'owner-2',
+      createdAt: new Date('2024-01-03'),
+      updatedAt: new Date('2024-01-03'),
+    };
+    const workspaces = [personalWorkspace, teamWorkspace, researchWorkspace];
+    const memberships = [
+      membershipFor(personalWorkspace, 'owner'),
+      membershipFor(teamWorkspace, 'editor'),
+      membershipFor(researchWorkspace, 'viewer'),
+    ];
+    const staleMembers = [memberFor(teamWorkspace, 'editor')];
+    const activeMembers = [memberFor(researchWorkspace, 'viewer')];
+    const staleDetails = createDeferred<WorkspaceMember[]>();
+    const repo = createRepo({
+      listMembershipsForUser: vi.fn(async () => memberships),
+      listMembers: vi.fn(async (workspaceId) => {
+        if (workspaceId === teamWorkspace.id) return staleDetails.promise;
+        if (workspaceId === researchWorkspace.id) return activeMembers;
+        return [memberFor(personalWorkspace, 'owner')];
+      }),
+      listSyncedWorkspacesForUser: vi.fn(async () => workspaces),
+    });
+    const store = createWorkspaceStore(repo);
+    store.setState({
+      activeWorkspaceId: personalWorkspace.id,
+      currentRole: 'owner',
+      currentUser: user,
+      members: [memberFor(personalWorkspace, 'owner')],
+      memberships,
+      workspaces,
+    });
+
+    const staleSwitch = store.getState().switchWorkspace(teamWorkspace.id);
+    const activeSwitch = store.getState().switchWorkspace(researchWorkspace.id);
+
+    await activeSwitch;
+    expect(store.getState().activeWorkspaceId).toBe(researchWorkspace.id);
+    expect(store.getState().currentRole).toBe('viewer');
+    expect(store.getState().members).toEqual(activeMembers);
+
+    staleDetails.resolve(staleMembers);
+    await staleSwitch;
+
+    expect(store.getState().activeWorkspaceId).toBe(researchWorkspace.id);
+    expect(store.getState().currentRole).toBe('viewer');
+    expect(store.getState().members).toEqual(activeMembers);
   });
 
   it('creates and activates a new workspace', async () => {

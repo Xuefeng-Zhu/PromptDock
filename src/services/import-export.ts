@@ -30,7 +30,7 @@ function isStrongerDuplicateMatch(candidate: DuplicateInfo, current: DuplicateIn
     return candidatePriority > currentPriority;
   }
 
-  return candidate.existing.id.localeCompare(current.existing.id) < 0;
+  return candidate.existing.id < current.existing.id;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

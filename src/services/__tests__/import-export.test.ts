@@ -432,6 +432,15 @@ describe('ImportExportService — Unit Tests', () => {
     expect(service.detectDuplicates(incoming, [first, second])[0].existing.id).toBe('alpha-match');
   });
 
+  it('should use locale-independent id ordering for same-strength matches', () => {
+    const upper = makePrompt({ id: 'I-match', title: 'Shared title', body: 'Existing body A' });
+    const lower = makePrompt({ id: 'i-match', title: 'Shared title', body: 'Existing body B' });
+    const incoming = [makePrompt({ id: 'incoming', title: 'Shared title', body: 'Imported body' })];
+
+    expect(service.detectDuplicates(incoming, [lower, upper])[0].existing.id).toBe('I-match');
+    expect(service.detectDuplicates(incoming, [upper, lower])[0].existing.id).toBe('I-match');
+  });
+
   it('should exclude archived prompts from export', () => {
     const prompts = [
       makePrompt({ id: '1', title: 'Active', archived: false }),

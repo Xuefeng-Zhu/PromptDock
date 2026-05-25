@@ -16,7 +16,11 @@ const firestoreMocks = vi.hoisted(() => {
     ref: { id: string; path: string };
   };
   const state = {
-    batches: [] as Array<{ commit: ReturnType<typeof vi.fn>; operations: string[] }>,
+    batches: [] as Array<{
+      commit: ReturnType<typeof vi.fn>;
+      operations: string[];
+      updates: Array<{ path: string; data: Record<string, unknown> }>;
+    }>,
     collectionDocs: new Map<string, DocSnapshot[]>(),
     documentData: new Map<string, Record<string, unknown>>(),
     workspaceExists: false,
@@ -80,9 +84,15 @@ const firestoreMocks = vi.hoisted(() => {
         set: vi.fn((ref: { path: string }) => {
           batch.operations.push(`set:${ref.path}`);
         }),
-        update: vi.fn((ref: { path: string }) => {
+        update: vi.fn((ref: { path: string }, data: Record<string, unknown>) => {
           batch.operations.push(`update:${ref.path}`);
+          batch.updates.push({ path: ref.path, data });
+          state.documentData.set(ref.path, {
+            ...(state.documentData.get(ref.path) ?? {}),
+            ...data,
+          });
         }),
+        updates: [] as Array<{ path: string; data: Record<string, unknown> }>,
       };
       state.batches.push(batch);
       return batch;
@@ -416,16 +426,26 @@ describe('WorkspaceRepository', () => {
         displayName: domainUser.displayName,
       });
 
-      const result = await repo.updateMemberRole(syncedWorkspace.id, domainUser.uid, 'viewer');
+      const result = await repo.updateMemberRole(syncedWorkspace.id, domainUser.uid, 'editor');
 
       expect(result).toMatchObject({
         userId: domainUser.uid,
-        role: 'viewer',
+        role: 'editor',
       });
       expect(firestoreMocks.state.batches).toHaveLength(1);
       expect(firestoreMocks.state.batches[0].operations).toEqual([
         'update:workspaces/workspace-1/members/user-2',
         'update:workspaceMemberships/workspace-1_user-2',
+      ]);
+      expect(firestoreMocks.state.batches[0].updates).toEqual([
+        {
+          path: 'workspaces/workspace-1/members/user-2',
+          data: { role: 'editor', updatedAt: 'server-timestamp' },
+        },
+        {
+          path: 'workspaceMemberships/workspace-1_user-2',
+          data: { role: 'editor', updatedAt: 'server-timestamp' },
+        },
       ]);
     });
 

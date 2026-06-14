@@ -4,9 +4,11 @@ import type { AuthUser } from '../../types/index';
 
 interface UseAppModeActionsOptions {
   setMode: AppModeStore['setMode'];
+  setSyncError: AppModeStore['setSyncError'];
   setSyncStatus: AppModeStore['setSyncStatus'];
   setUser: AppModeStore['setUser'];
   setUserId: AppModeStore['setUserId'];
+  userId: string | null;
 }
 
 /**
@@ -16,27 +18,39 @@ interface UseAppModeActionsOptions {
  */
 export function useAppModeActions({
   setMode,
+  setSyncError,
   setSyncStatus,
   setUser,
   setUserId,
+  userId,
 }: UseAppModeActionsOptions) {
   const handleAuthSuccess = useCallback(
     (user: AuthUser) => {
       setUser(user);
+      setSyncError(null);
       setSyncStatus('syncing');
       setMode('synced');
     },
-    [setMode, setSyncStatus, setUser],
+    [setMode, setSyncError, setSyncStatus, setUser],
   );
 
   const handleSignOutSuccess = useCallback(() => {
     setUserId(null);
+    setSyncError(null);
     setSyncStatus('local');
     setMode('local');
-  }, [setMode, setSyncStatus, setUserId]);
+  }, [setMode, setSyncError, setSyncStatus, setUserId]);
+
+  const handleRetrySync = useCallback(() => {
+    if (!userId) return;
+    setSyncError(null);
+    setSyncStatus('syncing');
+    setMode('synced');
+  }, [setMode, setSyncError, setSyncStatus, userId]);
 
   return {
     handleAuthSuccess,
+    handleRetrySync,
     handleSignOutSuccess,
   };
 }

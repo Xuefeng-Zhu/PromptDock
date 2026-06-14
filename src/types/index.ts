@@ -138,6 +138,7 @@ export interface AppModeState {
   userEmail: string | null;
   userDisplayName: string | null;
   isOnline: boolean;
+  syncError: string | null;
 }
 
 // ─── Sync Status ───────────────────────────────────────────────────────────────

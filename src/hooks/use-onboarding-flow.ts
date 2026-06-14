@@ -22,6 +22,7 @@ export function useOnboardingFlow({
   onComplete,
 }: UseOnboardingFlowOptions) {
   const setMode = useAppModeStore((s) => s.setMode);
+  const setSyncError = useAppModeStore((s) => s.setSyncError);
   const setSyncStatus = useAppModeStore((s) => s.setSyncStatus);
   const setUser = useAppModeStore((s) => s.setUser);
 
@@ -30,12 +31,13 @@ export function useOnboardingFlow({
   const handleAuthSuccess = useCallback(
     (user: AuthUser) => {
       setUser(user);
+      setSyncError(null);
       setSyncStatus('syncing');
       setMode('synced');
       markOnboardingComplete();
       onComplete('signin');
     },
-    [setMode, setSyncStatus, setUser, onComplete],
+    [setMode, setSyncError, setSyncStatus, setUser, onComplete],
   );
 
   const authForm = useAuthForm({
@@ -45,11 +47,12 @@ export function useOnboardingFlow({
   const { clearAuthError } = authForm;
 
   const handleStartLocally = useCallback(() => {
+    setSyncError(null);
     setSyncStatus('local');
     setMode('local');
     markOnboardingComplete();
     onComplete('local');
-  }, [setMode, setSyncStatus, onComplete]);
+  }, [setMode, setSyncError, setSyncStatus, onComplete]);
 
   const handleSignInClick = useCallback(() => {
     setShowSignInForm(true);

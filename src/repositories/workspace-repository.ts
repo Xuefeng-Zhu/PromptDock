@@ -175,12 +175,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
       updatedAt: timestamp,
     };
 
-    await setDoc(
-      workspaceRef,
-      workspacePayload,
-      { merge: true },
-    );
-
+    await setDoc(workspaceRef, workspacePayload, { merge: true });
     await setDoc(memberRef, memberPayload, { merge: true });
     await setDoc(membershipRef, membershipPayload, { merge: true });
 
@@ -191,12 +186,14 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     }
 
     const workspaceData = workspaceSnapshot.data() as FirestoreWorkspaceDoc;
-    const syncedWorkspace = toWorkspace(workspaceSnapshot.id, workspaceData);
     if (!workspaceData.createdAt) {
       await setDoc(workspaceRef, { createdAt: timestamp }, { merge: true });
     }
 
-    return syncedWorkspace;
+    const persistedWorkspace = toWorkspace(workspaceSnapshot.id, workspaceData);
+    return workspaceData.createdAt
+      ? persistedWorkspace
+      : { ...persistedWorkspace, createdAt: workspace.createdAt };
   }
 
   async listMembershipsForUser(userId: string): Promise<WorkspaceMembership[]> {

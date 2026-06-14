@@ -12,9 +12,11 @@ export interface AccountPanelProps {
   authService?: IAuthService;
   mode: AppMode;
   userId: string | null;
+  syncError?: string | null;
   syncStatus?: SyncStatus;
   variant?: AccountPanelVariant;
   onAuthSuccess: (user: AuthUser) => void;
+  onRetrySync?: () => void;
   onSignOutSuccess: () => void;
 }
 
@@ -22,9 +24,11 @@ export function AccountPanel({
   authService,
   mode,
   userId,
+  syncError,
   syncStatus,
   variant = 'card',
   onAuthSuccess,
+  onRetrySync,
   onSignOutSuccess,
 }: AccountPanelProps) {
   const {
@@ -48,7 +52,7 @@ export function AccountPanel({
     onSignOutSuccess,
   });
 
-  const isSignedIn = mode !== 'local' && Boolean(userId);
+  const isSignedIn = Boolean(userId) && (mode !== 'local' || Boolean(syncError));
   const isPopover = variant === 'popover';
   const syncLabel = getAccountStatusLabel(mode, syncStatus);
 
@@ -69,7 +73,9 @@ export function AccountPanel({
         authUser={authUser}
         compact={isPopover}
         isSubmitting={isSubmitting}
+        onRetrySync={onRetrySync}
         onSignOut={handleSignOut}
+        syncError={syncError ?? null}
         syncLabel={syncLabel}
         userId={userId}
       />

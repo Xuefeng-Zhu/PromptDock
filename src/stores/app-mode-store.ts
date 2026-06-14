@@ -11,6 +11,7 @@ export interface AppModeStore {
   userDisplayName: string | null;
   isOnline: boolean;
   syncStatus: SyncStatus;
+  syncError: string | null;
   lastSyncedAt: Date | null;
 
   // Actions
@@ -19,6 +20,7 @@ export interface AppModeStore {
   setUser: (user: AuthUser | null) => void;
   setOnline: (online: boolean) => void;
   setSyncStatus: (status: SyncStatus) => void;
+  setSyncError: (error: string | null) => void;
 }
 
 // ─── Factory ───────────────────────────────────────────────────────────────────
@@ -37,6 +39,7 @@ export function createAppModeStore() {
     userDisplayName: null,
     isOnline: true,
     syncStatus: 'local',
+    syncError: null,
     lastSyncedAt: null,
 
     // ── Actions ──────────────────────────────────────────────────────────────
@@ -48,7 +51,7 @@ export function createAppModeStore() {
     setUserId(userId: string | null) {
       set({
         userId,
-        ...(userId === null ? { userEmail: null, userDisplayName: null } : {}),
+        ...(userId === null ? { userEmail: null, userDisplayName: null, syncError: null } : {}),
       });
     },
 
@@ -57,6 +60,7 @@ export function createAppModeStore() {
         userId: user?.uid ?? null,
         userEmail: user?.email ?? null,
         userDisplayName: user?.displayName ?? null,
+        ...(user === null ? { syncError: null } : {}),
       });
     },
 
@@ -69,6 +73,10 @@ export function createAppModeStore() {
         syncStatus: status,
         ...(status === 'synced' ? { lastSyncedAt: new Date() } : {}),
       });
+    },
+
+    setSyncError(error: string | null) {
+      set({ syncError: error });
     },
   }));
 }

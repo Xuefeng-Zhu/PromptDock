@@ -35,7 +35,7 @@ Users create, organize, and reuse AI prompt templates with `{{variable}}` placeh
 │  Service Layer                                          │
 │  AuthService, SyncService, AppSyncLifecycle,            │
 │  ConflictService, ImportExportService, SearchEngine,    │
-│  VariableParser, PromptRenderer, PromptJson, Analytics  │
+│  VariableParser, PromptJson, Analytics                  │
 ├─────────────────────────────────────────────────────────┤
 │  Repository Layer                                       │
 │  PromptRepository, FolderRepository,                    │
@@ -103,34 +103,52 @@ src/
 │   ├── workspace-repository.ts     # Workspace metadata, members, invites
 │   └── settings-repository.ts      # Settings persistence
 ├── services/                  # Business logic (stateless)
-│   ├── interfaces.ts          # Service interfaces
-│   ├── auth-service.ts        # Firebase Auth (sign-in/up/out/restore)
-│   ├── app-sync-lifecycle.ts  # Auth restore and sync lifecycle orchestration
-│   ├── sync-service.ts        # Firestore real-time sync
-│   ├── conflict-service.ts    # Conflict detection and resolution
-│   ├── import-export.ts       # JSON import/export with duplicate detection
-│   ├── prompt-json.ts         # Single-prompt JSON form-fill parser
-│   ├── analytics-service.ts   # Optional Firebase Analytics events
-│   ├── search-engine.ts       # Local prompt search
-│   ├── variable-parser.ts     # {{variable}} extraction
-│   ├── prompt-renderer.ts     # Template variable substitution
+│   ├── interfaces.ts          # Service interfaces (IVariableParser, ISearchEngine, IImportExportService, IAuthService)
+│   ├── auth-service.ts        # Firebase Auth (sign-in/up/out/restore); lazy dynamic Firebase imports
+│   ├── app-sync-lifecycle.ts  # Auth restore and sync lifecycle orchestration; wires all stores
+│   ├── sync-service.ts        # Firestore real-time sync; constructs FirestoreBackend lazily
+│   ├── conflict-service.ts    # Pure in-memory conflict detection/resolution
+│   ├── import-export.ts       # JSON import/export (schema v1.0) with duplicate detection
+│   ├── prompt-json.ts         # Single-prompt JSON form-fill parser (folder resolution safe)
+│   ├── analytics-service.ts   # Optional Firebase Analytics events (errors always swallowed)
+│   ├── search-engine.ts       # Pure local search with field-priority ranking
+│   ├── variable-parser.ts     # {{variable}} extraction, first-appearance order
 │   └── seed-data.ts           # Default prompts for first launch
+├── utils/                     # Pure helpers; see src/utils/AGENTS.md for the 6-bucket categorization
+│   ├── clipboard.ts           # Tauri clipboard with browser fallback
+│   ├── hotkey.ts              # Tauri hotkey registration
+│   ├── hotkey-recorder.ts     # Pure-JS keyboard event → combo string
+│   ├── window.ts              # Tauri window fallback helpers
+│   ├── file-dialog.ts         # Tauri dialog with browser showSaveFilePicker fallback
+│   ├── theme.ts               # CSS theme application (light/dark/system)
+│   ├── runtime.ts             # isTauriRuntime() detection (9 consumers)
+│   ├── workspace-domain.ts    # Domain invite validation/helpers
+│   ├── workspace-records.ts   # Personal workspace + membership ID helpers
+│   ├── workspace-role.ts      # Role formatting + getWorkspaceRole
+│   ├── folder-names.ts        # Folder name normalization
+│   ├── folder-label.ts        # Display label derivation
+│   ├── folder-options.ts      # Quick-pick folder rows for combobox
+│   ├── prompt-filters.ts      # PromptFilters types + apply/normalize (central, 13 consumers)
+│   ├── prompt-variables.ts    # Variable metadata helpers (11 consumers)
+│   ├── prompt-template.ts     # {{var}} render + split (uses VariableParser service)
+│   ├── prompt-filter-chips.ts # Active chip UI helpers
+│   ├── library-filtering.ts   # filterPrompts pipeline
+│   ├── library-filter-options.ts # Tag/folder option derivation
+│   ├── sidebar-counts.ts      # Sidebar badge counts
+│   ├── text-counts.ts         # countWords/countChars (PBT-verified)
+│   ├── list-navigation.ts     # clampIndex for keyboard highlight (PBT-verified)
+│   ├── tag-options.ts         # Tag dedupe + quick-pick rows
+│   ├── error-message.ts       # formatErrorMessage (16 consumers)
+│   ├── date-format.ts         # Null-safe date formatters
+│   ├── onboarding.ts          # localStorage onboarding-complete flag
+│   ├── auth-error-message.ts  # IAuthService error → user copy
+│   └── auth-service-availability.ts # isAuthServiceAvailable runtime check
 ├── contexts/                  # React context providers
 │   └── AppModeProvider.tsx    # App mode context
 ├── firebase/                  # Firebase configuration
 │   └── config.ts              # Lazy Firebase initialization
 ├── types/                     # TypeScript type definitions
 │   └── index.ts               # All shared types
-├── utils/                     # Utility functions
-│   ├── clipboard.ts           # Tauri clipboard with browser fallback
-│   ├── hotkey.ts              # Tauri hotkey registration
-│   ├── theme.ts               # CSS theme application (light/dark/system)
-│   ├── file-dialog.ts         # File save/open (browser APIs)
-│   ├── workspace-domain.ts    # Domain invite validation/helpers
-│   ├── folder-names.ts        # Folder name normalization
-│   ├── runtime.ts             # Browser/Tauri runtime detection
-│   ├── window.ts              # Tauri window fallback helpers
-│   └── sidebar-counts.ts      # Sidebar count computations
 ├── data/                      # Static/mock data
 │   └── mock-data.ts           # Seed prompts and category colors
 └── styles.css                 # Tailwind CSS entry point
@@ -177,6 +195,51 @@ Prefer small reusable components over growing screen files. Before adding non-tr
 - Keep domain-specific composition in `src/components/` and reusable visual primitives in `src/components/ui/`.
 - When extracting UI, preserve accessibility roles/labels and move focused component tests or add coverage at the level where behavior is owned.
 
+### Tauri ↔ Frontend Boundary
+
+- Components must **not** import `@tauri-apps/*` directly. The only direct bridge in `src/components/` is `ui/HotkeyRecorder.tsx` (which talks to `utils/hotkey-recorder.ts`, a pure-JS converter).
+- All other Tauri surface funnels through `src/utils/` (clipboard, hotkey, window, file-dialog) and `src/hooks/` (`use-prompt-execution.ts` for copy/paste, `use-settings-actions.ts` for hotkey). New Tauri usage: extend the matching `src/utils/*.ts` module.
+- Every Tauri `invoke()` is wrapped in `try { invoke(...) } catch { /* browser fallback */ }`. Browser-mode `navigator.clipboard` / `showSaveFilePicker` are the fallback. Runtime detection is centralized in `src/utils/runtime.ts` (`isTauriRuntime()`).
+- See `src-tauri/AGENTS.md` for the command/capability surface and `src/utils/AGENTS.md` for the platform-boundary contract.
+
+### Layered Data Flow
+
+```
+UI (src/components, src/screens)
+  ↓ useXxxStore hooks only
+Zustand Stores (src/stores)
+  ↓ I*Repository interface
+Repositories (src/repositories) — local cache + optional Firestore delegate
+  ↓ IStorageBackend (Local | Browser)  |  FirestoreBackend (cloud)
+Storage Backends / Firestore
+```
+
+- **Components never import from `src/repositories/`.** They read/write exclusively through Zustand stores. (`docs/ARCHITECTURE.md:264` — *"Components should avoid talking directly to repositories."*)
+- **Backend construction is split by initialization site.** `App.tsx:117-120` constructs `LocalStorageBackend` or `BrowserStorageBackend` and injects them into the four repositories. `SyncService.transitionToSynced` (`sync-service.ts:107-108`) constructs `FirestoreBackend` lazily and installs it via `setFirestoreDelegate()` (set/cleared by `AppSyncLifecycle`). Repositories accept the chosen backend — they do not construct it. `WorkspaceRepository` bypasses the delegate and calls Firestore directly.
+- **The Zustand cache is observable UI state; the backend store is durable storage.** Don't conflate: stores mutate cache, repositories persist.
+
+### AGENTS.md Hierarchy
+
+This root file is the canonical project knowledge base. Subdirectory `AGENTS.md` files exist at:
+
+| Path | Covers |
+|---|---|
+| `src/AGENTS.md` | Top of src/ — cross-layer rules, anti-patterns, lazy-import contract |
+| `src/components/AGENTS.md` | Component domain map + test conventions |
+| `src/components/ui/AGENTS.md` | Reusable design-system primitives |
+| `src/components/app-shell/AGENTS.md` | Top-level orchestrator + screen routing |
+| `src/components/settings/AGENTS.md` | 17 settings cards + runtime gates |
+| `src/services/AGENTS.md` | 7 pure + 3 Firebase + 1 orchestrator services |
+| `src/repositories/AGENTS.md` | IStorageBackend + Firestore delegate pattern |
+| `src/stores/AGENTS.md` | Factory + Init + Singleton pattern, 4 core + 2 auxiliary |
+| `src/hooks/AGENTS.md` | Cross-screen vs screen-local hooks |
+| `src/utils/AGENTS.md` | 6-bucket utility categorization, Tauri boundary |
+| `src-tauri/AGENTS.md` | Tauri commands + capabilities + Rust layer |
+| `src/firebase/AGENTS.md` | Lazy dynamic imports + security model |
+| `e2e-tauri/AGENTS.md` | WebDriverIO Tauri E2E (dual E2E framework) |
+
+When changing code, prefer reading the closest AGENTS.md before the root.
+
 ### Code Documentation
 
 Keep comments concise and behavior-focused. Prefer TSDoc (`/** ... */`) for exported functions, hooks, classes, store factories, repositories, and shared utilities when the behavior is not obvious from the signature alone.
@@ -190,6 +253,42 @@ Add or update comments when code introduces:
 - Edge cases where future maintainers might otherwise infer the wrong behavior
 
 Avoid comments that restate the implementation. UI components and small helpers do not need TSDoc unless they own a reusable contract or hidden behavior. When behavior changes, update nearby comments in the same patch so documentation stays truthful.
+
+## Design Tokens (Tailwind v4)
+
+Defined as CSS custom properties in `src/styles.css` (no `tailwind.config.js`):
+
+| Group | Tokens |
+|---|---|
+| Primary | `--color-primary`, `--color-primary-hover`, `--color-primary-light` |
+| Surfaces | `--color-background`, `--color-panel`, `--color-border` |
+| Text | `--color-text-main`, `--color-text-muted`, `--color-text-placeholder` |
+| Category | `--color-cat-{purple,green,amber,blue,rose,teal}` |
+| Spacing | `--space-xs/sm/md/lg/xl` (0.25 / 0.5 / 1 / 1.5 / 2 rem) |
+| Typography | `--font-sans` (Inter, system-ui, …), `--font-mono` (JetBrains Mono, …) |
+| Radii | `--radius-sm/md/lg/xl` (0.375 / 0.5 / 0.75 / 1 rem) |
+
+Themes are switched by `src/utils/theme.ts` writing `class="dark"` / `class="light"` on `<html>`. Use `var(--token)` or arbitrary-value classes like `bg-[var(--color-primary)]`.
+
+## Anti-Patterns (Enforced)
+
+| Pattern | Where | Rule |
+|---|---|---|
+| `id` mutation | `repositories/prompt-repository.ts`, `workspace-repository.ts` | IDs are immutable; tests assert it |
+| Personal workspace deletion | `stores/workspace-store.ts:242` | Throws — cannot delete personal workspace |
+| Owner self-demote/remove | `stores/workspace-store.ts:369,386` | Throws — owners cannot demote or remove themselves |
+| Viewer mutation | `hooks/app-shell/use-prompt-crud-actions.ts`, `use-app-shell-controller.ts` | Throws + toast — viewers cannot create/edit/archive/restore/delete/move prompts, cannot create/delete folders, cannot edit tags, cannot change favorites, cannot import |
+| Module-level Firebase import | `firebase/config.ts` | All Firebase imports are dynamic `await import('firebase/...')` inside cached getters |
+| Tauri invoke in components | `components/*/` | Components never import `@tauri-apps/*` — funnel via `src/utils/` or `src/hooks/` |
+| Persistence in non-repository | `src/stores/*` (except `app-mode-store`) | Stores never touch `localStorage` / Tauri Store / Firestore directly |
+| Persisted toasts | `stores/toast-store.ts:25` | Toasts are in-memory only, never persisted or synced |
+| Persisted conflicts | `services/conflict-service.ts` | Conflicts are in-memory only; cleared on reload |
+| Analytics interrupt | `services/analytics-service.ts:30` | All errors swallowed so tracking can never block product workflows |
+| Hidden folder creation | `services/prompt-json.ts:28` | Single-prompt JSON import resolves `folder`/`folderId` against existing folders; never creates unknown folders |
+| Server secrets in `VITE_*` | `docs/CONFIGURATION.md:80` | `VITE_*` values are embedded in the client bundle; Firebase web API keys are identifiers, not secrets (security lives in `firestore.rules`) |
+| Use-before-init | `stores/*-store.ts` (e.g. `prompt-store.ts:241`) | Stores throw if accessed before `initXxxStore()`; App.tsx initialization is idempotent via `initializeApp()` guard |
+| Pre-commit hooks | (none) | No `.husky`/commitlint in repo; CI is the only enforcement point |
+| `TODO`/`FIXME`/`HACK` markers | `src/**/*` | Zero matches — codebase is clean of architectural-debt markers |
 
 ## Commands
 

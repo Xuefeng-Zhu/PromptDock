@@ -149,16 +149,6 @@ src/
 │   └── config.ts              # Lazy Firebase initialization
 ├── types/                     # TypeScript type definitions
 │   └── index.ts               # All shared types
-├── utils/                     # Utility functions
-│   ├── clipboard.ts           # Tauri clipboard with browser fallback
-│   ├── hotkey.ts              # Tauri hotkey registration
-│   ├── theme.ts               # CSS theme application (light/dark/system)
-│   ├── file-dialog.ts         # File save/open (browser APIs)
-│   ├── workspace-domain.ts    # Domain invite validation/helpers
-│   ├── folder-names.ts        # Folder name normalization
-│   ├── runtime.ts             # Browser/Tauri runtime detection
-│   ├── window.ts              # Tauri window fallback helpers
-│   └── sidebar-counts.ts      # Sidebar count computations
 ├── data/                      # Static/mock data
 │   └── mock-data.ts           # Seed prompts and category colors
 └── styles.css                 # Tailwind CSS entry point
@@ -225,7 +215,7 @@ Storage Backends / Firestore
 ```
 
 - **Components never import from `src/repositories/`.** They read/write exclusively through Zustand stores. (`docs/ARCHITECTURE.md:264` — *"Components should avoid talking directly to repositories."*)
-- **Repositories are the only place** that constructs `IStorageBackend` or `FirestoreBackend` instances. The Firestore delegate is set/cleared by `AppSyncLifecycle` — repositories do not import Firebase at module level.
+- **Backend construction is split by initialization site.** `App.tsx:117-120` constructs `LocalStorageBackend` or `BrowserStorageBackend` and injects them into the four repositories. `SyncService.transitionToSynced` (`sync-service.ts:107-108`) constructs `FirestoreBackend` lazily and installs it via `setFirestoreDelegate()` (set/cleared by `AppSyncLifecycle`). Repositories accept the chosen backend — they do not construct it. `WorkspaceRepository` bypasses the delegate and calls Firestore directly.
 - **The Zustand cache is observable UI state; the backend store is durable storage.** Don't conflate: stores mutate cache, repositories persist.
 
 ### AGENTS.md Hierarchy

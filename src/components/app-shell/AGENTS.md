@@ -23,7 +23,7 @@ src/components/app-shell/
 - `usePromptLaunchFlow` — quick-launcher entry: pick → fill variables → execute copy/paste
 - `useConflictController` — `useSyncExternalStore` over `ConflictService` + resolve-and-persist
 
-The hook also calls `registerHotkey(settings.hotkey)` on mount so the Tauri global shortcut is bound. Cleanup on unmount.
+The hook does **not** register the global hotkey. Hotkey registration lives in `App.tsx:158` (called once during `runAppInitialization()` after the settings store is loaded), not in the AppShell controller. The controller only reads `useSettingsStore` for the configured hotkey combo and forwards it to the launcher.
 
 ## STORES IT TOUCHES
 

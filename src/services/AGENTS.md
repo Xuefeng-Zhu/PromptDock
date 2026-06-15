@@ -71,7 +71,7 @@ The only service-to-service coupling is `app-sync-lifecycle → {sync-service, c
 - **No persistence in `conflict-service`.** Conflicts are in-memory; cleared on reload. (See `docs/Issues.md` for the deferred follow-up.)
 - **`prompt-json.ts` never creates folders.** It resolves `folder` / `folderId` against the supplied `folders` parameter; missing references are dropped silently. This rule prevents hidden or misspelled folder assignments.
 - **`analytics-service.ts` swallows all errors** — tracking can never block product workflows.
-- **`app-sync-lifecycle` is the only place that imports from `stores/`.** New cross-store coordination belongs there or in `src/hooks/`, not in a service file.
+- **`app-sync-lifecycle` and `sync-service` are the only services that import from `stores/`.** `sync-service` is type-aliased against `AppModeStore` (so it can call `appModeStore.setSyncStatus(...)` when the listener flips); all other cross-store coordination belongs in `app-sync-lifecycle` or `src/hooks/`, not in a service file. New services should not take store dependencies.
 
 ## PROPERTY-BASED TESTS
 

@@ -14,7 +14,9 @@ Pure helpers. **28 files** grouped into 6 buckets. The platform-boundary bucket 
 | `file-dialog.ts` | `saveFile` / `openFile` for JSON; Tauri dialogs when available, browser `showSaveFilePicker` fallback | — |
 | `theme.ts` | Toggles `light` / `dark` classes on `<html>` (system mode reads `prefers-color-scheme`) | ✓ |
 
-**Rule**: every Tauri `invoke()` is wrapped in `try { invoke(...) } catch { /* browser fallback */ }`. Browser-mode fallbacks are `navigator.clipboard.writeText` for clipboard and `showSaveFilePicker` for file dialogs. The contract is enforced in code review; there are no ESLint rules to catch a missing fallback.
+**Rule**: every Tauri `invoke()` in the clipboard, file-dialog, and window utilities is wrapped in `try { invoke(...) } catch { /* browser fallback */ }`. Browser-mode fallbacks are `navigator.clipboard.writeText` for clipboard and `showSaveFilePicker` for file dialogs. The contract is enforced in code review; there are no ESLint rules to catch a missing fallback.
+
+**Exception — `hotkey.ts`**: `registerHotkey` does **not** swallow invoke failures. Its TSDoc contract is `@throws If the Tauri command fails (e.g. invalid combo, OS-level conflict)`. Errors must propagate so `useSettingsActions` can surface "shortcut invalid / already claimed" in the settings UI and prevent the user from saving a hotkey that was never actually registered. Do not wrap `invoke('register_hotkey', ...)` in `hotkey.ts` with a try/catch; do not add a browser fallback for the hotkey — the settings UI is the only consumer and it must see the failure.
 
 ## BUCKET 2 — GENERIC PRIMITIVES (5 files, no domain coupling)
 

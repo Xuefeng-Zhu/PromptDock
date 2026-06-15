@@ -34,7 +34,7 @@ The port-resolver is unit-tested under Vitest (it's included in the `vitest.conf
 
 ## CI
 
-`npm run test:e2e:tauri` is gated on Linux + Windows runners with `xvfb-run -a` for headless display. macOS is excluded because the Tauri paste-into-active-app test requires real accessibility permissions that CI cannot grant. The CI step is one of the six required merge checks defined in `.github/workflows/ci.yml`.
+`npm run test:e2e:tauri` is gated on the single `ubuntu-latest` runner in `.github/workflows/ci.yml` with `xvfb-run -a` for headless display. macOS and Windows are not in the current CI matrix. macOS is excluded because the Tauri paste-into-active-app test requires real accessibility permissions that CI cannot grant; Windows-specific Tauri regressions are therefore **not** covered by CI today — test locally before landing desktop changes that touch paste, clipboard, or window control. The CI step is one of the six required merge checks defined in `.github/workflows/ci.yml`.
 
 ## RUNNING LOCALLY
 

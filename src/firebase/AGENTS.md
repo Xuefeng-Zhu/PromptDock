@@ -49,7 +49,7 @@ The emulator is also required for `firestore-rules.test.ts` — that test is `de
 ## ANTI-PATTERNS
 
 - **No module-level Firebase imports.** Always `await import('firebase/...')` inside the cached getters or inside service methods.
-- **No `firebase` imports outside `src/firebase/`, `src/services/auth-service.ts`, `src/services/sync-service.ts`, and `src/repositories/firestore-backend.ts`.** New modules that need Firebase go through the getters.
+- **No `firebase` imports outside `src/firebase/`, `src/services/auth-service.ts`, `src/services/sync-service.ts`, `src/repositories/firestore-backend.ts`, and `src/repositories/workspace-repository.ts`.** The workspace repository is the one repository that bypasses the delegate pattern: its synced methods (member/invite/domain invite/workspace lifecycle) call Firestore directly via dynamic `await import('firebase/firestore')`. New modules that need Firebase still go through the getters; new repository code should follow the `setFirestoreDelegate` pattern instead of adding a new exception.
 - **No secrets in `VITE_*`.** The bundle is public; secrets live in `firestore.rules` or in server-side Cloud Functions.
 - **No per-document security logic in client code.** Trust `firestore.rules`.
 - **No `firebase/analytics` writes outside `src/services/analytics-service.ts`.** Analytics is centralized so its error-swallowing guarantee (never block product workflows) cannot be circumvented.

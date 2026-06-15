@@ -33,7 +33,7 @@ src/hooks/app-shell/
 └── use-shell-navigation.ts        # screen selection, onboarding gate, analytics trackScreenView
 ```
 
-These have **zero external imports by design**. They are implementation details of `use-app-shell-controller`. Don't reach into them from feature components; use the public controller instead.
+These are private implementation details of `use-app-shell-controller` and may import freely from `react`, store types, the analytics service, utility helpers, and component types — the controller and its sub-hooks are the same unit. Don't reach into them from feature components; use the public controller instead.
 
 ## CROSS-SCREEN vs SCREEN-LOCAL
 

@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -145,7 +145,7 @@ jobs:
 
       - name: Build, sign, and notarize
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           VITE_USE_EMULATOR: "false"
           VITE_FIREBASE_PROJECT_ID: promptdock-95e31
@@ -204,7 +204,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download verified assets
         uses: actions/download-artifact@v8

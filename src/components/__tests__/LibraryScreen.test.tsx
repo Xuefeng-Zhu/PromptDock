@@ -17,6 +17,23 @@ const defaultProps = {
 };
 
 describe('LibraryScreen', () => {
+  it.each([
+    ['favorites', 'Favorites'],
+    ['recent', 'Recent'],
+    ['archived', 'Archived'],
+    ['tag-writing', '#writing'],
+    ['folder-writing', 'Writing'],
+  ])('labels the %s view with its selected scope', (activeSidebarItem, heading) => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        activeSidebarItem={activeSidebarItem}
+        folders={[{ id: 'folder-writing', name: 'Writing', createdAt: new Date(), updatedAt: new Date() }]}
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeDefined();
+  });
+
   it('renders the "All Prompts" heading', () => {
     render(<LibraryScreen {...defaultProps} />);
     expect(screen.getByText('All Prompts')).toBeDefined();

@@ -13,6 +13,7 @@ interface AppScreenRouterProps {
 export function AppScreenRouter({ controller }: AppScreenRouterProps) {
   const {
     activeFilter,
+    activeSidebarItem,
     authService,
     canEditWorkspace,
     conflictService,
@@ -48,6 +49,7 @@ export function AppScreenRouter({ controller }: AppScreenRouterProps) {
     >
       {screen.name === 'library' && (
         <LibraryScreen
+          activeSidebarItem={activeSidebarItem}
           prompts={libraryData.filteredPrompts}
           filterSourcePrompts={prompts}
           folders={libraryData.derivedFolders}

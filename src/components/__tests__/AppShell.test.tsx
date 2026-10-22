@@ -642,9 +642,7 @@ describe('AppShell', () => {
         fireEvent.click(screen.getByText('Favorites'));
       });
 
-      const headings = screen.getAllByText('All Prompts');
-      const h1 = headings.find((el) => el.tagName === 'H1');
-      expect(h1).toBeDefined();
+      expect(screen.getByRole('heading', { level: 1, name: 'Favorites' })).toBeDefined();
       expect(screen.queryByText('Settings')).toBeNull();
     });
 
@@ -679,9 +677,7 @@ describe('AppShell', () => {
         fireEvent.click(screen.getByText('Favorites'));
       });
 
-      const headings = screen.getAllByText('All Prompts');
-      const h1 = headings.find((el) => el.tagName === 'H1');
-      expect(h1).toBeDefined();
+      expect(screen.getByRole('heading', { level: 1, name: 'Favorites' })).toBeDefined();
       expect(screen.queryByLabelText(/title/i)).toBeNull();
     });
 

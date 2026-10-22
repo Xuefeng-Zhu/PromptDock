@@ -13,9 +13,17 @@ import { PromptGrid } from './PromptGrid';
 import { PromptFiltersPopover } from '../prompt-filters';
 import { PromptSortDropdown } from './PromptSortDropdown';
 
+const LIBRARY_VIEW_TITLES = new Map([
+  ['library', 'All Prompts'],
+  ['favorites', 'Favorites'],
+  ['recent', 'Recent'],
+  ['archived', 'Archived'],
+]);
+
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface LibraryScreenProps {
+  activeSidebarItem?: string;
   prompts: PromptRecipe[];
   filterSourcePrompts?: PromptRecipe[];
   folders?: Folder[];
@@ -34,6 +42,7 @@ export interface LibraryScreenProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function LibraryScreen({
+  activeSidebarItem = 'library',
   prompts,
   filterSourcePrompts,
   folders,
@@ -51,6 +60,11 @@ export function LibraryScreen({
   const [viewMode, setViewMode] = useState<LibraryViewMode>('grid');
   const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
   const displayCount = totalPromptCount ?? prompts.length;
+  const title = LIBRARY_VIEW_TITLES.get(activeSidebarItem) ?? (
+    activeSidebarItem.startsWith('tag-')
+      ? `#${activeSidebarItem.slice(4)}`
+      : folders?.find((folder) => folder.id === activeSidebarItem)?.name ?? 'All Prompts'
+  );
   const filterOptionSourcePrompts = filterSourcePrompts ?? prompts;
   const folderFilterOptions = useMemo(
     () => deriveFolderFilterOptions(filterOptionSourcePrompts, folders),
@@ -70,6 +84,7 @@ export function LibraryScreen({
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col p-4 md:p-6">
         <LibraryHeader
+          title={title}
           canCreatePrompt={canCreatePrompt}
           displayCount={displayCount}
           onNewPrompt={onNewPrompt}

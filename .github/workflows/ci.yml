@@ -18,7 +18,8 @@ concurrency:
 jobs:
   verify:
     name: Build and test
-    runs-on: ubuntu-latest
+    # Keep the Tauri/WebKit and Playwright dependency set stable.
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
 
     steps:

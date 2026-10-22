@@ -19,7 +19,8 @@ jobs:
   preview:
     name: Verify and deploy PR preview
     if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    # Keep the Tauri/WebKit and Playwright dependency set stable.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment:
       # Reuse the existing environment-scoped credentials without changing settings.

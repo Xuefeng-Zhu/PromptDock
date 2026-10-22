@@ -41,6 +41,21 @@ function fillAllVariables() {
 }
 
 describe('VariableFillModal', () => {
+  it('fills prototype-named variables without inherited values or crashes', async () => {
+    const prompt = { ...testPrompt, body: 'Use {{constructor}} and {{__proto__}}.' };
+    const variables = resolvePromptVariables(prompt.body);
+    const onCopy = vi.fn().mockResolvedValue(undefined);
+    render(<VariableFillModal {...defaultProps} prompt={prompt} variables={variables} onCopy={onCopy} />);
+    expect((screen.getByLabelText('Value for variable __proto__') as HTMLInputElement).value).toBe('');
+    expect(screen.getByLabelText('Rendered prompt preview').textContent).toBe(prompt.body);
+    fireEvent.change(screen.getByLabelText('Value for variable constructor'), { target: { value: 'Ada' } });
+    fireEvent.change(screen.getByLabelText('Value for variable __proto__'), { target: { value: 'literal' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Copy to Clipboard/ }));
+    });
+    expect(onCopy).toHaveBeenCalledWith('Use Ada and literal.');
+  });
+
   it('renders the prompt title in the header', () => {
     render(<VariableFillModal {...defaultProps} />);
     expect(screen.getByText('Summarize Text')).toBeDefined();

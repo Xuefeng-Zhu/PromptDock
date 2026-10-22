@@ -7,7 +7,7 @@ import {
 } from 'react';
 import type { Folder, PromptRecipe, PromptVariable } from '../types/index';
 import type { PromptJsonDraft } from '../services/prompt-json';
-import { extractVariables } from '../utils/prompt-template';
+import { extractVariables, getPromptVariableValue, renderPromptTemplate } from '../utils/prompt-template';
 import {
   arePromptVariablesEqual,
   createDefaultPromptVariable,
@@ -301,16 +301,11 @@ export function usePromptEditorForm({
 
   const renderedPreview = useMemo(() => {
     if (!body) return '';
-    let result = body;
-    // Preview uses defaults when explicit fill values are absent, but leaves
-    // unresolved placeholders visible so users can spot missing data.
-    for (const variable of promptVariables) {
-      const value = variableValues[variable.name] ?? variable.defaultValue;
-      if (value) {
-        result = result.replaceAll(`{{${variable.name}}}`, value);
-      }
-    }
-    return result;
+    const values = Object.fromEntries(promptVariables.map((variable) => [
+      variable.name,
+      getPromptVariableValue(variableValues, variable.name, variable.defaultValue),
+    ]));
+    return renderPromptTemplate(body, values);
   }, [body, promptVariables, variableValues]);
 
   return {

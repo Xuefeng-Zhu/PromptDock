@@ -1,0 +1,50 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v4.1.8 /workspace/scratch/0993a134a928/PromptDock
+
+ ❯ src/utils/__tests__/prompt-template.test.ts (5 tests | 1 failed) 10ms
+     × ignores inherited properties when rendering and validating variables 6ms
+ ❯ src/components/__tests__/VariableFillModal.test.tsx (26 tests | 1 failed) 678ms
+     × fills prototype-named variables without inherited values or crashes 67ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/__tests__/VariableFillModal.test.tsx > VariableFillModal > fills prototype-named variables without inherited values or crashes
+AssertionError: expected '[object Object]' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ [object Object]
+
+ ❯ src/components/__tests__/VariableFillModal.test.tsx:49:95
+     47|     const onCopy = vi.fn().mockResolvedValue(undefined);
+     48|     render(<VariableFillModal {...defaultProps} prompt={prompt} variab…
+     49|     expect((screen.getByLabelText('Value for variable __proto__') as H…
+       |                                                                                               ^
+     50|     expect(screen.getByLabelText('Rendered prompt preview').textConten…
+     51|     fireEvent.change(screen.getByLabelText('Value for variable constru…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/utils/__tests__/prompt-template.test.ts > prompt-template utilities > ignores inherited properties when rendering and validating variables
+AssertionError: expected 'function Object() { [native code] } f…' to be '{{constructor}} {{toString}} {{__prot…' // Object.is equality
+
+Expected: "{{constructor}} {{toString}} {{__proto__}}"
+Received: "function Object() { [native code] } function toString() { [native code] } [object Object]"
+
+ ❯ src/utils/__tests__/prompt-template.test.ts:35:44
+     33|   it('ignores inherited properties when rendering and validating varia…
+     34|     const body = '{{constructor}} {{toString}} {{__proto__}}';
+     35|     expect(renderPromptTemplate(body, {})).toBe(body);
+       |                                            ^
+     36|     expect(areAllPromptVariablesFilled(['constructor', 'toString', '__…
+     37|     const values = Object.fromEntries([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 29 passed (31)
+   Start at  05:49:31
+   Duration  1.66s (transform 175ms, setup 0ms, import 378ms, tests 688ms, environment 517ms)

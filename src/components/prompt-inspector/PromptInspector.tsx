@@ -5,7 +5,7 @@ import { PromptInspectorHeader } from './PromptInspectorHeader';
 import { PromptFolderSection, PromptMetadataSection } from './PromptMetadataSection';
 import { PromptTagsSection } from './PromptTagsSection';
 import { PromptVariablesSection } from './PromptVariablesSection';
-import { renderPromptTemplate } from '../../utils/prompt-template';
+import { getPromptVariableValue, renderPromptTemplate } from '../../utils/prompt-template';
 import {
   createDefaultPromptVariable,
   resolvePromptRecipeVariables,
@@ -73,7 +73,7 @@ export function PromptInspector({
     const values = Object.fromEntries(
       promptVariables.map((variable) => [
         variable.name,
-        variableValues[variable.name] ?? variable.defaultValue,
+        getPromptVariableValue(variableValues, variable.name, variable.defaultValue),
       ]),
     );
 

@@ -27,6 +27,17 @@ export function splitPromptTemplateParts(text: string): PromptTemplatePart[] {
   }));
 }
 
+/** Reads only explicit string values; placeholder names may match Object.prototype keys. */
+export function getPromptVariableValue(
+  values: Record<string, string>,
+  name: string,
+  fallback = '',
+): string {
+  return Object.prototype.hasOwnProperty.call(values, name) && typeof values[name] === 'string'
+    ? values[name]
+    : fallback;
+}
+
 /**
  * Renders a prompt body by replacing variables with supplied non-empty values.
  * Missing or empty values leave the original placeholder intact for the user.
@@ -36,7 +47,7 @@ export function renderPromptTemplate(
   values: Record<string, string>,
 ): string {
   return body.replace(/{{(\w+)}}/g, (_match, name: string) => {
-    return values[name] || `{{${name}}}`;
+    return getPromptVariableValue(values, name) || `{{${name}}}`;
   });
 }
 
@@ -47,5 +58,5 @@ export function areAllPromptVariablesFilled(
   variables: string[],
   values: Record<string, string>,
 ): boolean {
-  return variables.every((variable) => (values[variable] ?? '').trim().length > 0);
+  return variables.every((variable) => getPromptVariableValue(values, variable).trim().length > 0);
 }

@@ -30,6 +30,17 @@ describe('prompt-template utilities', () => {
     );
   });
 
+  it('ignores inherited properties when rendering and validating variables', () => {
+    const body = '{{constructor}} {{toString}} {{__proto__}}';
+    expect(renderPromptTemplate(body, {})).toBe(body);
+    expect(areAllPromptVariablesFilled(['constructor', 'toString', '__proto__'], {})).toBe(false);
+    const values = Object.fromEntries([
+      ['constructor', 'Ada'], ['toString', '$& <tag> 中文 😀'], ['__proto__', 'literal'],
+    ]);
+    expect(renderPromptTemplate(body, values)).toBe('Ada $& <tag> 中文 😀 literal');
+    expect(areAllPromptVariablesFilled(['constructor', 'toString', '__proto__'], values)).toBe(true);
+  });
+
   it('treats blank variable values as unfilled', () => {
     expect(
       areAllPromptVariablesFilled(['name', 'place'], {

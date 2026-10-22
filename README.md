@@ -1,5 +1,9 @@
 # PromptDock
 
+**[Open the live web app](https://promptdock-95e31.web.app)** — no account required; start locally.
+
+[Marketing and desktop downloads](https://xuefeng-zhu.github.io/PromptDock) is the GitHub Pages download page, not the live web app or TestSprite test target.
+
 PromptDock is a local-first prompt recipe manager for people who reuse AI prompts throughout their day. It runs as a Tauri desktop app with a global quick launcher, and it also runs in a regular browser during development by falling back to `window.localStorage`.
 
 Users create reusable prompt templates, organize them with folders/tags/favorites, fill `{{variable}}` placeholders, then copy or paste the rendered prompt into another app.
@@ -142,6 +146,16 @@ npx vitest run src/components/__tests__/AppShell.test.tsx
 ```
 
 The main verification suite covers linting, typecheck/build, Vitest, Playwright browser E2E, and Rust unit tests. Details are tracked in [Testing](docs/TESTING.md).
+
+## Testing with TestSprite
+
+The TestSprite 3.0 portal suite targets the [live web app](https://promptdock-95e31.web.app) in anonymous local mode. The [suite scope](docs/hackathon/TESTSPRITE_SCOPE.md) covers prompt create/edit/duplicate/favorite/archive/restore, folders and tags, search and the command palette, variable defaults/dropdowns/live preview, exact clipboard output, JSON import/export and duplicate handling, invalid input, reload persistence, long and special-character content, and mobile navigation. Firebase sync/workspace scenarios require dedicated test accounts and are optional.
+
+The intended GitHub App configuration runs the suite on **every pull request** into the confirmed base branch and enables **Blocking PRs**. **Setup is pending verification:** the portal currently shows GitHub as unconnected, and no passing TestSprite PR result has been recorded. Installation, enabling these options, and evidence links must be completed before claiming the integration is active. The repository default branch is `develop`; Frank confirmed `develop` as the TestSprite base branch.
+
+The production Hosting workflow deploys only on pushes to `main`. The [PR preview workflow](.github/workflows/firebase-hosting-preview.yml) verifies same-repository PRs into `develop` and deploys a seven-day Firebase Hosting preview channel. It reuses the existing `firebase-hosting` environment secrets and publishes the URL in the Firebase bot comment and GitHub deployment. Fork and Dependabot PRs do not deploy. Configure TestSprite to wait for the successful preview deployment and test its actual URL; a fixed production URL does not validate unmerged PR changes. The preview workflow is prepared; its first successful deployment and TestSprite trigger are still pending. See the [submission checklist](docs/hackathon/SUBMISSION.md) for the decision and remaining evidence.
+
+Local checks supplement the portal suite: `npm run lint`, `npm run build`, `npm test`, and `npm run test:e2e`. TestSprite results must come from its own portal/GitHub App; local checks do not satisfy that requirement.
 
 ## Release
 

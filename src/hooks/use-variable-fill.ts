@@ -27,13 +27,9 @@ export function useVariableFill({
   prompt,
   variables,
 }: UseVariableFillOptions) {
-  const [values, setValues] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    for (const variable of variables) {
-      initial[variable.name] = variable.defaultValue;
-    }
-    return initial;
-  });
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(variables.map((variable) => [variable.name, variable.defaultValue])),
+  );
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const firstInputRef = useRef<

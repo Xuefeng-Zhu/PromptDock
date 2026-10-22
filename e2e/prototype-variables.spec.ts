@@ -1,0 +1,36 @@
+import { expect, test } from '@playwright/test';
+import { appUrl, openNewPrompt, openCommandPalette, selectPrompt, startLocalLibrary } from './helpers';
+
+test('prototype-named variables stay literal until filled and copy safely after reload', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: appUrl });
+  await startLocalLibrary(page);
+  await openNewPrompt(page);
+  const title = 'Prototype variable regression';
+  const body = 'Use {{constructor}} and {{__proto__}}.';
+  await page.getByLabel('Title', { exact: true }).fill(title);
+  await page.getByLabel('Body', { exact: true }).fill(body);
+  const editorPreview = page.getByRole('complementary', { name: 'Live Preview' });
+  await expect(editorPreview.getByLabel('Preview value for constructor')).toHaveValue('');
+  await expect(editorPreview.getByLabel('Preview value for __proto__')).toHaveValue('');
+  await expect(editorPreview).toContainText(body);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.reload();
+  const details = await selectPrompt(page, title);
+  await expect(details.getByLabel('Preview value for __proto__')).toHaveValue('');
+  await expect(details).toContainText(body);
+  const palette = await openCommandPalette(page);
+  await palette.getByLabel('Search prompts').fill(title);
+  await palette.getByRole('option', { name: title, exact: true }).click();
+  const modal = page.getByRole('dialog', { name: `Fill variables for ${title}` });
+  await expect(modal.getByLabel('Value for variable __proto__')).toHaveValue('');
+  const copy = modal.getByRole('button', { name: /Copy to Clipboard/ });
+  await expect(copy).toBeDisabled();
+  await modal.getByLabel('Value for variable constructor').fill('Ada');
+  await expect(copy).toBeDisabled();
+  await modal.getByLabel('Value for variable __proto__').fill('$& <tag> 中文 😀 {{constructor}}');
+  const rendered = 'Use Ada and $& <tag> 中文 😀 {{constructor}}.';
+  await expect(modal.getByLabel('Rendered prompt preview')).toHaveText(rendered);
+  await copy.click();
+  await expect(modal).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(rendered);
+});

@@ -1,3 +1,4 @@
+import { getPromptVariableValue } from '../../utils/prompt-template';
 import { Copy, Lightbulb } from 'lucide-react';
 import type { PromptVariable } from '../../types/index';
 import { PromptVariableValueControl } from '../prompt-variables/PromptVariableValueControl';
@@ -45,7 +46,7 @@ export function LivePreviewPanel({
           <PromptVariableValueControl
             key={variable.name}
             variable={variable}
-            value={variableValues[variable.name] ?? variable.defaultValue}
+            value={getPromptVariableValue(variableValues, variable.name, variable.defaultValue)}
             onValueChange={onVariableValueChange}
           />
         ))}

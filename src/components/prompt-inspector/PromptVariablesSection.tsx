@@ -1,3 +1,4 @@
+import { getPromptVariableValue } from '../../utils/prompt-template';
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { PromptVariable } from '../../types/index';
@@ -40,7 +41,7 @@ export function PromptVariablesSection({
             <PromptVariableValueControl
               key={variable.name}
               variable={variable}
-              value={values[variable.name] ?? variable.defaultValue}
+              value={getPromptVariableValue(values, variable.name, variable.defaultValue)}
               onValueChange={onVariableValueChange}
             />
           ))}

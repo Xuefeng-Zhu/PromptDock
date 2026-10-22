@@ -35,6 +35,19 @@ const folders: Folder[] = [
 ];
 
 describe('usePromptEditorForm', () => {
+  it('previews prototype-named variables and preserves literal replacement text', () => {
+    const { result } = renderHook(() => usePromptEditorForm({ folders, onSave: vi.fn() }));
+    act(() => result.current.setBody('Use {{constructor}} and {{__proto__}}.'));
+    expect(result.current.renderedPreview).toBe('Use {{constructor}} and {{__proto__}}.');
+    act(() => {
+      result.current.handleVariableValueChange('constructor', '$& {{__proto__}} 中文 😀');
+      result.current.handleVariableValueChange('__proto__', 'literal');
+    });
+    expect(result.current.renderedPreview).toBe('Use $& {{__proto__}} 中文 😀 and literal.');
+    act(() => result.current.handleResetPreview());
+    expect(result.current.renderedPreview).toBe('Use {{constructor}} and {{__proto__}}.');
+  });
+
   it('validates required title and body before saving', async () => {
     const onSave = vi.fn();
     const { result } = renderHook(() =>

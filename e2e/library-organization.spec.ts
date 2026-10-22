@@ -69,6 +69,9 @@ test.describe('library organization', () => {
     await searchPrompts(page, 'this prompt does not exist');
     await expect(page.getByText('No prompts found')).toBeVisible();
 
+    await page.getByRole('searchbox', { name: 'Search prompts' }).click();
+    await expect(page.getByRole('dialog', { name: 'Command palette' })).toHaveCount(0);
+
     await searchPrompts(page, '');
     await expect(promptCard(page, 'Summarize Text')).toBeVisible();
   });

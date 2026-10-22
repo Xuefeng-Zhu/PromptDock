@@ -60,11 +60,6 @@ export function LibraryScreen({
   const [viewMode, setViewMode] = useState<LibraryViewMode>('grid');
   const appliedFilters = useMemo(() => normalizePromptFilters(activeFilter), [activeFilter]);
   const displayCount = totalPromptCount ?? prompts.length;
-  const title = LIBRARY_VIEW_TITLES.get(activeSidebarItem) ?? (
-    activeSidebarItem.startsWith('tag-')
-      ? `#${activeSidebarItem.slice(4)}`
-      : folders?.find((folder) => folder.id === activeSidebarItem)?.name ?? 'All Prompts'
-  );
   const filterOptionSourcePrompts = filterSourcePrompts ?? prompts;
   const folderFilterOptions = useMemo(
     () => deriveFolderFilterOptions(filterOptionSourcePrompts, folders),
@@ -73,6 +68,12 @@ export function LibraryScreen({
   const tagFilterOptions = useMemo(
     () => deriveTagFilterOptions(filterOptionSourcePrompts),
     [filterOptionSourcePrompts],
+  );
+  const selectedTag = activeSidebarItem.slice(4);
+  const title = LIBRARY_VIEW_TITLES.get(activeSidebarItem) ?? (
+    activeSidebarItem.startsWith('tag-')
+      ? `#${tagFilterOptions.find((tag) => tag.value.toLowerCase() === selectedTag)?.label ?? selectedTag}`
+      : folderFilterOptions.find((folder) => folder.value === activeSidebarItem)?.label ?? 'All Prompts'
   );
 
   const sortedPrompts = useMemo(

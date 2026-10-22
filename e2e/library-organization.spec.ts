@@ -21,7 +21,7 @@ test.describe('library organization', () => {
   test('organizes by folder and tag, searches, filters, sorts, and toggles view mode', async ({ page }) => {
     const title = 'E2E Research Brief';
     const folder = 'E2E Research';
-    const tag = 'research';
+    const tag = 'Research';
 
     await startLocalLibrary(page);
     await createPrompt(page, {
@@ -33,9 +33,11 @@ test.describe('library organization', () => {
     });
 
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: `${folder} 1` }).click();
+    await expect(page.getByRole('heading', { level: 1, name: folder, exact: true })).toBeVisible();
     await expect(promptCard(page, title)).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: `${tag} 1`, exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `#${tag}`, exact: true })).toBeVisible();
     await expect(promptCard(page, title)).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: /All Prompts/ }).click();

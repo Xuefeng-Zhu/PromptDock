@@ -34,6 +34,19 @@ describe('LibraryScreen', () => {
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeDefined();
   });
 
+  it('preserves the selected tag display spelling even when its filtered view is empty', () => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={[]}
+        filterSourcePrompts={[{ ...MOCK_PROMPTS[0], tags: ['Writing'] }]}
+        activeSidebarItem="tag-writing"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: '#Writing' })).toBeDefined();
+    expect(screen.getByText('No prompts found')).toBeDefined();
+  });
+
   it('renders the "All Prompts" heading', () => {
     render(<LibraryScreen {...defaultProps} />);
     expect(screen.getByText('All Prompts')).toBeDefined();

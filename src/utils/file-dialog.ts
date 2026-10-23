@@ -90,22 +90,35 @@ export async function saveFile(content: string, defaultName: string): Promise<bo
  * Returns the file content as a string, or null if the user cancelled.
  */
 export async function openFile(): Promise<string | null> {
-  return new Promise<string | null>((resolve) => {
+  return new Promise<string | null>((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json,application/json';
+    input.hidden = true;
+    input.setAttribute('aria-label', 'Import prompts from JSON file');
+    const finish = (content: string | null) => {
+      input.remove();
+      resolve(content);
+    };
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) {
-        resolve(null);
+        finish(null);
         return;
       }
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
+      reader.onload = () => finish(reader.result as string);
+      reader.onerror = () => finish(null);
       reader.readAsText(file);
     };
-    input.oncancel = () => resolve(null);
-    input.click();
+    input.oncancel = () => finish(null);
+    // Keep the pending chooser discoverable to DOM-based file selection.
+    document.body.appendChild(input);
+    try {
+      input.click();
+    } catch (error) {
+      input.remove();
+      reject(error);
+    }
   });
 }

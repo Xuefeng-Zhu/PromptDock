@@ -16,6 +16,26 @@ function exportDocument(prompts: Array<Record<string, unknown>>) {
 }
 
 test.describe('settings, import, and export', () => {
+  test('supports DOM file selection for an open import and removes the input afterward', async ({ page }) => {
+    await startLocalLibrary(page);
+    await openSettings(page);
+    await page.getByRole('button', { name: 'Import/Export' }).click();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Import prompts from JSON file' }).click();
+    await chooser;
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'dom-import.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(exportDocument([{ title: 'E2E DOM Import', body: 'Exact 中文 😀\nBody.', tags: ['dom-import'] }])),
+    });
+    await expect(page.getByText('Imported 1 prompt(s) successfully.')).toBeVisible();
+    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+    await page.reload();
+    const details = await selectPrompt(page, 'E2E DOM Import');
+    await expect(details).toContainText('Exact 中文 😀');
+    await expect(details).toContainText('Body.');
+  });
+
   test('persists appearance preferences and keeps browser-only default action safe after reload', async ({ page }) => {
     await startLocalLibrary(page);
     await openSettings(page);

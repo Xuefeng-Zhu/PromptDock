@@ -326,6 +326,20 @@ describe('TopBar', () => {
     expect(input.value).toBe('test query');
   });
 
+  it('opens the palette outside the library even with a retained library query', () => {
+    const onCommandPaletteOpen = vi.fn();
+    render(
+      <TopBar
+        {...defaultProps}
+        isLibraryScreen={false}
+        searchQuery="retained library query"
+        onCommandPaletteOpen={onCommandPaletteOpen}
+      />,
+    );
+    fireEvent.click(screen.getByRole('searchbox', { name: 'Search prompts' }));
+    expect(onCommandPaletteOpen).toHaveBeenCalledTimes(1);
+  });
+
   it('renders as a header element', () => {
     const { container } = render(<TopBar {...defaultProps} />);
     expect(container.querySelector('header')).toBeDefined();

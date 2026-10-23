@@ -52,6 +52,21 @@ describe('LibraryScreen', () => {
     expect(screen.getByText('All Prompts')).toBeDefined();
   });
 
+  it('matches the visible sidebar tag casing when archived tags appear first', () => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={[]}
+        filterSourcePrompts={[
+          { ...MOCK_PROMPTS[0], id: 'archived-tag', archived: true, tags: ['writing'] },
+          { ...MOCK_PROMPTS[0], id: 'active-tag', archived: false, tags: ['Writing'] },
+        ]}
+        activeSidebarItem="tag-writing"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: '#Writing' })).toBeDefined();
+  });
+
   it('renders the prompt count', () => {
     render(<LibraryScreen {...defaultProps} />);
     const countElements = screen.getAllByText('6 prompts');

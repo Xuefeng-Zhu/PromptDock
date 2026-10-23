@@ -12,6 +12,7 @@ import type { LibraryViewMode } from './types';
 import { PromptGrid } from './PromptGrid';
 import { PromptFiltersPopover } from '../prompt-filters';
 import { PromptSortDropdown } from './PromptSortDropdown';
+import { computeTagCounts } from '../../utils/sidebar-counts';
 
 const LIBRARY_VIEW_TITLES = new Map([
   ['library', 'All Prompts'],
@@ -70,9 +71,13 @@ export function LibraryScreen({
     [filterOptionSourcePrompts],
   );
   const selectedTag = activeSidebarItem.slice(4);
+  const sidebarTags = useMemo(
+    () => Object.keys(computeTagCounts(filterOptionSourcePrompts)),
+    [filterOptionSourcePrompts],
+  );
   const title = LIBRARY_VIEW_TITLES.get(activeSidebarItem) ?? (
     activeSidebarItem.startsWith('tag-')
-      ? `#${tagFilterOptions.find((tag) => tag.value.toLowerCase() === selectedTag)?.label ?? selectedTag}`
+      ? `#${sidebarTags.find((tag) => tag.toLowerCase() === selectedTag) ?? selectedTag}`
       : folderFilterOptions.find((folder) => folder.value === activeSidebarItem)?.label ?? 'All Prompts'
   );
 

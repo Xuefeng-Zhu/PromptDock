@@ -1,6 +1,6 @@
 # PromptDock — TestSprite Hackathon Season 4 submission
 
-Deadline supplied by Frank: **Thursday, October 22, 2026, 11:59 PM America/Los_Angeles**. Target a green TestSprite PR and ready Discord post by 9 PM PT. The official event page was verified in Chrome: https://www.testsprite.com/hackathon-s4. It confirms Oct 22, 11:59 PM PT for Project submissions, portal-generated live-URL suite, public README/repo, PR with TestSprite evidence, and Discord post. Final schedule is confirmed in Discord.
+**Updated deadline: Monday, October 26, 2026, 11:59 PM America/Los_Angeles.** On October 23 at 12:57 PM Pacific, TestSprite admin Holly McAninch announced the extension in [hackathon-season-4](https://discord.com/channels/1227394620623949934/1556776381894099117/1563280349557956740). This supersedes the original October 22 deadline still shown on the public event page. The same announcement says credit boosts are processed on weekdays, typically by day's end. The linked form limits eligibility to participants with completely depleted credits; do not submit an inaccurate eligibility acknowledgment. Current workspace credit balance was verified as **280.4**, including 250 extra credits, on October 23. No purchase or credit request was made in this follow-up.
 
 ## Current status — October 22, about 10:10 PM Pacific
 

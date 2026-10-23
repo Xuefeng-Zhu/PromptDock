@@ -1,5 +1,17 @@
 # Remaining TestSprite cases — action plan
 
+## October 23 follow-up
+
+- The organizer extended the deadline to **Monday, October 26, 11:59 PM Pacific**: [admin announcement](https://discord.com/channels/1227394620623949934/1556776381894099117/1563280349557956740). This supersedes the original October 22 date.
+- Current workspace balance was verified at **280.4 credits** before the targeted probe, including 250 extra credits. The prior full-run credit error is historical. No purchase or credit request was made.
+- PR #202 remains unmerged at remote head 1c8afa3. All normal CI checks passed; the TestSprite check still records the historical insufficient-credit refusal.
+- Review found two additional UI defects: archived tag casing could override the visible sidebar label, and a retained query prevented header-click palette access outside the library. Local fix commit 08e2926 addresses both with two red-then-green component regressions and browser regressions for Settings/editor entry. Lint/build passed, **1,037 Vitest passed / 13 existing skips, and 22 browser E2E passed**. This follow-up is not pushed or deployed; Frank's per-push/deploy approval is still required. The temporary Chromium 153 launch override was removed; CI config and dependencies are unchanged.
+- JSN-002 was refined as a targeted native-file-chooser probe using the disposable baseline and named modified fixture, preserving exact new-record/duplicate-preservation assertions. It finished Blocked: the runner reported no chooser and said /tmp/fixtures/ts4-modified.json was unavailable. The attachment remains a project Test File; do not confuse a guessed runner path with verified availability. The latest one-case portal edit is newer than the saved YAML snapshot and needs incorporation after resolving runner access. Preserve unchanged/repeat-import coverage when finalizing this probe into the suite. Local Playwright import tests pass through the native chooser event, so this report does not establish a broken application import handler. No additional full run was requested.
+- Searching the actual hackathon-s4-submissions forum for PromptDock returned No matching posts. The account currently sees You do not have permission to post in this channel. Resolve participant-role/posting access with the organizer before submission. No Discord message was posted.
+
+The earlier checkpoints below are historical.
+
+
 Current checkpoint: October 22, 2026, about 10:10 PM Pacific. [PR #202](https://github.com/Xuefeng-Zhu/PromptDock/pull/202) remains open with a failing required TestSprite check. The latest complete PR run, `620b8fd6-556b-40eb-b96d-bcee225d8515`, finished **63 passed, 23 failed, 21 blocked**. Its [bot comment](https://github.com/Xuefeng-Zhu/PromptDock/pull/202#issuecomment-6357306595) is historical evidence, not a green result.
 
 ## Completed work and current blockers

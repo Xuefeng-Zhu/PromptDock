@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 import {
+  appUrl,
   expectPromptAbsent,
   fillPromptForm,
+  openCommandPalette,
   openNewPrompt,
   promptCard,
   selectPrompt,
@@ -9,6 +11,34 @@ import {
 } from './helpers';
 
 test.describe('prompt authoring', () => {
+  test('preserves multiline variable defaults through save, reload, preview, and copy', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: appUrl });
+    const title = 'E2E Multiline Default';
+    const value = 'Launch\nCampaign 中文 😀';
+    const rendered = `Write ${value}. Repeat: ${value}.`;
+    await startLocalLibrary(page);
+    await openNewPrompt(page);
+    await fillPromptForm(page, { title, body: 'Write {{topic}}. Repeat: {{topic}}.' });
+    await page.getByRole('button', { name: 'Use textarea input for topic' }).click();
+    const defaultValue = page.getByLabel('Default value for topic');
+    await defaultValue.fill(value);
+    await expect(defaultValue).toHaveValue(value);
+    await expect(page.getByRole('complementary', { name: 'Live Preview' }).locator('pre')).toHaveText(rendered);
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(promptCard(page, title)).toBeVisible();
+    await page.reload();
+    const details = await selectPrompt(page, title);
+    await expect(details.getByLabel('Preview value for topic')).toHaveValue(value);
+    const palette = await openCommandPalette(page);
+    await palette.getByLabel('Search prompts').fill(title);
+    await palette.getByRole('option', { name: title, exact: true }).click();
+    const modal = page.getByRole('dialog', { name: `Fill variables for ${title}` });
+    await expect(modal.getByLabel('Value for variable topic')).toHaveValue(value);
+    await expect(modal.getByLabel('Rendered prompt preview')).toHaveText(rendered);
+    await modal.getByRole('button', { name: /Copy to Clipboard/ }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(rendered);
+  });
+
   test('creates a prompt with variables and persists rendered preview values after reload', async ({ page }) => {
     const promptTitle = 'E2E Launch Note Prompt';
 

@@ -1,5 +1,11 @@
 # TestSprite setup and first run — October 22, 2026
 
+## Current status — October 22, about 10:10 PM Pacific
+
+Production runs tested PR #202 application code from `e6339b1`. TEM-005 passed in the resulting full PR run; the full result remains **63 passed / 23 failed / 21 blocked**. The focused corrected-plan run finished **12 passed / 3 failed / 0 blocked**. All eight synthetic fixtures are now uploaded and Ready. The next full run was rejected with **Insufficient credits**; no upgrade/purchase was made. Independent live Chrome checks did not reproduce the three focused clearing-input failures. Details and next actions: [remaining cases](REMAINING_CASES.md).
+
+The saved develop branch rule now requires **Build and test** and **TestSprite V3**. PR #202 is unmerged. The historical checkpoints below explain the earlier setup and must not be read as current pending work.
+
 ## Deployment and integration
 
 - Fix PR: https://github.com/Xuefeng-Zhu/PromptDock/pull/201 — merged into `develop`, commit `82bcafe24790ba20b26afee5348cf2335338b4b3`.
@@ -81,3 +87,50 @@ The existing `develop` branch-protection edit form lists only **Build and test**
 Chrome returned **“The connected browser approval session failed. The tool was not replayed.”** on resuming portal work. Reconnect the ChatGPT Chrome extension before retrying signed-in portal actions or workflow dispatch. No portal or GitHub settings were changed in this failed browser attempt.
 
 The [remaining-case action plan](REMAINING_CASES.md) distinguishes the reproduced app defect from setup mistakes and unresolved runner limitations. Those are proposed next actions, not completed portal edits or passing results.
+
+
+## October 22 publication checkpoint
+
+Frank approved publishing the multiline fix/documentation, deployment after CI, and adding the required TestSprite check. Published fix commit `8d2fd13a4edb2428adcadf2059fa0f2e0b7b6d95` has the exact tested local tree `b8fbb3c3dee40b30c17480c8e9ebc32c6a6bb66c`. Documentation commit / PR head `e6339b1e186cf11cb300822d5a5fdba2d477fe2b` matches local tree `f16ab7411626ffc24e6d17b8a1f6d331a4a44b85`. All seven normal CI checks passed.
+
+Production deployment #33 succeeded from that head: https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39899769500. Live Chrome verification saved a synthetic multiline default `Launch\nCampaign 中文 😀`, reloaded it, reopened Fill Variables and independently read exact clipboard text `Write Launch\nCampaign 中文 😀. Repeat: Launch\nCampaign 中文 😀.`. No existing recipes were removed.
+
+GitHub prompted for account verification while saving branch protection; after verification the saved develop rule was inspected again. It now requires **Build and test** from GitHub Actions and **TestSprite V3** from TestSprite. Other protection controls were preserved. Saved rule: [required check](https://github.com/Xuefeng-Zhu/PromptDock/settings/branch_protection_rules/76447933). Production deployment: [production](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39899769500).
+
+The deployment automatically triggered full PR run `620b8fd6-556b-40eb-b96d-bcee225d8515` against production. Its status is pending; the in-progress counts are not a final result. PR #202 remains unmerged. No additional manual full run was started.
+
+TestSprite AI was asked to propose only generated setup/interaction corrections while preserving all 107 cases and intended assertions. Only FLT-012 has a confirmed executed Update so far; other tool labels reading Done are not proof of saved edits. A direct FLT-011 inspection still showed its old missing-template setup. ONB-003, not ONB-004, is the folder/tag/search case; this ID mismatch was corrected in the follow-up request. Remaining updates need individual saved-plan verification.
+
+Test Files attachment remains unconfirmed. Browser download/file-chooser operations timed out. Frank was given the fixture ZIP and asked to extract it and add its synthetic files through Test Files. Exact file/download assertions remain intact; no case was skipped or softened.
+
+
+### Verified regression and updated suite plans
+
+TEM-005 passed in PR run 620b8fd6-556b-40eb-b96d-bcee225d8515 with its multiline, clipboard and reload assertions intact. Run evidence: [TestSprite pass](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/620b8fd6-556b-40eb-b96d-bcee225d8515?test=85e13acc-2b21-46f0-b3c8-f43d43dfcb54). This is genuine red-then-green evidence for the multiline fix, not a passing full suite. The completed full run was **63 passed, 23 failed, 21 blocked**; its bot comment is https://github.com/Xuefeng-Zhu/PromptDock/pull/202#issuecomment-6357306595.
+
+Individual Save & Run corrections were applied to FLT-011, TEM-007, ONB-007, LIT-002 and MOB-009. TestSprite AI proposals were reviewed; invalid proposals missing Body setup or the actual Copy action were rejected before writing. Valid AI changes were confirmed for FLT-012, ONB-003 and EDT-005. The AI's bulk Update labels were not accepted as proof of execution: it confirmed that an open review card had blocked the other attempted updates.
+
+The portal's full YAML editor then applied 13 setup/interaction updates, with its confirmation explicitly listing 13 updates and no added/deleted cases. The saved YAML was copied back through the UI and parsed: it matched the reviewed YAML exactly. All 107 IDs, titles, descriptions, priorities and assertion counts were retained. These edits occurred after the completed full run was launched and do not retroactively validate it.
+
+A second 11-case update addresses the remaining generated interaction mistakes: header-trigger palette scoping, explicit saved-description verification before duplication, native paste focus, the mobile fill-modal entry path, and source-file-based exact long-content comparisons. The long cases use the prepared real 12,288-byte fixture; they remain blocked if it is not attached. No approximation, excerpt, toast, deleted case or skipped assertion counts as a pass. The second 11-case batch was saved and copied back through the UI. Its parsed content matched the reviewed plan exactly; fresh execution is still required.
+
+
+### Focused verification and current blocker
+
+All five individual Save & Run corrections passed: FLT-011, TEM-007, ONB-007, LIT-002 and MOB-009. Latest-per-case totals became 68 passed / 18 failed / 21 blocked, which must not be substituted for the full PR run result. A focused 15-case run was launched on the corrected non-file failures: https://www.testsprite.com/dashboard-v3/o/xuefeng-zhus-workspace-6167b83c/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/08336884-1d91-4e66-8b95-821e00ac09d1. The three remaining failed long-content cases await the actual fixture, alongside the existing blocked file cases. This subset run does not replace the required full 107-case PR check.
+
+The final saved plan is preserved in [test plan](evidence/testsprite-plan-final-saved.yaml). Both YAML batches retained all 107 IDs and all titles, goals, priorities and assertion counts. No tests were added, deleted, disabled or skipped. The file and exact-content cases are still in the suite. Test Files was inspected again and is empty; its page is left open for Frank to upload the extracted fixture bundle.
+
+## Fixture upload and credit checkpoint
+
+Frank completed upload of README.md, manifest.json, ts4-valid.json, ts4-modified.json, ts4-bad-json.json, ts4-bad-schema.json, ts4-exact-12k.txt and ts4-long.json. All eight show Ready. The focused run finished 12 passed / 3 failed. Latest-per-case totals are 80 passed / 6 failed / 21 blocked; this is not a full PR result. A Run All 107 request was rejected with Insufficient credits. No new full execution was started and no billing action was taken.
+
+
+### Focused reruns after fixture upload
+
+All 21 previously blocked cases are running in execution `e6f25b36-3436-4edf-a88a-acf91afaea11`; all six remaining failed cases ran in `4ec13a85-b047-4a47-a986-f8216f0fcfc9`. The workspace displayed 45.8 credits before these launches, enough for focused investigation but not the full 107-case request. LIB-005, FAV-008 and TEM-001 now explicitly use real keyboard Select All/Backspace instead of an empty fill. The three-case plan update was saved and read back through the UI; parsed YAML matched the reviewed plan exactly. All 107 cases and all assertions remain. These in-progress subset runs do not replace the required full PR check.
+
+
+### Completed post-upload subsets
+
+Execution e6f25b36-3436-4edf-a88a-acf91afaea11 completed **3 passed / 5 failed / 13 blocked**. Execution 4ec13a85-b047-4a47-a986-f8216f0fcfc9 completed **3 passed / 0 failed / 3 blocked**. All three clearing-input cases (TEM-001, LIB-005, FAV-008) now pass with explicit native keyboard actions. The remaining long cases are blocked: fixture text readout is truncated, and the runner attempted to upload into the From JSON textarea. A duplicate import case selected ts4-long.json rather than the required disposable duplicate pair and could not handle the native Settings Import picker. TestSprite AI was asked for read-only capability diagnosis; no additional runs were requested. Aggregate latest-case counts are 86 passed / 5 failed / 16 blocked, not a full PR result.

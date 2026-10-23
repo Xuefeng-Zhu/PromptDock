@@ -1,12 +1,21 @@
 # Remaining TestSprite cases — action plan
 
-Source: [PR #202 TestSprite report](https://github.com/Xuefeng-Zhu/PromptDock/pull/202#issuecomment-6354058364), execution `5f48ad5d-e15a-4ada-ae3e-0716154c2714`: **70 passed, 20 failed, 17 blocked**. This document proposes corrections and investigations; it does not record completed portal changes or a passing rerun.
+Current checkpoint: October 22, 2026, about 10:10 PM Pacific. [PR #202](https://github.com/Xuefeng-Zhu/PromptDock/pull/202) remains open with a failing required TestSprite check. The latest complete PR run, `620b8fd6-556b-40eb-b96d-bcee225d8515`, finished **63 passed, 23 failed, 21 blocked**. Its [bot comment](https://github.com/Xuefeng-Zhu/PromptDock/pull/202#issuecomment-6357306595) is historical evidence, not a green result.
 
-## Reproduced application defect
+## Completed work and current blockers
 
-**Render variable defaults, validation, and copied output for a topic template (TEM-005).** Selecting Textarea still left its default-value editor as a single-line input. The browser removed newlines before the value reached state. Local commit `ff4f3c6` uses a textarea and adds a red-then-green unit regression plus a browser regression covering exact values through save, reload, preview, fill modal and clipboard. Lint/build passed, 1,035 unit tests passed (13 pre-existing skips), and all 20 browser tests passed. Publish/deploy with approval, then rerun this unchanged multiline assertion against production.
+- TEM-005 is fixed and deployed from `e6339b1`; its original multiline/default/clipboard/reload assertions passed in the full PR run. The fix has unit and browser regressions. Lint/build passed, 1,035 Vitest tests passed (13 existing skips), and all 20 browser E2E tests passed. All seven normal CI checks passed.
+- Both saved YAML batches preserved all 107 IDs, titles, goals, priorities and assertion counts. The final saved plan is in [evidence](evidence/testsprite-plan-final-saved.yaml).
+- The focused run `08336884-1d91-4e66-8b95-821e00ac09d1` finished **12 passed, 3 failed, 0 blocked**. TEM-001, LIB-005 and FAV-008 still failed on clearing-input behavior. These are not confirmed application defects: independent Chrome checks against production rejected an empty title, disabled modal Copy with a required value empty, and restored all seven existing recipes after clearing search. The runner log used fill actions for the title-clearing step. Retain these assertions and investigate the actual events/focus in TestSprite.
+- Frank uploaded all eight synthetic files. Test Files shows each as **Ready**, including the malformed/schema fixtures, duplicate pair, exact 12,288-byte text and long JSON. Actual runner upload/download and exact-content assertions still need execution.
+- Attempting **Run All 107** after the upload was rejected with **Insufficient credits**. No new full run was created. Replenish workspace credits before rerunning; no purchase or upgrade was made.
+- The saved develop rule requires both **Build and test** and **TestSprite V3**. Do not bypass this gate or merge while it fails.
 
-## Case-level work after reconnecting the portal
+## Earlier triage plan
+
+The table below records intended assertions and setup corrections, many now saved in the portal. It is not a list of newly reproduced defects or proof of passing execution.
+
+## Case-level work in the portal
 
 | Failed case | Next action; assertion to retain |
 | --- | --- |
@@ -32,9 +41,18 @@ Source: [PR #202 TestSprite report](https://github.com/Xuefeng-Zhu/PromptDock/pu
 
 ## Runner and merge requirements
 
-- Preserve all 107 cases and their intended assertions. No case is skipped, deleted or marked passed by this plan.
-- Review the remaining 17 blocked cases individually after their setup dependencies and file handling are available.
-- Inspect the portal's “Always use planned steps” setting before rerunning edited cases; ensure the runner executes the saved plan rather than replaying stale actions. Do not discard evidence from the original failing execution.
-- Production is the selected TestSprite target. A new PR commit is not tested until that exact code is deployed with Frank's approval. Normal CI and preview success do not establish a passing production TestSprite result.
-- Add TestSprite as a required GitHub check only with Frank's explicit approval. The observed develop rule currently requires only Build and test. Keep PR #202 unmerged while TestSprite fails.
-- Chrome's connected approval session must be restored to apply these portal steps. For fixture upload, the Chrome extension may also require the user to enable Allow access to file URLs, as described in the extension's official upload guidance. No successful fixture attachment is claimed.
+- Retain all 107 cases and their intended assertions. No case is skipped, deleted, disabled or manually marked passed.
+- Restore credits, investigate the three remaining focused failures, then execute file/long-content cases with the real attachments.
+- Obtain a fresh full 107-case result on the latest PR head through the GitHub integration. Individual passes and aggregate latest-case totals do not replace the required PR check.
+- Production is the selected target. Application code must be deployed with approval before TestSprite exercises it; previews alone do not publish production.
+- Keep PR #202 unmerged until its required TestSprite check passes. Frank posts the final Discord submission; no post has been sent.
+
+
+### Focused reruns after fixture upload
+
+All 21 previously blocked cases are running in execution `e6f25b36-3436-4edf-a88a-acf91afaea11`; all six remaining failed cases ran in `4ec13a85-b047-4a47-a986-f8216f0fcfc9`. The workspace displayed 45.8 credits before these launches, enough for focused investigation but not the full 107-case request. LIB-005, FAV-008 and TEM-001 now explicitly use real keyboard Select All/Backspace instead of an empty fill. The three-case plan update was saved and read back through the UI; parsed YAML matched the reviewed plan exactly. All 107 cases and all assertions remain. These in-progress subset runs do not replace the required full PR check.
+
+
+### Completed post-upload subsets
+
+Execution e6f25b36-3436-4edf-a88a-acf91afaea11 completed **3 passed / 5 failed / 13 blocked**. Execution 4ec13a85-b047-4a47-a986-f8216f0fcfc9 completed **3 passed / 0 failed / 3 blocked**. All three clearing-input cases (TEM-001, LIB-005, FAV-008) now pass with explicit native keyboard actions. The remaining long cases are blocked: fixture text readout is truncated, and the runner attempted to upload into the From JSON textarea. A duplicate import case selected ts4-long.json rather than the required disposable duplicate pair and could not handle the native Settings Import picker. TestSprite AI was asked for read-only capability diagnosis; no additional runs were requested. Aggregate latest-case counts are 86 passed / 5 failed / 16 blocked, not a full PR result.

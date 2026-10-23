@@ -5,18 +5,19 @@ Deadline supplied by Frank: **Thursday, October 22, 2026, 11:59 PM America/Los_A
 ## Current status
 
 - Live app: https://promptdock-95e31.web.app; download page only: https://xuefeng-zhu.github.io/PromptDock.
-- [PR #201](https://github.com/Xuefeng-Zhu/PromptDock/pull/201) merged into `develop` as `82bcafe`; all seven checks passed, including browser and native tests.
-- Authorized production deployment from `develop` succeeded: https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39863759026. The variable crash/literal regressions were verified fixed live. `main` was not moved.
-- TestSprite generated and ran 107 cases: **57 passed, 21 failed, 29 blocked**. The suite is not green.
-- GitHub App connected for PromptDock; PR deployment trigger active; portal Merge gate on. Actual PR result and GitHub required-check enforcement remain unverified.
-- Frank chose the fixed production target for the deadline. PR preview deployment triggers testing, but production is tested; unmerged PR code is not validated.
-- See [portal setup and triage](PORTAL_SETUP.md) for run/project links, evidence, and remaining submission gates.
-- Keep the confirmed TestSprite account email in the Discord submission, not public repository documentation. Name: Frank Zhu (portal label Xuefeng-Zhu), Discord frankzhu94.
-- No Discord post has been sent. Do not claim a green TestSprite PR or submission readiness until evidence exists.
+- PR #201 merged into develop as `82bcafe`; variable crash/literal regressions were fixed and verified live.
+- [PR #202](https://github.com/Xuefeng-Zhu/PromptDock/pull/202) fixes library scope headings, tag display casing and search recovery. All seven normal checks passed. The PR is open and unmerged.
+- Frank approved deploying tested PR head `a5ffbbf` before TestSprite passed. [Production deployment #32](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39875519473) succeeded from that head; live heading/search verification passed. Main/develop were not moved for this deployment.
+- The deployment automatically triggered [107 TestSprite cases on PR #202](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/5f48ad5d-e15a-4ada-ae3e-0716154c2714). The updated-production run finished **70 passed, 20 failed, 17 blocked**. The preceding old-production PR run had 51 passed, 21 failed, 35 blocked.
+- At least five corrected constructor/literal cases passed individual portal runs with exact clipboard verification; the other edited cases still need confirmation. All 13 mobile cases now have real 390×844 viewport overrides. This does not establish a green full suite.
+- GitHub App connected for PromptDock; deployment trigger active; portal Merge gate on. A real PR TestSprite status/comment is verified. The GitHub develop rule currently requires only Build and test; adding TestSprite as a required check still needs Frank's approval.
+- Frank chose the fixed production target. Unmerged PR code is tested only after an explicitly approved production deployment; normal PR preview deployments alone do not publish production.
+- Test files are prepared in [fixtures](fixtures/README.md). Browser upload stalled; attachment and runner file/download handling remain blockers for import/export and exact long-content cases.
+- No Discord post has been sent. Keep the confirmed submission email in the final Discord post, not the public repository.
 
 ## Finish in order
 
-Follow the [submission gate in the setup report](PORTAL_SETUP.md#submission-gate). The local view-heading fix requires approval to publish and deploy. Preserve all intended assertions while correcting inaccurate generated steps and runner setup; do not skip failures to get green.
+Finish fixture attachment and inaccurate setup/runner triage while preserving assertions; obtain a passing TestSprite status for PR #202; verify required-check enforcement; merge only after the passing gate; update README and submission evidence; Frank posts the final Discord submission before the deadline.
 
 ## Discord draft — Frank posts after a green TestSprite result
 
@@ -64,7 +65,7 @@ The preview workflow passed on PR #201 and published https://promptdock-95e31--p
 
 Branch: `fix/library-view-heading`, based on `develop`. The library heading now follows Favorites, Recent, Archived, folder, or tag navigation instead of always saying All Prompts. The defect was identified by the first TestSprite run. Five new component assertions failed before the change; a browser navigation regression covers the full sidebar path.
 
-Local validation: lint/build passed; **1,032 Vitest tests passed, 13 skipped; 19 browser E2E tests passed**. Browser E2E used the previously installed temporary Chromium 153 executable because the pinned browser download was unavailable locally. No dependency or CI browser configuration was changed. Publication and deployment of this follow-up still require Frank's approval.
+Local validation for the deployed search/tag/heading changes: lint/build passed; **1,034 Vitest tests passed, 13 skipped; 19 browser E2E tests passed**. Browser E2E used the previously installed temporary Chromium 153 executable because the pinned browser download was unavailable locally. No dependency or CI browser configuration was changed. The follow-up was published as PR #202 and deployed from tested head a5ffbbf with Frank's explicit approval. Its full TestSprite gate remains failing (70 passed, 20 failed, 17 blocked).
 
 ## Evidence still required
 
@@ -73,3 +74,10 @@ Local validation: lint/build passed; **1,032 Vitest tests passed, 13 skipped; 19
 - Actual passing TestSprite PR comment/status and verified GitHub merge enforcement.
 - Final README with passing evidence.
 - Discord submission permalink and timestamp.
+
+
+## Additional confirmed TestSprite defect
+
+TEM-005 exposed stripped line breaks in textarea variable defaults. Local commit `ff4f3c6` fixes the default control and adds unit/browser regressions for exact multiline preservation through save, reload, preview and clipboard. Lint/build passed, 1,035 Vitest tests passed (13 existing skips), and all 20 browser tests passed. The commit is local only; approval is needed before publishing/deploying it. The current full TestSprite result remains 70 passed / 20 failed / 17 blocked.
+
+Chrome's connected approval session is unavailable. Reconnect Chrome to resume portal edits, fixture attachment and approved workflow dispatch. See [remaining cases](REMAINING_CASES.md). No Discord post was sent.

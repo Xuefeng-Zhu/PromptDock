@@ -1,0 +1,14 @@
+{
+  "bodyBytes": 12288,
+  "bodyCodePoints": 10608,
+  "bodyUTF16Units": 10848,
+  "bodySHA256": "23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a",
+  "files": {
+    "ts4-bad-json.json": "2eeaeea0f900074f31e7f6163c957eed9c5f5028b1c0c9d1ada708353f6b8a65",
+    "ts4-bad-schema.json": "a38f8fc16404a7024044732da5cc80228384713d35ef7c36996cce9949e66310",
+    "ts4-exact-12k.txt": "23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a",
+    "ts4-long.json": "cd4e7d2ed7c5c128158a03da1278f45c19432cc959b3280f264e9b88944f7fa4",
+    "ts4-modified.json": "4d55e588eb8313c9eb17e1361d1e26c0936198609f506b87b838609b25aa1ac7",
+    "ts4-valid.json": "fafa2a14f8ddb558012737c156b438b04b2fdf20febd28b3408878dc89225cfe"
+  }
+}

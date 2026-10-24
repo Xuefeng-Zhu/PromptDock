@@ -11,6 +11,22 @@ const defaultProps = {
 };
 
 describe('PromptEditor', () => {
+  it('saves textarea defaults with their original line breaks', async () => {
+    const onSave = vi.fn();
+    const value = 'Launch\nCampaign 中文 😀';
+    render(<PromptEditor {...defaultProps} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Multiline default' } });
+    fireEvent.change(screen.getByLabelText('Body'), { target: { value: 'Write {{topic}}.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Use textarea input for topic' }));
+    fireEvent.change(screen.getByLabelText('Default value for topic'), { target: { value } });
+    fireEvent.click(screen.getByRole('button', { name: /^Save$/ }));
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        variables: [expect.objectContaining({ name: 'topic', inputType: 'textarea', defaultValue: value })],
+      }));
+    });
+  });
+
   it('renders form fields for title, description, and body', () => {
     render(<PromptEditor {...defaultProps} />);
     expect(screen.getByLabelText('Title')).toBeDefined();

@@ -309,10 +309,35 @@ describe('TopBar', () => {
     expect(onCommandPaletteOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps an existing library query editable instead of opening a second search', () => {
+    const onCommandPaletteOpen = vi.fn();
+    const onSearchChange = vi.fn();
+    render(<TopBar {...defaultProps} searchQuery="missing prompt" onSearchChange={onSearchChange} onCommandPaletteOpen={onCommandPaletteOpen} />);
+    const input = screen.getByRole('searchbox', { name: 'Search prompts' });
+    fireEvent.click(input);
+    expect(onCommandPaletteOpen).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '' } });
+    expect(onSearchChange).toHaveBeenCalledWith('');
+  });
+
   it('displays the current search query value', () => {
     render(<TopBar {...defaultProps} searchQuery="test query" />);
     const input = screen.getByPlaceholderText('Search…') as HTMLInputElement;
     expect(input.value).toBe('test query');
+  });
+
+  it('opens the palette outside the library even with a retained library query', () => {
+    const onCommandPaletteOpen = vi.fn();
+    render(
+      <TopBar
+        {...defaultProps}
+        isLibraryScreen={false}
+        searchQuery="retained library query"
+        onCommandPaletteOpen={onCommandPaletteOpen}
+      />,
+    );
+    fireEvent.click(screen.getByRole('searchbox', { name: 'Search prompts' }));
+    expect(onCommandPaletteOpen).toHaveBeenCalledTimes(1);
   });
 
   it('renders as a header element', () => {

@@ -8,10 +8,20 @@ import {
 } from './helpers';
 
 test.describe('library organization', () => {
+  test('labels sidebar library views and returns to All Prompts', async ({ page }) => {
+    await startLocalLibrary(page);
+    const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+    for (const view of ['Favorites', 'Recent', 'Archived', 'All Prompts']) {
+      await navigation.getByRole('button', { name: new RegExp(`^${view}( \\d+)?$`) }).click();
+      await expect(page.getByRole('heading', { level: 1, name: view, exact: true })).toBeVisible();
+    }
+    await expect(promptCard(page, 'Summarize Text')).toBeVisible();
+  });
+
   test('organizes by folder and tag, searches, filters, sorts, and toggles view mode', async ({ page }) => {
     const title = 'E2E Research Brief';
     const folder = 'E2E Research';
-    const tag = 'research';
+    const tag = 'Research';
 
     await startLocalLibrary(page);
     await createPrompt(page, {
@@ -23,9 +33,11 @@ test.describe('library organization', () => {
     });
 
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: `${folder} 1` }).click();
+    await expect(page.getByRole('heading', { level: 1, name: folder, exact: true })).toBeVisible();
     await expect(promptCard(page, title)).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: `${tag} 1`, exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `#${tag}`, exact: true })).toBeVisible();
     await expect(promptCard(page, title)).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: /All Prompts/ }).click();
@@ -56,6 +68,9 @@ test.describe('library organization', () => {
 
     await searchPrompts(page, 'this prompt does not exist');
     await expect(page.getByText('No prompts found')).toBeVisible();
+
+    await page.getByRole('searchbox', { name: 'Search prompts' }).click();
+    await expect(page.getByRole('dialog', { name: 'Command palette' })).toHaveCount(0);
 
     await searchPrompts(page, '');
     await expect(promptCard(page, 'Summarize Text')).toBeVisible();

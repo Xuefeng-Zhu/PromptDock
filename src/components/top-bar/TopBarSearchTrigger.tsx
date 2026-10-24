@@ -1,12 +1,14 @@
 import { Search } from 'lucide-react';
 
 interface TopBarSearchTriggerProps {
+  isLibraryScreen: boolean;
   onCommandPaletteOpen: () => void;
   onSearchChange: (query: string) => void;
   searchQuery: string;
 }
 
 export function TopBarSearchTrigger({
+  isLibraryScreen,
   onCommandPaletteOpen,
   onSearchChange,
   searchQuery,
@@ -22,7 +24,10 @@ export function TopBarSearchTrigger({
         type="search"
         value={searchQuery}
         onChange={(event) => onSearchChange(event.target.value)}
-        onClick={onCommandPaletteOpen}
+        onClick={() => {
+          // Keep an active library filter editable; a separate palette query would hide it.
+          if (!isLibraryScreen || searchQuery === '') onCommandPaletteOpen();
+        }}
         placeholder="Search…"
         aria-label="Search prompts"
         className="min-h-10 w-full rounded-lg border py-2 pl-9 pr-3 text-sm outline-none transition-colors md:min-h-0 md:py-1.5 md:pr-14"

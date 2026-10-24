@@ -156,16 +156,30 @@ export function VariableDefinitionEditor({
                 placeholder="Optional helper text"
               />
 
-              <Input
-                label={`Default value for ${variable.name}`}
-                value={variable.defaultValue}
-                onChange={(event) =>
-                  onVariableChange(variable.name, {
-                    defaultValue: event.target.value,
-                  })
-                }
-                placeholder="Optional default"
-              />
+              {variable.inputType === 'textarea' ? (
+                <Textarea
+                  label={`Default value for ${variable.name}`}
+                  value={variable.defaultValue}
+                  rows={3}
+                  onChange={(event) =>
+                    onVariableChange(variable.name, {
+                      defaultValue: event.target.value,
+                    })
+                  }
+                  placeholder="Optional default"
+                />
+              ) : (
+                <Input
+                  label={`Default value for ${variable.name}`}
+                  value={variable.defaultValue}
+                  onChange={(event) =>
+                    onVariableChange(variable.name, {
+                      defaultValue: event.target.value,
+                    })
+                  }
+                  placeholder="Optional default"
+                />
+              )}
             </div>
 
             {variable.inputType === 'dropdown' && (

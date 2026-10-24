@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import type { LibraryViewMode } from './types';
 
 interface LibraryHeaderProps {
+  title: string;
   canCreatePrompt?: boolean;
   displayCount: number;
   onNewPrompt: () => void;
@@ -11,6 +12,7 @@ interface LibraryHeaderProps {
 }
 
 export function LibraryHeader({
+  title,
   canCreatePrompt = true,
   displayCount,
   onNewPrompt,
@@ -21,7 +23,7 @@ export function LibraryHeader({
     <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="text-xl font-bold text-[var(--color-text-main)]">
-          All Prompts
+          {title}
         </h1>
         <span className="text-sm text-[var(--color-text-muted)]">
           {displayCount} prompts

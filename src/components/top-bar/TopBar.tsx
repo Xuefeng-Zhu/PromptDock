@@ -9,6 +9,7 @@ import type { AppMode, AuthUser, SyncStatus } from '../../types/index';
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface TopBarProps {
+  isLibraryScreen?: boolean;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onCommandPaletteOpen: () => void;
@@ -42,6 +43,7 @@ function toBadgeStatus(status: SyncStatus): 'local' | 'synced' | 'offline' {
  * with ⌘K shortcut hint, sync status badge, and account icon.
  */
 export function TopBar({
+  isLibraryScreen = true,
   searchQuery,
   onSearchChange,
   onCommandPaletteOpen,
@@ -99,6 +101,7 @@ export function TopBar({
 
       <div className="col-span-full flex min-w-0 md:order-2 md:col-span-1 md:flex-1 md:justify-center">
         <TopBarSearchTrigger
+          isLibraryScreen={isLibraryScreen}
           searchQuery={searchQuery}
           onSearchChange={onSearchChange}
           onCommandPaletteOpen={onCommandPaletteOpen}

@@ -123,15 +123,16 @@ export function usePromptImportExport() {
     }
   }, [clearMessages, prompts]);
 
-  const handleImport = useCallback(async () => {
-    if (duplicateResolutionInFlightRef.current) return;
+  /** A selected file bypasses the native chooser and uses the same validation and duplicate review. */
+  const handleImport = useCallback(async (file?: File) => {
+    if (duplicateResolutionInFlightRef.current || !canImport) return;
     clearMessages();
     setDuplicates([]);
     setPendingNonDuplicates([]);
     setIsImporting(true);
     try {
-      const content = await openFile();
-      if (!content) {
+      const content = file ? await file.text() : await openFile();
+      if (content === null) {
         return;
       }
 
@@ -160,7 +161,7 @@ export function usePromptImportExport() {
     } finally {
       setIsImporting(false);
     }
-  }, [clearMessages, importPrompts, prompts]);
+  }, [canImport, clearMessages, importPrompts, prompts]);
 
   const handleSkipAll = useCallback(async () => {
     if (!beginDuplicateResolution('skip')) return;

@@ -12,10 +12,19 @@ import type { LibraryViewMode } from './types';
 import { PromptGrid } from './PromptGrid';
 import { PromptFiltersPopover } from '../prompt-filters';
 import { PromptSortDropdown } from './PromptSortDropdown';
+import { computeTagCounts } from '../../utils/sidebar-counts';
+
+const LIBRARY_VIEW_TITLES = new Map([
+  ['library', 'All Prompts'],
+  ['favorites', 'Favorites'],
+  ['recent', 'Recent'],
+  ['archived', 'Archived'],
+]);
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface LibraryScreenProps {
+  activeSidebarItem?: string;
   prompts: PromptRecipe[];
   filterSourcePrompts?: PromptRecipe[];
   folders?: Folder[];
@@ -34,6 +43,7 @@ export interface LibraryScreenProps {
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function LibraryScreen({
+  activeSidebarItem = 'library',
   prompts,
   filterSourcePrompts,
   folders,
@@ -60,6 +70,16 @@ export function LibraryScreen({
     () => deriveTagFilterOptions(filterOptionSourcePrompts),
     [filterOptionSourcePrompts],
   );
+  const selectedTag = activeSidebarItem.slice(4);
+  const sidebarTags = useMemo(
+    () => Object.keys(computeTagCounts(filterOptionSourcePrompts)),
+    [filterOptionSourcePrompts],
+  );
+  const title = LIBRARY_VIEW_TITLES.get(activeSidebarItem) ?? (
+    activeSidebarItem.startsWith('tag-')
+      ? `#${sidebarTags.find((tag) => tag.toLowerCase() === selectedTag) ?? selectedTag}`
+      : folderFilterOptions.find((folder) => folder.value === activeSidebarItem)?.label ?? 'All Prompts'
+  );
 
   const sortedPrompts = useMemo(
     () => sortPromptsByFilter(prompts, appliedFilters.sortBy),
@@ -70,6 +90,7 @@ export function LibraryScreen({
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col p-4 md:p-6">
         <LibraryHeader
+          title={title}
           canCreatePrompt={canCreatePrompt}
           displayCount={displayCount}
           onNewPrompt={onNewPrompt}

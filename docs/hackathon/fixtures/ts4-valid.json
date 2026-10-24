@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-10-22T00:00:00.000Z",
+  "prompts": [
+    {
+      "title": "TS4 Fixture Recipe",
+      "body": "Fixture original {{name}}.",
+      "description": "Disposable test fixture",
+      "tags": [
+        "ts4-fixture"
+      ],
+      "favorite": false
+    }
+  ]
+}

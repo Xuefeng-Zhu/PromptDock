@@ -1,0 +1,1713 @@
+# PENDING DEPLOYMENT - NOT SAVED IN THE TESTSPRITE PORTAL
+# Based on the complete portal export with SHA-256 d0db15f653f3e93cc90f21f2f0823736b23bd2824373c6a03da66fd3e90e6431.
+# Requires the tested persistent upload controls before use.
+# Retains all 107 cases and every original assertion. Missing files/capabilities remain blockers.
+---
+useCases:
+- useCase: Local Onboarding
+  slug: ONB
+  testCases:
+  - id: ONB-001
+    priority: High
+    name: Start local onboarding and save a new prompt
+    description: Verifies first-use local onboarding, creation of a prompt, canceling a draft, and persistence after reload.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Open the prompt creation flow
+    - Fill the title field with TS4 Local Launch
+    - Fill the description field with TS4 onboarding prompt for local storage
+    - Fill the body field with TS4 launch body content for local persistence
+    - Cancel the draft
+    - Open the prompt creation flow again
+    - Fill the title field with TS4 Local Launch
+    - Fill the description field with TS4 onboarding prompt for local storage
+    - Fill the body field with TS4 launch body content for local persistence
+    - Save the prompt
+    - Reload the page
+    - assert: Verify the saved prompt is shown in the library with the exact stored title, description, and body after reload
+  - id: ONB-002
+    priority: High
+    name: Edit, duplicate, favorite, archive, and restore a prompt
+    description: Verifies editing, duplicating into the local workspace, favorite membership changes, archive/restore behavior, and visibility across active views.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Open an existing prompt from the library
+    - Edit the prompt title to TS4 Edited Prompt
+    - Edit the prompt description to TS4 edited description
+    - Save the changes
+    - Duplicate the prompt into the local workspace if a destination dialog appears
+    - Mark the prompt as a favorite
+    - Archive the prompt
+    - Open the Favorites view
+    - Open the Archived view
+    - Restore the archived prompt
+    - assert: Verify the edited prompt appears in Favorites before archiving and is excluded from the active library while archived, then returns after restore
+  - id: ONB-003
+    priority: High
+    name: Create folders and tags, then search and sort prompts
+    description: Verifies folder and tag assignment from the editor, filtered membership counts, tag removal, search recovery, and list or grid sorting behavior.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Open Add folders and create a folder named TS4 Folder Alpha in the library
+    - Open the prompt editor for a new prompt
+    - Fill the title field with TS4 Folder Tag Prompt
+    - Fill the description field with TS4 folder and tag coverage
+    - Fill the body field with Folder and tag regression body.
+    - Assign the prompt to the folder TS4 Folder Alpha
+    - Add a tag named TS4 Tag One
+    - Add a second tag named TS4 Tag Two
+    - Save the prompt
+    - Open the folder view for TS4 Folder Alpha
+    - Open the tag filter for TS4 Tag One
+    - Remove the TS4 Tag Two tag from the prompt
+    - Search for TS4 Folder Tag Prompt within the same library search field
+    - Clear the SAME header library searchbox using real keyboard select-all and Backspace/Delete. Immediately verify its actual value is empty before selecting another scope; do not clear an independently queried palette instead.
+    - Select All Prompts in the library
+    - Switch between list and grid views
+    - Change the sorting option
+    - assert: Verify the prompt appears in the assigned folder and tag filters, the removed tag no longer appears, list and grid views both show the saved record, and the sort change keeps the library accessible without losing the record
+    - assert: Verify clearing the same library search field restores all matches within the selected folder and tag scope, with the search field empty afterward
+    - assert: Verify selecting All Prompts restores the full library and the saved record is visible again
+  - id: ONB-004
+    priority: Medium
+    name: Use the command palette from the keyboard and search header
+    description: Verifies the command palette opens from keyboard shortcuts or header search, supports navigation, selection, and escape to close.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Press Cmd or Ctrl plus K
+    - Type a library search term into the command palette
+    - Use the arrow keys to highlight a result
+    - Press Enter to open the highlighted result
+    - Press Escape to close the palette
+    - Use the header search field to open search again if it opens the palette
+    - Type a query with no matches
+    - Press Escape to close the no-results state
+    - assert: Verify the palette opens, a matching result can be selected with the keyboard, the no-results state is shown for an unmatched query, and Escape closes the palette
+  - id: ONB-005
+    priority: High
+    name: Save and reload a template prompt with variable defaults and preview
+    description: Verifies template metadata, default variable values, single-input behavior for repeated tokens, exact preview text, and copy behavior after reload.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Create a new prompt with the template title TS4 Template Prompt
+    - 'Set body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. Configure topic as Text with saved Default value Launch; configure tone as Dropdown with options Friendly, Professional, Concise and saved Default value Friendly.'
+    - Save the prompt with topic defaulted to Launch and tone defaulted to Friendly
+    - Reload the page
+    - Open the saved prompt after reload and verify original metadata and saved defaults. Open Cmd/Ctrl+K, search TS4 Template Prompt and select it to open Fill Variables.
+    - Fill the topic input with Launch Update
+    - Select Professional in the tone dropdown
+    - Copy the generated output
+    - assert: 'Verify there is one topic input for the repeated token and the modal preview is exactly Write Launch Update in Professional. Repeat: Launch Update. After Copy to Clipboard, open a disposable New Prompt draft and paste into Body with Cmd/Ctrl+V; assert exactly the same complete text, then Cancel without saving. A copy toast is insufficient.'
+  - id: ONB-006
+    priority: High
+    name: Render literal special characters in a template prompt
+    description: Verifies literal rendering of special characters, HTML-like text, emoji, and braces in the editor, preview, inspector, fill modal, and clipboard.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Create a new prompt with the title TS4 Literal Prompt
+    - "Set body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. In Variables definitions set topic Default value exactly $& <tag> 中文 \U0001F600 {{tone}}; configure tone as Dropdown with options Friendly, Professional, Concise and Default value Professional. Verify editor Preview Result is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}."
+    - Save the prompt
+    - "Open TS4 Literal Prompt and verify the inspector renders exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}."
+    - "Fill the topic input with $& <tag> 中文 \U0001F600 {{tone}}"
+    - Select Professional in the tone dropdown
+    - "Open Ctrl+K (Cmd+K on macOS), search TS4 Literal Prompt, select the result to open Fill Variables. Verify the saved defaults and dropdown selection produce exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}."
+    - Click Copy to Clipboard in Fill Variables. After it closes, open New Prompt, CLICK the Body textarea to focus it, and use native keyboard Cmd+V on macOS or Ctrl+V on Linux/Windows to paste once. Verify Body actually receives text; do not paste into Title or header search and do not substitute a toast for the clipboard value.
+    - assert: "Verify the pasted body is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Preserve every symbol, Chinese character, emoji and literal {{tone}} without recursive replacement or HTML interpretation. Do not rely on a copy toast. Cancel the verification draft without saving."
+  - id: ONB-007
+    priority: High
+    name: Prevent constructor and proto placeholder regression
+    description: Verifies the prompt remains stable with constructor and __proto__ placeholders, defaults are empty, save and reload work, and the generated output is exact.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Create a new prompt with the title TS4 Regression Prompt
+    - Set body exactly Use {{constructor}} and {{__proto__}}. Keep both defaults empty, Save, then open Cmd/Ctrl+K and choose TS4 Regression Prompt to open Fill Variables.
+    - In Fill Variables verify both variable inputs are initially empty.
+    - In Fill Variables verify the rendered preview still shows exactly Use {{constructor}} and {{__proto__}}. before filling values, without inherited object values or a crash.
+    - In Fill Variables verify Copy to Clipboard is disabled before required values are entered.
+    - Cancel Fill Variables and verify the recipe is already saved in the library.
+    - Reload the page
+    - Open the saved recipe after reload and verify the unresolved body is still Use {{constructor}} and {{__proto__}}. Open Cmd/Ctrl+K and select TS4 Regression Prompt to open Fill Variables again.
+    - Fill the constructor field with Ada
+    - Fill the __proto__ field with literal
+    - Verify the filled modal preview is exactly Use Ada and literal., then click Copy to Clipboard.
+    - assert: Verify no crash occurred and the previously inspected preview is exactly Use Ada and literal. Open a disposable New Prompt draft, paste clipboard with Cmd/Ctrl+V into Body and assert the complete text is exactly Use Ada and literal. Cancel the verification draft without saving. Do not count a toast as clipboard evidence.
+  - id: ONB-008
+    priority: Medium
+    name: Export active prompts and reimport without duplicates
+    description: Verifies JSON export of active prompts, schema metadata, duplicate handling on reimport, overwrite of a modified disposable duplicate, and recovery after malformed imports.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Create and save a separate active recipe titled TS4 Export Metadata with Body exactly Write {{topic}} in {{tone}}., Description Exact export metadata, and tag ts4-export. In Variables definitions set topic to Textarea with saved Default value Launch newline Campaign (a real newline), and tone to Dropdown with options Friendly, Professional and saved Default value Friendly. Verify the saved controls before continuing.
+    - Create and save a disposable plain recipe titled TS4 Archived File Check with Body exactly Archived export exclusion. Archive this recipe through its prompt actions. Verify it appears in Archived and is excluded from All Prompts before opening Settings.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the actual downloaded JSON: version must be 1.0, exportedAt must be present, and prompts must contain every active baseline record with exact body, description, tags and variable metadata. Verify TS4 Archived File Check is absent, and record the full active prompt count/content before importing.'
+    - Select the actual exported JSON download in the persistent Choose JSON file input. Choose Skip duplicates. Select that SAME unmodified downloaded file again and choose Skip duplicates again. Verify no active recipe, body, tag or variable metadata changed and no duplicate copies were created after either import. Keep using actual downloaded bytes, not a reconstructed JSON string.
+    - Select the attached Test File ts4-modified.json through Choose JSON file, using its actual available attachment path. Verify its incoming records are the modified TS4 Fixture Recipe and TS4 Imported New, then choose Overwrite duplicates. The disposable recipe must become Body Fixture updated {{name}}., Description Modified disposable fixture, tags ts4-fixture and updated. The one new recipe must have Body New unique fixture body. Do not overwrite any seeded recipe; do not substitute ts4-long.json. If the named attachment is unavailable, report its missing filename and stop.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select actual attached ts4-bad-json.json through Choose JSON file and verify the import error and no persisted changes before proceeding. Then select actual attached ts4-bad-schema.json and verify schema rejection and no persisted changes. Keep both files unchanged; do not approximate malformed data in a different UI. Missing required attachments remain blockers.
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the active library excludes archive content from export, duplicate prompts are not multiplied, the overwritten disposable prompt does not create an extra record, the new record persists after reload, and malformed or invalid JSON shows an import error without partial mutations
+  - id: ONB-009
+    priority: Medium
+    name: Handle long prompt content, search empty states, and favorites or archive recovery
+    description: Verifies long multiline content round-trips exactly, unsupported placeholder names remain literal, and empty-state recovery for search, favorites, and archived views.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context
+    - Start locally from the onboarding screen if it appears
+    - Create a new recipe with title TS4 Long ONB009.
+    - Open New Prompt and set Title to TS4 Long ONB009. Use the persistent visible file input labelled Load text file to select the actual attached ts4-exact-12k.txt file. This control loads the COMPLETE UTF-8 bytes directly into the unsaved Body. Do not upload the text file to From JSON or Settings JSON import. Do not transcribe a truncated file preview, manually regenerate repetitions, accept an excerpt, or substitute a short sample. Verify the complete Body equals the source before saving. The source has 12,288 UTF-8 bytes and SHA-256 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; these supplied constants alone are not a computed comparison of the saved Body. Report missing attachment or comparison capability as a blocker.
+    - Verify the original source already contains unsupported {{bad-name!}} punctuation and leave it exactly unchanged; do not append or transform the fixture.
+    - Save the prompt
+    - Reload the page
+    - Use keyboard Tab to focus the HEADER library searchbox, search TS4 unmatched 918274 and verify no results. Clear the SAME header input with select-all and Backspace/Delete and verify it is empty before changing views.
+    - Open the Favorites view when it is empty
+    - Open the Archived view when it is empty
+    - Return explicitly to All Prompts with the header query empty and no folder/tag filters selected.
+    - assert: Compare the entire saved Body after reload with the attached ts4-exact-12k.txt exactly, including unsupported {{bad-name!}} remaining literal. Verify all empty search, Favorites and Archived states can be exited back to the full baseline library and saved recipe. An excerpt or toast is insufficient.
+  - id: ONB-010
+    priority: Medium
+    name: Use the mobile layout to create and execute a prompt
+    description: Verifies the mobile viewport shows the drawer and settings flow, supports creating and editing prompts, allows scrolling through long content, and keeps primary actions accessible without horizontal overflow.
+    steps:
+    - Navigate to the app on a fresh anonymous browser context at a mobile viewport
+    - Verify the viewport width matches a mobile layout
+    - Start locally from the onboarding screen if it appears
+    - Open the navigation drawer
+    - Open Settings from the drawer
+    - Go back from Settings
+    - Dismiss the drawer with Escape
+    - Create a new prompt with the title TS4 Mobile Prompt
+    - Fill a long prompt body that requires scrolling to review
+    - Save the prompt
+    - Open the saved prompt
+    - Fill a value into the prompt variables
+    - Copy the generated output
+    - Dismiss any helper or preview overlay if present
+    - assert: Verify primary actions remain accessible on mobile, the prompt content can be scrolled and edited, and there is no horizontal overflow that blocks use of the app
+- useCase: Prompt Library Browsing
+  slug: LIB
+  testCases:
+  - id: LIB-001
+    priority: High
+    name: Browse seeded library views
+    description: Validate the seeded prompt library is available after local onboarding and each core library view shows the expected prompt set.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Wait for the main library to load
+    - Open the Favorites view
+    - Open the Recent view
+    - Open the Archived view
+    - Return to the All Prompts view
+    - assert: Verify the seeded prompt library is displayed in the main view with prompt cards present
+    - assert: Verify the Favorites, Recent, and Archived views each display their expected empty-or-populated library state
+  - id: LIB-002
+    priority: High
+    name: Create a prompt and persist it after reload
+    description: Validate that a new prompt can be created with title, description, and body, then saved and restored exactly after reload.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Start creating a new prompt
+    - Fill in a unique TS4-prefixed title
+    - Fill in a unique TS4-prefixed description
+    - Fill in a unique TS4-prefixed prompt body
+    - Save the prompt
+    - Reload the page
+    - Open the saved prompt from the library
+    - assert: Verify the saved prompt is present in the library after reload
+    - assert: Verify the title, description, and body are restored exactly as saved
+  - id: LIB-003
+    priority: Medium
+    name: Cancel a draft and keep the library unchanged
+    description: Validate that canceling a prompt draft discards the unsaved draft and leaves the library unchanged.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Start creating a new prompt
+    - Fill in a unique TS4-prefixed title
+    - Fill in a unique TS4-prefixed description
+    - Fill in a unique TS4-prefixed prompt body
+    - Cancel the draft
+    - Return to the main library view
+    - assert: Verify the unsaved draft does not appear as a saved prompt
+    - assert: Verify the main library remains unchanged after canceling the draft
+  - id: LIB-004
+    priority: High
+    name: Edit, duplicate, favorite, archive, and restore a prompt
+    description: Validate the core prompt management actions work end to end and update library membership correctly.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Create and save a unique TS4-prefixed prompt
+    - Open the prompt for editing
+    - Update the prompt title and body
+    - Save the edited prompt
+    - Duplicate the prompt into the local workspace if a destination dialog appears
+    - Mark the prompt as a favorite
+    - Archive the prompt
+    - Open the Favorites view
+    - Open the Archived view
+    - Restore the archived prompt
+    - Open the All Prompts view
+    - assert: Verify the edited prompt, its duplicate, and the archive state are reflected in the library views
+    - assert: Verify the prompt appears in Favorites when favorited, is excluded from active views when archived, and returns after restore
+  - id: LIB-005
+    priority: High
+    name: Create folders and tags, then filter and search prompts
+    description: Validate folder and tag assignment from the editor and confirm list filtering, counts, and search recovery work correctly.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Create and save a unique TS4-prefixed prompt
+    - Open the saved prompt for editing
+    - Assign the prompt to a new folder
+    - Add one or more tags through the editor
+    - Save the prompt
+    - Open the folder view for the assigned folder
+    - Open the tag filter for one of the assigned tags
+    - Search for the prompt using its title
+    - Focus the SAME header library searchbox that contains the title query. Send real keyboard Select All (Control+A, or Meta+A on macOS) then Backspace. Do not substitute an empty fill or a DOM value assignment. Verify the query is empty and all matches in the selected tag/folder scope return. Then explicitly select sidebar All Prompts and verify full-library recovery; clearing a query alone does not reset tag/folder selection.
+    - assert: Verify the prompt appears in the assigned folder and tag-filtered views with matching membership counts
+    - assert: Verify search returned the saved recipe, clearing the query restored all matches in its selected scope, and explicitly selecting All Prompts restored the full broader library with the saved recipe still present.
+  - id: LIB-006
+    priority: Medium
+    name: Switch between list and grid views and sort prompts
+    description: Validate the library can switch layouts and preserve prompt visibility while sorting changes the ordering of the list.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Open the All Prompts view
+    - Switch to grid view
+    - Switch back to list view
+    - Change the sort order
+    - Open a prompt from the sorted list
+    - assert: Verify prompts remain visible when switching between list and grid views
+    - assert: Verify the list order updates according to the selected sort mode
+  - id: LIB-007
+    priority: High
+    name: Search the library with the command palette
+    description: Validate the command palette supports prompt search, keyboard navigation, selection, and dismissal.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Open the command palette from the header search or keyboard shortcut
+    - Search for a known prompt title
+    - Use the arrow keys to highlight a matching result
+    - Press Enter to open the highlighted result
+    - Open the command palette again
+    - Search for a term with no matches
+    - Press Escape to dismiss the palette
+    - assert: Verify the matching prompt opens from the palette
+    - assert: Verify the palette shows a no-results state for an unmatched query and closes on Escape
+  - id: LIB-008
+    priority: Medium
+    name: Use the command palette from header search
+    description: Validate the header search can open the command palette and support keyboard selection of a result.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Ensure the header library query is empty. CLICK the empty header search field and immediately verify the Command palette DIALOG opens. Operate the search textbox INSIDE that dialog, not the background header input. If it does not open, this header-trigger assertion must fail; do not substitute another trigger to pass it.
+    - Inside the Command palette dialog search Email Draft, a seeded VARIABLE recipe. Verify the matching result is shown in the dialog before using keyboard selection.
+    - Use the arrow keys to move between results
+    - With the palette dialog active, press Enter on Email Draft to open Fill Variables. A plain recipe would execute Copy; this variable fixture must open the modal.
+    - assert: Verify the empty header-search click opened Command palette and its keyboard-selected Email Draft result opened Fill Variables.
+    - assert: Verify keyboard selection changes the active result before opening it
+  - id: LIB-009
+    priority: High
+    name: Save a template prompt and restore it after reload
+    description: Validate template prompts preserve variable metadata, preview output, and saved content exactly after reload.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Create a prompt with the template body using topic and tone variables
+    - Set the default topic to Launch
+    - Set the tone dropdown default to Friendly
+    - Save the template prompt
+    - Reload the page
+    - Open the saved template prompt
+    - assert: Verify the saved template metadata and variable defaults are restored after reload
+    - assert: Verify the live preview and prompt body reflect the template exactly with a single topic input despite the repeated token
+  - id: LIB-010
+    priority: High
+    name: Use literal variable-like text without recursive replacement
+    description: Validate literal placeholder-like content renders exactly and does not get interpreted as HTML or recursive variables.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - 'Create a prompt titled TS4 Library Literal with body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. Keep the unresolved placeholders in the saved template.'
+    - In Variables definitions configure tone as Dropdown with options Friendly, Professional, Concise and Default value Professional.
+    - "In Variables definitions set topic Default value exactly $& <tag> 中文 \U0001F600 {{tone}}. Verify editor Preview Result exactly equals Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}."
+    - Save the prompt
+    - "Select TS4 Library Literal and verify the inspector body exactly equals Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Then open Ctrl+K (Cmd+K on macOS), search TS4 Library Literal and select the result to open Fill Variables. Verify the modal preview matches exactly."
+    - Click Copy to Clipboard in the modal. Open a new prompt draft and paste with Ctrl+V (Cmd+V on macOS) into its body to expose actual clipboard content.
+    - assert: "Verify the pasted body exactly equals Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. A copy toast alone cannot establish equality."
+    - assert: Verify the literal $&, <tag>, Chinese, emoji and {{tone}} are preserved without HTML interpretation or recursive substitution. Cancel the verification draft without saving.
+  - id: LIB-011
+    priority: High
+    name: Handle constructor and proto variable names safely
+    description: Validate prompts containing constructor and proto variable names save, reload, and render without crashes or unsafe placeholder expansion.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Create a recipe titled TS4 Safe LIB011 with body exactly Use {{constructor}} and {{__proto__}}. Keep both defaults empty, Save, then Cmd/Ctrl+K and select this recipe to open Fill Variables.
+    - In Fill Variables verify both inputs are initially empty and the preview is exactly Use {{constructor}} and {{__proto__}}., with no inherited object value or crash.
+    - In Fill Variables verify Copy to Clipboard is disabled while either required value is empty. Do not perform this validation on inspector Copy, which permits unresolved template text.
+    - Cancel Fill Variables. Verify the recipe was saved with its unresolved body and empty defaults; do not fill execution values before this initial persistence check.
+    - Reload the page
+    - After reload, Cmd/Ctrl+K and select TS4 Safe LIB011 to reopen Fill Variables. Fill constructor with Ada.
+    - In Fill Variables fill __proto__ with literal; verify the preview becomes exactly Use Ada and literal.
+    - Click Copy to Clipboard in Fill Variables, then open a disposable New Prompt draft and paste into Body with Cmd/Ctrl+V.
+    - assert: Verify the app does not crash while editing or copying the prompt
+    - assert: Verify the previously inspected preview and complete pasted Body are exactly Use Ada and literal., with safe single-pass substitution. Cancel the disposable draft without saving.
+  - id: LIB-012
+    priority: High
+    name: Export active prompts and import them back safely
+    description: Validate active prompts can be exported and reimported, duplicates are skipped, and valid imports recover after invalid JSON or schema attempts.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Create and save a separate active recipe titled TS4 Export Metadata with Body exactly Write {{topic}} in {{tone}}., Description Exact export metadata, and tag ts4-export. In Variables definitions set topic to Textarea with saved Default value Launch newline Campaign (a real newline), and tone to Dropdown with options Friendly, Professional and saved Default value Friendly. Verify the saved controls before continuing.
+    - Create and save a disposable plain recipe titled TS4 Archived File Check with Body exactly Archived export exclusion. Archive this recipe through its prompt actions. Verify it appears in Archived and is excluded from All Prompts before opening Settings.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the actual downloaded JSON: version must be 1.0, exportedAt must be present, and prompts must contain every active baseline record with exact body, description, tags and variable metadata. Verify TS4 Archived File Check is absent, and record the full active prompt count/content before importing.'
+    - Select the actual exported JSON download in the persistent Choose JSON file input. Choose Skip duplicates. Select that SAME unmodified downloaded file again and choose Skip duplicates again. Verify no active recipe, body, tag or variable metadata changed and no duplicate copies were created after either import. Keep using actual downloaded bytes, not a reconstructed JSON string.
+    - Select the attached Test File ts4-modified.json through Choose JSON file, using its actual available attachment path. Verify its incoming records are the modified TS4 Fixture Recipe and TS4 Imported New, then choose Overwrite duplicates. The disposable recipe must become Body Fixture updated {{name}}., Description Modified disposable fixture, tags ts4-fixture and updated. The one new recipe must have Body New unique fixture body. Do not overwrite any seeded recipe; do not substitute ts4-long.json. If the named attachment is unavailable, report its missing filename and stop.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select actual attached ts4-bad-json.json through Choose JSON file and verify the import error and no persisted changes before proceeding. Then select actual attached ts4-bad-schema.json and verify schema rejection and no persisted changes. Keep both files unchanged; do not approximate malformed data in a different UI. Missing required attachments remain blockers.
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify active prompts are exported without archived prompts and reimported prompts persist after reload
+    - assert: Verify duplicates are skipped or overwritten as intended, invalid imports do not create partial records, and valid import recovery succeeds
+  - id: LIB-013
+    priority: Medium
+    name: Render a large prompt and preserve search and empty states
+    description: Validate the app can store and restore a long prompt containing multiline text, quotes, braces, dollar signs, and Unicode, while empty search and empty library states recover correctly.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context
+    - Choose local onboarding to start using the app locally
+    - Open New Prompt and set Title to TS4 Long LIB013. Use the persistent visible file input labelled Load text file to select the actual attached ts4-exact-12k.txt file. This control loads the COMPLETE UTF-8 bytes directly into the unsaved Body. Do not upload the text file to From JSON or Settings JSON import. Do not transcribe a truncated file preview, manually regenerate repetitions, accept an excerpt, or substitute a short sample. Verify the complete Body equals the source before saving. The source has 12,288 UTF-8 bytes and SHA-256 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; these supplied constants alone are not a computed comparison of the saved Body. Report missing attachment or comparison capability as a blocker.
+    - Save the prompt
+    - Reload the page
+    - Open the saved prompt
+    - Focus the header LIBRARY searchbox via keyboard Tab (do not click its empty value, which opens palette), search TS4 unmatched 918274 and verify the library no-results state.
+    - Clear that SAME header library input via select-all and Backspace/Delete and verify it is empty before opening other scopes.
+    - Open the Favorites view when empty
+    - Open the Archived view when empty
+    - assert: Open Edit on TS4 Long LIB013 after reload and compare its entire saved Body with the attached ts4-exact-12k.txt source exactly. Preserve all symbols and unsupported {{bad-name!}} literally. Cancel Edit without changes. A screenshot or approximate length is insufficient.
+    - assert: Verify no-match search and empty Favorites/Archived states were visible with the intended query/scope. Explicitly select All Prompts with the header query empty and verify the saved long recipe and full baseline list are restored.
+- useCase: Search and Empty States
+  slug: SEA
+  testCases:
+  - id: SEA-001
+    priority: High
+    name: Recover from empty search results
+    description: Validates that searching filters prompts and the empty state can be cleared to restore results.
+    steps:
+    - Navigate to PromptDock and start locally if onboarding appears. Select All Prompts and record the baseline visible prompt titles and count.
+    - Use keyboard Tab to focus the header LIBRARY searchbox without clicking the empty field (an empty-field click opens Command palette). Type TS4 no match 918274. Verify this header value; if a palette is open dismiss it first and focus the header by keyboard.
+    - assert: Verify the library header query is TS4 no match 918274, All Prompts is selected, and No prompts found is displayed for the library results.
+    - Clear the SAME header library searchbox using select-all and Backspace/Delete. Verify its value is empty and no independent Command palette dialog is hiding a different query.
+    - assert: Verify All Prompts restores the full baseline prompt titles and count after clearing that same library query.
+  - id: SEA-002
+    priority: High
+    name: Open the search palette and dismiss it
+    description: Validates that the keyboard shortcut opens the command palette, supports no-results search, and closes with Escape.
+    steps:
+    - Navigate to the PromptDock app and start locally if the onboarding screen appears.
+    - Press Cmd/Ctrl+K to open the command palette.
+    - Enter a search term that does not match any command or prompt.
+    - assert: Verify an empty state is shown in the palette search results.
+    - Press Escape.
+    - assert: Verify the command palette is closed.
+  - id: SEA-003
+    priority: High
+    name: Select a search result from the command palette
+    description: Validates that palette search results can be navigated with arrows and chosen with Enter.
+    steps:
+    - Navigate to the PromptDock app in a fresh anonymous context and start locally if onboarding appears.
+    - Open New Prompt. Set Title to TS4 Arrow Choice Alpha and Body to exactly Alpha {{topic}}.
+    - In Variables definitions fill Default value for topic with Launch. This must be the saved default, not the transient Live Preview input. Verify it displays Launch before continuing.
+    - Click Save to save Alpha.
+    - Open New Prompt. Set Title to TS4 Arrow Choice Beta and Body to exactly Beta {{topic}}.
+    - In THIS Beta editor fill Default value for topic with Launch. Verify Beta default displays Launch and the preview shows Beta Launch. before saving. The Alpha default does not carry over to Beta.
+    - Click Save to save Beta.
+    - Open the command palette with Ctrl+K (Cmd+K on macOS), focus its search field and search exactly TS4 Arrow Choice. Verify BOTH Alpha and Beta appear.
+    - With focus in the palette search field press ArrowUp twice to highlight the first result. Record that result title.
+    - Press ArrowDown exactly once. Verify the highlighted result changes to the other title; record the new title. Do not click a result.
+    - Press Enter with search still focused. Verify Fill Variables opens for the title highlighted AFTER ArrowDown, different from the previous title. Verify topic is Launch and its exact corresponding preview is Alpha Launch. or Beta Launch.
+    - assert: Verify the selected result is opened or applied.
+  - id: SEA-004
+    priority: High
+    name: Search prompts by title, description, and tag
+    description: Validates that text search finds matching prompts across prompt content and tags, with matching results shown in the list.
+    steps:
+    - Navigate to the PromptDock app and start locally if the onboarding screen appears.
+    - Enter a search term that matches a prompt title, description, or tag.
+    - assert: Verify only matching prompts are shown in the results.
+  - id: SEA-005
+    priority: Medium
+    name: Recover from empty Favorites and Archived views
+    description: Validates that empty library views show a recoverable empty state and that results return after restoring matching items.
+    steps:
+    - Navigate to the PromptDock app and start locally if the onboarding screen appears.
+    - Open the Favorites view.
+    - assert: Verify an empty state is shown when no favorites are available.
+    - Open the Archived view.
+    - assert: Verify an empty state is shown when no archived prompts are available.
+- useCase: Prompt Editor
+  slug: EDT
+  testCases:
+  - id: EDT-001
+    priority: High
+    name: Complete first-use onboarding and save a new prompt
+    description: Validates anonymous first-use onboarding, creating a prompt with required fields, cancelling a draft, saving it, and confirming exact persistence after reload.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open the new prompt editor
+    - Fill in the title field with TS4 Launch Checklist
+    - Fill in the description field with TS4 onboarding and save flow coverage
+    - Fill in the body field with TS4 prompt body content for onboarding persistence
+    - Cancel the draft without saving
+    - Open the new prompt editor again
+    - Fill in the title field with TS4 Launch Checklist
+    - Fill in the description field with TS4 onboarding and save flow coverage
+    - Fill in the body field with TS4 prompt body content for onboarding persistence
+    - Save the prompt
+    - Reload the page
+    - assert: Verify the saved prompt appears in the library with the exact title, description, and body content preserved after reload
+    - assert: Verify the prompt remains available in the same local workspace after reload
+  - id: EDT-002
+    priority: High
+    name: Edit, duplicate, favorite, archive, and restore a prompt
+    description: Validates core prompt management actions including editing, duplicating into the local workspace, favoriting, archiving, and restoring with membership changes reflected in library views.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open an existing prompt from the library
+    - Edit the title, description, and body of the prompt with TS4 edit flow content
+    - Save the edited prompt
+    - Duplicate the prompt into the local workspace if a destination dialog appears
+    - Mark the prompt as a favorite
+    - Open the favorites view
+    - Archive the prompt from its details or editor view
+    - Open the archived view
+    - Restore the prompt from archive
+    - Open the active prompts view
+    - assert: Verify the edited prompt is present with the updated saved content and appears in Favorites before archiving
+    - assert: Verify the prompt is excluded from active views while archived and returns to active views after restore
+  - id: EDT-003
+    priority: High
+    name: Assign folders and tags and verify search and sort behavior
+    description: Validates creating and assigning folders and tags from the editor, then confirming filtered membership, counts, search recovery, and list or grid sorting behavior.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Create a disposable recipe titled TS4 QA Membership with description Folder tag regression and body Folder and tag regression body. Keep the editor open to assign folder and tags.
+    - Create and assign a new folder from the editor
+    - Add multiple tags from the editor
+    - Save the prompt
+    - Open the folder-filtered view
+    - Open the tag-filtered view for one of the assigned tags
+    - Remove one assigned tag in the editor and save again
+    - Within All Prompts focus the HEADER library searchbox via keyboard Tab, avoiding clicking the empty field which opens Command palette. Search TS4 QA Membership, verify it appears, then search TS4 no match 918274 and verify the library empty state.
+    - Clear the SAME header library searchbox using select-all and Backspace/Delete, verify its actual value is empty, then explicitly select All Prompts. Do not clear a different palette query.
+    - Switch between list and grid views
+    - assert: Verify the prompt appears in the assigned folder and tag memberships with counts reflecting the saved relationships
+    - assert: Verify removed tags no longer appear on the prompt and search recovers the prompt after an empty result state
+  - id: EDT-004
+    priority: Medium
+    name: Use the command palette to search and select prompts
+    description: Validates opening the command palette, searching for prompts, navigating results with keyboard arrows, selecting with Enter, and dismissing with Escape.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose local onboarding if it appears. Within THIS case create a recipe titled TS4 Palette EDT-004 with body Use {{topic}}. and saved topic Default value Launch; Save. Do not assume another case created a TS4 fixture.
+    - Open Cmd/Ctrl+K (Cmd+K on macOS) to open Command palette. Use only the search input inside this dialog.
+    - Search TS4 Palette EDT-004 inside Command palette and verify the saved variable recipe is a matching result.
+    - Use the arrow keys to move through the matching results
+    - Press Enter to execute the selected VARIABLE recipe and verify Fill Variables opens with topic Launch. A plain recipe would copy by default; this fixture intentionally has a variable.
+    - Press Escape to dismiss Fill Variables, then open Cmd/Ctrl+K again.
+    - Inside Command palette replace its query with TS4 unmatched palette query 918274 and verify No prompts found before proceeding.
+    - Press Escape to dismiss the palette
+    - assert: Verify the saved variable recipe opened Fill Variables from keyboard selection, with its correct default and rendered preview.
+    - assert: Verify the unmatched query showed the palette no-results state before Escape, and Escape then dismissed that dialog cleanly without changing the library search.
+  - id: EDT-005
+    priority: High
+    name: Save a template prompt with metadata and copy the rendered output
+    description: Validates the template prompt flow with default variable values, metadata persistence after reload, live preview rendering, and copy behavior with required values present and absent.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open a new prompt editor
+    - Fill in the title field with TS4 Topic Tone Template
+    - Fill in the description field with Template prompt for topic and tone rendering
+    - 'Fill in the body field with Write {{topic}} in {{tone}}. Repeat: {{topic}}.'
+    - Set the topic variable default to Launch
+    - Set the tone variable default to Friendly
+    - Save the prompt
+    - Reload the page
+    - Open the saved prompt and verify its original title, description, defaults, and unresolved template body are unchanged
+    - Open Cmd/Ctrl+K and choose the saved recipe to open Fill Variables
+    - In Fill Variables, click the topic input, use native keyboard Control+A then Backspace (Command+A on macOS), and blur it with Tab. Verify its actual value is the empty string and immediately assert Copy to Clipboard is disabled before refilling. Do not use an empty text-entry operation that leaves the default value unchanged.
+    - Fill topic Launch and tone Friendly
+    - 'Immediately verify exactly Write Launch in Friendly. Repeat: Launch. in the rendered preview, and one topic input for both tokens'
+    - Click Copy to Clipboard in the Fill Variables dialog
+    - Open New Prompt and paste the clipboard into Body with keyboard paste
+    - 'Immediately verify Body is exactly Write Launch in Friendly. Repeat: Launch.'
+    - Cancel this disposable draft without saving
+    - Reload the page and reopen the original recipe
+    - assert: Verify the prompt metadata and exact live preview persist after reload, including a single topic input despite the repeated token
+    - assert: 'Verify Copy to Clipboard is disabled in Fill Variables when the topic is empty, then the rendered preview is exactly Write Launch in Friendly. Repeat: Launch., and the clipboard round-trip pasted into the disposable draft matches that text exactly'
+    - assert: Verify the original title, description, defaults, and unresolved template body are still unchanged after reopening the saved recipe
+  - id: EDT-006
+    priority: High
+    name: Render literal special characters and variable names without recursive replacement
+    description: Validates that literal text containing special characters, Unicode, emoji, and placeholder-like sequences renders exactly in the editor, inspector, fill modal, and clipboard without HTML interpretation or recursive substitution.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open a new prompt editor
+    - Fill in the title field with TS4 Literal Token Safety
+    - 'Fill the body with the unresolved template exactly: Write {{topic}} in {{tone}}. Repeat: {{topic}}. Do not pre-expand the template or replace its placeholders before saving.'
+    - "In Variables definitions, set the topic Default value to exactly $& <tag> 中文 \U0001F600 {{tone}}. This is literal input, including braces; do not create another variable from this value."
+    - "In Variables definitions, set the tone Default value to Professional. Verify the editor Preview Result is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. The <tag> characters must appear as text, not HTML."
+    - Save the prompt
+    - "Select the saved prompt and verify the inspector body equals Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Then open the command palette with Ctrl+K (Cmd+K on macOS), search TS4 Literal Token Safety, choose it, and verify the Fill Variables modal opens with the saved defaults."
+    - "In Fill Variables verify the preview exactly equals Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Click Copy to Clipboard. Open a new prompt draft and paste with Ctrl+V (Cmd+V on macOS) into the body to expose the actual clipboard content."
+    - assert: "Verify the pasted body is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Verify the literal $&, angle brackets, Chinese, emoji, and {{tone}} remain unchanged. A copy confirmation toast alone is insufficient."
+    - assert: Cancel the clipboard verification draft without saving. Verify the original saved prompt remains in the library with its unresolved template and exact literal rendering, and no extra verification prompt was saved.
+  - id: EDT-007
+    priority: High
+    name: Handle constructor and __proto__ placeholders safely
+    description: Validates that prompts using constructor and __proto__ placeholders open safely with empty defaults, keep placeholders unchanged until filled, and render exact copied output without crashes.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open a new prompt editor
+    - Fill in the title field with TS4 Constructor Safety
+    - Fill in the body field with Use {{constructor}} and {{__proto__}}.
+    - Save the prompt
+    - Reload the page
+    - Open the saved prompt
+    - Fill constructor with Ada
+    - Fill __proto__ with literal
+    - Copy the rendered output
+    - assert: Verify the prompt opens without a crash and the placeholders remain unchanged until values are filled
+    - assert: Verify the exact rendered preview and clipboard output read Use Ada and literal.
+  - id: EDT-008
+    priority: High
+    name: Export and reimport prompts with duplicate handling and validation
+    description: Validates exporting active prompts, reimporting valid JSON, skipping duplicates, overwriting a modified disposable duplicate, and recovering from malformed or invalid schema imports without partial mutation.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Create and save a separate active recipe titled TS4 Export Metadata with Body exactly Write {{topic}} in {{tone}}., Description Exact export metadata, and tag ts4-export. In Variables definitions set topic to Textarea with saved Default value Launch newline Campaign (a real newline), and tone to Dropdown with options Friendly, Professional and saved Default value Friendly. Verify the saved controls before continuing.
+    - Create and save a disposable plain recipe titled TS4 Archived File Check with Body exactly Archived export exclusion. Archive this recipe through its prompt actions. Verify it appears in Archived and is excluded from All Prompts before opening Settings.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the actual downloaded JSON: version must be 1.0, exportedAt must be present, and prompts must contain every active baseline record with exact body, description, tags and variable metadata. Verify TS4 Archived File Check is absent, and record the full active prompt count/content before importing.'
+    - Select the actual exported JSON download in the persistent Choose JSON file input. Choose Skip duplicates. Select that SAME unmodified downloaded file again and choose Skip duplicates again. Verify no active recipe, body, tag or variable metadata changed and no duplicate copies were created after either import. Keep using actual downloaded bytes, not a reconstructed JSON string.
+    - Select the attached Test File ts4-modified.json through Choose JSON file, using its actual available attachment path. Verify its incoming records are the modified TS4 Fixture Recipe and TS4 Imported New, then choose Overwrite duplicates. The disposable recipe must become Body Fixture updated {{name}}., Description Modified disposable fixture, tags ts4-fixture and updated. The one new recipe must have Body New unique fixture body. Do not overwrite any seeded recipe; do not substitute ts4-long.json. If the named attachment is unavailable, report its missing filename and stop.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select actual attached ts4-bad-json.json through Choose JSON file and verify the import error and no persisted changes before proceeding. Then select actual attached ts4-bad-schema.json and verify schema rejection and no persisted changes. Keep both files unchanged; do not approximate malformed data in a different UI. Missing required attachments remain blockers.
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the export includes active prompts only and preserves version, content, tags, and variable metadata on reimport
+    - assert: Verify duplicates are skipped, overwritten records update without creating an extra record, and invalid imports do not crash or mutate existing prompts
+  - id: EDT-009
+    priority: Medium
+    name: Edit long prompts and preserve exact content with empty search and empty-state recovery
+    description: Validates editing a very long prompt with multiline text, quotes, braces, dollar signs, Unicode, and emoji while confirming exact reload persistence and recovery from empty search and empty Favorites or Archived states.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open a New Prompt editor with unique title TS4 Long EDT009 and description Long edit regression.
+    - Open New Prompt and set Title to TS4 Long EDT009. Use the persistent visible file input labelled Load text file to select the actual attached ts4-exact-12k.txt file. This control loads the COMPLETE UTF-8 bytes directly into the unsaved Body. Do not upload the text file to From JSON or Settings JSON import. Do not transcribe a truncated file preview, manually regenerate repetitions, accept an excerpt, or substitute a short sample. Verify the complete Body equals the source before saving. The source has 12,288 UTF-8 bytes and SHA-256 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; these supplied constants alone are not a computed comparison of the saved Body. Report missing attachment or comparison capability as a blocker. Set Description to Long edit regression. Save once, reopen Edit, append exactly one newline and TS4 edited marker at the end, and retain the entire original-file-plus-marker expected string for comparison.
+    - Save the prompt
+    - Reload the page
+    - Open the saved prompt
+    - In All Prompts, focus the header library searchbox with keyboard Tab rather than clicking the empty field. Search an unmatched TS4 string and verify the library empty state. Clear this SAME header query with select-all and Backspace/Delete and verify its value is empty before moving to other views; do not clear an independent palette input instead.
+    - Open the Favorites view
+    - Open the Archived view
+    - Return explicitly to All Prompts, ensure its header library query is empty and folder/tag filters are cleared, and verify the saved long recipe is visible again.
+    - assert: Open Edit after reload and compare the ENTIRE Body exactly against the attached ts4-exact-12k.txt content plus one newline and TS4 edited marker. Every original symbol and unsupported {{bad-name!}} must remain literal. Cancel Edit; a visible excerpt does not prove exact equality.
+    - assert: Verify empty search and empty-state views recover back to the prompt library without losing the saved prompt
+  - id: EDT-010
+    priority: Medium
+    name: Use the app on mobile and complete authoring and execution flows
+    description: Validates the mobile layout at 390x844, including drawer navigation, settings access, create and edit flows, long-content scrolling, preview and copy actions, and the absence of horizontal overflow or blocked primary actions.
+    steps:
+    - Set the viewport to 390 by 844 and navigate to the PromptDock live site in a fresh browser context
+    - Choose the local-first start option if onboarding appears
+    - Open the navigation drawer
+    - Open Settings from the drawer
+    - Return back to the main workspace
+    - Open a new prompt editor
+    - Fill in the title and body fields with TS4 mobile content
+    - Scroll through the editor to the lower portion of the content
+    - Open the preview or fill modal
+    - Copy the rendered output
+    - Dismiss the modal and return to the editor
+    - assert: Verify the mobile layout remains usable with accessible primary actions and no horizontal overflow
+    - assert: Verify the saved or previewed prompt content is available on mobile after scrolling and modal dismissal
+- useCase: Duplicate Prompt
+  slug: DUP
+  testCases:
+  - id: DUP-001
+    priority: High
+    name: Duplicate a prompt into the local workspace
+    description: Validates that an existing prompt can be duplicated into a new record using the local workspace destination.
+    steps:
+    - Navigate to the PromptDock web app and choose Start locally if onboarding appears.
+    - Open an existing prompt from the library.
+    - Open the duplicate action for the prompt.
+    - Confirm the duplicate destination using the local workspace if a destination dialog appears.
+    - Open the duplicated prompt record.
+    - assert: Verify a new prompt record exists with the same saved title, description, and body content as the source prompt.
+    - assert: Verify the duplicated prompt is available in the local workspace and is treated as a separate record from the original.
+  - id: DUP-002
+    priority: High
+    name: Duplicate a prompt and keep both records accessible
+    description: Validates that duplicating a prompt creates a second accessible record without removing the source prompt from the library.
+    steps:
+    - Navigate to the PromptDock web app in a fresh browser context and choose Start locally if onboarding appears.
+    - Open a prompt from the library.
+    - Duplicate the prompt.
+    - Use the local workspace destination if the duplicate flow asks where to save the copy.
+    - Return to the prompts library.
+    - Open the original prompt again.
+    - assert: Verify both the original prompt and the duplicated prompt are present as separate records in the library.
+    - assert: Verify the duplicated prompt preserves the source prompt content exactly.
+  - id: DUP-003
+    priority: Medium
+    name: Duplicate a prompt after opening it from search
+    description: Validates that a prompt found through search can be duplicated into the local workspace and then reopened from the library.
+    steps:
+    - Navigate to the PromptDock web app in a fresh browser context and choose Start locally if onboarding appears.
+    - Search for an existing prompt in the header search field.
+    - Open one of the search results.
+    - Duplicate the prompt.
+    - Select the local workspace if a destination dialog appears.
+    - Return to the library view.
+    - assert: Verify the duplicated prompt appears in the library as a new record.
+    - assert: Verify the duplicated prompt content matches the opened source prompt exactly.
+- useCase: Folders and Tags
+  slug: FLT
+  testCases:
+  - id: FLT-001
+    priority: High
+    name: Create a prompt and assign a folder and tags in the editor
+    description: Validates that a new prompt can be created locally, saved with a folder and tags, and reloaded with the same metadata and content.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Click the link to create a new prompt.
+    - Fill in the title field with TS4 Foldered Prompt Alpha.
+    - Fill in the description field with TS4 prompt for folder and tag organization.
+    - Fill in the body field with TS4 body content for folder and tag testing.
+    - Assign the prompt to a folder from the editor.
+    - Add two tags to the prompt from the editor.
+    - Save the prompt.
+    - Reload the page.
+    - Open the saved prompt again.
+    - assert: Verify the saved prompt shows the exact title, description, body, folder membership, and both tags after reload.
+  - id: FLT-002
+    priority: High
+    name: Filter prompts by folder and tag membership
+    description: Validates that folder and tag filters return only matching prompts and that clearing the filter restores the broader list.
+    steps:
+    - Navigate to the app in a fresh browser context and choose local onboarding if it appears.
+    - Create a prompt with the title TS4 Folder Filter Match and assign it to a unique folder and unique tag.
+    - Save the prompt.
+    - Return to the prompts list.
+    - Apply the folder filter for the unique folder.
+    - Apply the tag filter for the unique tag.
+    - assert: Verify only prompts matching the selected folder and tag are shown.
+    - Clear the applied filters.
+    - assert: Verify the broader prompts list is restored.
+  - id: FLT-003
+    priority: High
+    name: Search prompts by title, description, and tag and recover from no results
+    description: Validates prompt search across saved content fields and recovery back to results after an empty search.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Create a prompt with a unique TS4 search title, description, body, and tag.
+    - Save the prompt.
+    - Use search to look up the unique title.
+    - assert: Verify the matching prompt is shown in the search results.
+    - Use search to look up a unique word from the saved description.
+    - assert: Verify the same prompt is shown in the search results.
+    - Use search to look up the unique tag name.
+    - assert: Verify the prompt remains discoverable through tag search.
+    - Use search with a term that matches nothing.
+    - assert: Verify an empty state is shown for no results.
+    - Clear the search term.
+    - assert: Verify the prompt list is restored.
+  - id: FLT-004
+    priority: Medium
+    name: Sort prompts and switch between grid and list views
+    description: Validates that sorting changes the order of prompts and that both grid and list presentations can be used on the same data set.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Create two prompts with distinct TS4 titles and save both.
+    - Open the prompts list.
+    - Change the sorting mode.
+    - assert: Verify the prompt order updates according to the selected sort mode.
+    - Switch to the alternate list presentation mode.
+    - assert: Verify the same prompts are still shown in the alternate view.
+  - id: FLT-005
+    priority: High
+    name: Edit an existing prompt and persist the changes after reload
+    description: Validates that an existing prompt can be edited and that the updated title, description, and body persist after a reload.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open an existing prompt from the seeded library.
+    - Update the title to TS4 Edited Prompt Beta.
+    - Update the description to TS4 edited description for persistence verification.
+    - Update the body to TS4 edited body content.
+    - Save the prompt.
+    - Reload the page.
+    - Open the same prompt again.
+    - assert: Verify the edited title, description, and body persist exactly after reload.
+  - id: FLT-006
+    priority: Medium
+    name: Duplicate a prompt into the local workspace
+    description: Validates that duplicating a prompt creates a separate local copy with the expected content and metadata in the local workspace.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open an existing prompt from the seeded library.
+    - Start the duplicate action for the prompt.
+    - If a destination dialog appears, choose the local workspace.
+    - Confirm the duplication.
+    - Open the duplicated prompt.
+    - assert: Verify the duplicated prompt exists as a separate prompt in the local workspace with the expected copied content.
+  - id: FLT-007
+    priority: High
+    name: Favorite and unfavorite a prompt and verify Favorites membership
+    description: Validates that a prompt can be added to Favorites and removed again, with membership updating in the Favorites view.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open an existing prompt from the seeded library.
+    - Mark the prompt as a favorite.
+    - Open the Favorites view.
+    - assert: Verify the favorited prompt appears in Favorites.
+    - Open the prompt again.
+    - Remove the prompt from Favorites.
+    - Return to the Favorites view.
+    - assert: Verify the prompt is no longer included in Favorites.
+  - id: FLT-008
+    priority: High
+    name: Archive and restore a prompt and verify active view membership
+    description: Validates that archiving removes a prompt from active views and restoring it returns the prompt to the active library.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open an existing prompt from the seeded library.
+    - Archive the prompt.
+    - Open the Archived view.
+    - assert: Verify the archived prompt appears in Archived.
+    - Open the archived prompt again.
+    - Restore the prompt from archive.
+    - Return to the active prompts view.
+    - assert: Verify the prompt returns to the active library and is excluded from Archived.
+  - id: FLT-009
+    priority: High
+    name: Use the command palette to search and select a prompt
+    description: Validates command palette opening, searching, keyboard navigation, selection, and dismissal.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open the command palette from the header shortcut.
+    - Type a unique prompt name into the palette search.
+    - Use the arrow keys to highlight the matching result.
+    - Press Enter to select the result.
+    - assert: Verify the selected prompt opens.
+    - Open the command palette again.
+    - Press Escape to dismiss it.
+    - assert: Verify the palette is closed.
+  - id: FLT-010
+    priority: Medium
+    name: Use the command palette with a no-results query and recover
+    description: Validates that the command palette shows an empty state for unknown queries and can be dismissed cleanly.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open the command palette from the header shortcut.
+    - Type a search term that matches no prompts.
+    - assert: Verify a no-results state is shown in the palette.
+    - Press Escape to dismiss the palette.
+    - assert: Verify the palette is closed and the app returns to the current view.
+  - id: FLT-011
+    priority: High
+    name: Create a prompt with the default template variables and persist metadata
+    description: Validates the template prompt editor behavior with default variable values, one topic input, live preview, and reload persistence.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - 'Open New Prompt and create TS4 Topic Tone Metadata with description Saved variable metadata and body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. Configure topic as Textarea with Default value Launch. Configure tone as Dropdown with options Friendly, Professional, Concise and Default value Friendly. This fixture is created in this case, not assumed to exist.'
+    - Verify the topic field defaults to Launch and the tone selection defaults to Friendly.
+    - 'In Variables definitions change topic Default value to exactly two lines: Launch then Campaign. Verify the textarea value and live preview preserve the real newline. Set the SAVED default, not only the transient Live Preview value.'
+    - In Variables definitions set tone Default value to Professional, leaving Dropdown options Friendly, Professional, Concise. Verify the live preview uses Professional.
+    - Save the prompt.
+    - Reload the page.
+    - Open the saved prompt again.
+    - assert: 'Verify the saved title, description, variable metadata and live preview persist after reload, including a SINGLE topic input despite its repeated token. Topic default must be Launch newline Campaign and tone default Professional; preview must exactly be Write Launch newline Campaign in Professional. Repeat: Launch newline Campaign. Open Edit and verify the unresolved body remains Write {{topic}} in {{tone}}. Repeat: {{topic}}., then Cancel without changes.'
+  - id: FLT-012
+    priority: High
+    name: Copy the rendered template output with required values present
+    description: Validates that the template copy action produces the exact rendered output when required values are filled and that the clipboard matches the preview text.
+    steps:
+    - Navigate to the app in a fresh anonymous context and choose local onboarding if it appears.
+    - 'Open New Prompt. Create TS4 Topic Tone Copy with body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. Configure topic default Launch and tone as Dropdown with options Friendly, Professional, Concise and default Friendly.'
+    - Save, reload, and select TS4 Topic Tone Copy. Open the command palette with Ctrl+K (Cmd+K on macOS), search this exact title, and select the result to open Fill Variables.
+    - 'In Fill Variables set topic to exactly Product launch and tone to Professional. Read and remember the preview, which must be exactly Write Product launch in Professional. Repeat: Product launch.'
+    - Click Copy to Clipboard inside Fill Variables. If the modal remains open, close it. Open New Prompt, click its Body textarea to focus it, then press Ctrl+V (Cmd+V on macOS). Do not type the expected string; this draft must receive the real clipboard contents.
+    - assert: Verify the clipboard contains the exact rendered output for the current topic and tone values.
+    - assert: Verify the live preview matches the copied output exactly.
+    - 'Verify the pasted draft body is exactly Write Product launch in Professional. Repeat: Product launch. A toast alone is insufficient. Click the editor Cancel button without saving and verify TS4 Topic Tone Copy remains the only saved fixture.'
+  - id: FLT-013
+    priority: High
+    name: Render literal special characters and braces in the template prompt
+    description: Validates that special characters, Unicode, emoji, and placeholder-like text are rendered literally without HTML interpretation or recursive replacement.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - 'Create a new prompt named TS4 Folder Literal with body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. Create this fixture within this fresh test context; it is not seeded.'
+    - "In Variables definitions set topic Default value to exactly $& <tag> 中文 \U0001F600 {{tone}}. Preserve the literal punctuation and braces."
+    - In Variables definitions configure tone as Dropdown with options Friendly, Professional, Concise and Default value Professional.
+    - "Verify the editor preview is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Save the prompt."
+    - Reload the page.
+    - "Open TS4 Folder Literal after reload and verify its inspector displays exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Open it using Ctrl+K (Cmd+K on macOS) and select its search result to enter Fill Variables. Verify topic default and Professional dropdown selection persisted, and the modal preview matches exactly."
+    - Click Copy to Clipboard in Fill Variables, then open a new prompt draft and paste using Ctrl+V (Cmd+V on macOS) into its body to inspect the actual clipboard content.
+    - assert: "Verify the pasted body is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. The literal $&, angle brackets, Chinese, emoji and {{tone}} must be preserved without HTML interpretation or recursive replacement. A toast alone does not prove clipboard equality. Cancel the verification draft without saving."
+  - id: FLT-014
+    priority: High
+    name: Use constructor and proto placeholders safely and persist custom values
+    description: Validates that the regression prompt keeps placeholders intact by default, allows custom values, and renders the exact expected output after reload.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Create within this case a recipe titled TS4 Safe Defaults FLT014 with body exactly Use {{constructor}} and {{__proto__}}. Leave both defaults empty, Save, then open Cmd/Ctrl+K and select this recipe to open Fill Variables.
+    - In Fill Variables verify both inputs are initially empty and the rendered preview still shows exactly Use {{constructor}} and {{__proto__}}.
+    - In Fill Variables verify Copy to Clipboard is disabled while either required input is missing.
+    - Fill the constructor field with Ada.
+    - Fill the __proto__ field with literal.
+    - Verify modal preview Use Ada and literal., then Cancel the modal. Open Edit for this saved recipe and set saved constructor Default value Ada and __proto__ Default value literal in Variables definitions, then Save.
+    - Reload the page.
+    - After reload verify the saved recipe body is still unresolved. Open Cmd/Ctrl+K and select TS4 Safe Defaults FLT014; verify the persisted defaults populate Ada and literal in Fill Variables.
+    - Verify exact preview Use Ada and literal., click Copy to Clipboard, open a disposable New Prompt draft and paste into Body with Cmd/Ctrl+V.
+    - assert: Verify the persisted defaults, rendered preview and full pasted Body are exactly Use Ada and literal., with no crash or TypeError. Cancel the verification draft without saving.
+  - id: FLT-015
+    priority: High
+    name: Export active prompts and reimport valid JSON without duplicating existing records
+    description: Validates that active prompts can be exported as JSON, reimported, and deduplicated without creating extra records.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save a separate active recipe titled TS4 Export Metadata with Body exactly Write {{topic}} in {{tone}}., Description Exact export metadata, and tag ts4-export. In Variables definitions set topic to Textarea with saved Default value Launch newline Campaign (a real newline), and tone to Dropdown with options Friendly, Professional and saved Default value Friendly. Verify the saved controls before continuing.
+    - Create and save a disposable plain recipe titled TS4 Archived File Check with Body exactly Archived export exclusion. Archive this recipe through its prompt actions. Verify it appears in Archived and is excluded from All Prompts before opening Settings.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the actual downloaded JSON: version must be 1.0, exportedAt must be present, and prompts must contain every active baseline record with exact body, description, tags and variable metadata. Verify TS4 Archived File Check is absent, and record the full active prompt count/content before importing.'
+    - Select the actual exported JSON download in the persistent Choose JSON file input. Choose Skip duplicates. Select that SAME unmodified downloaded file again and choose Skip duplicates again. Verify no active recipe, body, tag or variable metadata changed and no duplicate copies were created after either import. Keep using actual downloaded bytes, not a reconstructed JSON string.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the active prompts remain unchanged and no duplicate records are added.
+  - id: FLT-016
+    priority: Medium
+    name: Import a modified duplicate and a new prompt from JSON
+    description: Validates that an imported duplicate can be overwritten for a disposable local record and that a new record is added successfully.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Select the attached Test File ts4-modified.json through Choose JSON file, using its actual available attachment path. Verify its incoming records are the modified TS4 Fixture Recipe and TS4 Imported New, then choose Overwrite duplicates. The disposable recipe must become Body Fixture updated {{name}}., Description Modified disposable fixture, tags ts4-fixture and updated. The one new recipe must have Body New unique fixture body. Do not overwrite any seeded recipe; do not substitute ts4-long.json. If the named attachment is unavailable, report its missing filename and stop.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the modified disposable prompt is updated and the new prompt is added as a separate record after reload.
+  - id: FLT-017
+    priority: Medium
+    name: Reject malformed or invalid-schema JSON import and recover with a valid import
+    description: Validates that invalid JSON import inputs are rejected without partial mutations and that a subsequent valid import still succeeds.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select actual attached ts4-bad-json.json through Choose JSON file and verify the import error and no persisted changes before proceeding. Then select actual attached ts4-bad-schema.json and verify schema rejection and no persisted changes. Keep both files unchanged; do not approximate malformed data in a different UI. Missing required attachments remain blockers.
+    - assert: Verify an import validation error is shown and no partial changes are applied.
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the valid import succeeds after the earlier invalid attempts.
+  - id: FLT-018
+    priority: Medium
+    name: Handle a long prompt with exact persistence and literal unsupported placeholder punctuation
+    description: Validates that a very long prompt with multiline content, quotes, braces, dollar signs, Unicode, and unsupported placeholder punctuation reloads exactly and survives search and empty-state recovery flows.
+    steps:
+    - Navigate to the app and choose local onboarding if it appears.
+    - Open New Prompt and set Title to TS4 Long FLT018. Use the persistent visible file input labelled Load text file to select the actual attached ts4-exact-12k.txt file. This control loads the COMPLETE UTF-8 bytes directly into the unsaved Body. Do not upload the text file to From JSON or Settings JSON import. Do not transcribe a truncated file preview, manually regenerate repetitions, accept an excerpt, or substitute a short sample. Verify the complete Body equals the source before saving. The source has 12,288 UTF-8 bytes and SHA-256 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; these supplied constants alone are not a computed comparison of the saved Body. Report missing attachment or comparison capability as a blocker.
+    - Save the prompt.
+    - Reload the page.
+    - Open the saved prompt again.
+    - assert: Open Edit after reload and compare the full Body exactly with the attached ts4-exact-12k.txt, including real newlines and all literal {{bad-name!}} punctuation. Verify the original source has 12,288 UTF-8 bytes as recorded in manifest.json; do not confuse bytes with JavaScript character count. Cancel Edit without changes.
+    - In All Prompts focus the header library searchbox via keyboard Tab and search an unmatched string. Operate this same header input throughout; an empty-field click would open an independently queried palette.
+    - assert: Verify the empty search state is shown.
+    - Clear the SAME header library query using select-all and Backspace/Delete and verify the value is empty. Then open Favorites and Archived views.
+    - assert: Verify the empty state is shown in Favorites and Archived when no matching items are present.
+    - Return explicitly to All Prompts, verify the header query is empty and no tag/folder filters are selected.
+    - assert: Verify the prompt list is restored.
+  - id: FLT-019
+    priority: Medium
+    name: Use the app on mobile with drawer, settings navigation, and scrolling
+    description: Validates that the app works at mobile viewport size with drawer navigation, settings return flow, long-content scrolling, and accessible primary actions.
+    steps:
+    - Open the app in a fresh browser context at a mobile viewport and verify the viewport width matches the expected mobile size.
+    - Choose local onboarding if it appears.
+    - Open the navigation drawer.
+    - Navigate to Settings from the drawer.
+    - Return from Settings using the back navigation or Escape key.
+    - Create and Save TS4 Mobile Variable Scroll with body consisting of long multiline scrolling content followed by Use {{topic}}. Configure topic as Textarea with saved default Mobile. This case must create its own variable recipe so a Fill Variables path exists.
+    - Scroll through the editor and preview area.
+    - Open Cmd/Ctrl+K and select TS4 Mobile Variable Scroll to open Fill Variables; a separate inspector Fill button is not part of the app. Fill topic Mobile filled, verify live substitution, then click Copy to Clipboard. Keep long-content scrolling and numeric viewport checks.
+    - assert: Verify the mobile layout remains usable, primary actions stay accessible, and there is no horizontal overflow.
+- useCase: Favorites
+  slug: FAV
+  testCases:
+  - id: FAV-001
+    priority: High
+    name: Favorite a prompt from the library
+    description: Validates that a prompt can be added to Favorites from the library and appears in the favorites-only view after reload.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create a new prompt with a unique TS4-prefixed title, a description, and a body
+    - Save the prompt
+    - Return to the library view
+    - Mark the newly created prompt as a favorite from the library
+    - Open the Favorites view
+    - assert: Verify the favorited prompt is shown in the Favorites view
+    - Reload the page
+    - assert: Verify the favorited prompt remains in the Favorites view after reload
+  - id: FAV-002
+    priority: High
+    name: Remove a prompt from Favorites
+    description: Validates that an existing favorite can be removed and no longer appears in the favorites-only view after reload.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create a new prompt with a unique TS4-prefixed title, a description, and a body
+    - Save the prompt
+    - Mark the prompt as a favorite from the library
+    - Open the Favorites view
+    - Remove the prompt from Favorites from the library or favorites view
+    - assert: Verify the prompt is no longer shown in the Favorites view
+    - Reload the page
+    - assert: Verify the prompt does not return to the Favorites view after reload
+  - id: FAV-003
+    priority: High
+    name: Manage a prompt with edit, duplicate, archive, and restore
+    description: Validates that a prompt can be edited, duplicated into the local workspace, archived, and restored while preserving access in the expected views.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create a new prompt with a unique TS4-prefixed title, a description, and a body
+    - Save the prompt
+    - Open the prompt for editing
+    - Update the prompt title, description, and body
+    - Save the updated prompt
+    - Duplicate the prompt and choose the local workspace if a destination dialog appears
+    - Archive the original prompt
+    - Open the Archived view
+    - assert: Verify the archived prompt is shown in the Archived view
+    - Restore the archived prompt
+    - Open the All Prompts view
+    - assert: Verify the restored prompt returns to the active library and the duplicated prompt remains available
+  - id: FAV-004
+    priority: High
+    name: Create folders and tags from the editor
+    description: Validates that folders and tags can be created or assigned in the editor and that the prompt appears in the expected filtered views.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create a new prompt with a unique TS4-prefixed title, a description, and a body
+    - Assign the prompt to a new folder from the editor
+    - Add a new tag from the editor
+    - Save the prompt
+    - Open the folder-filtered view for the assigned folder
+    - assert: Verify the prompt appears in the folder-filtered view
+    - Open the tag-filtered view for the assigned tag
+    - assert: Verify the prompt appears in the tag-filtered view
+  - id: FAV-005
+    priority: Medium
+    name: Remove a tag and recover it through search and sorting
+    description: Validates that a tag can be removed from a prompt and the prompt can still be found again using search and list controls.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create a new prompt with a unique TS4-prefixed title, a description, and a body
+    - Add a unique TS4-prefixed tag from the editor
+    - Save the prompt
+    - Remove the tag from the prompt in the editor
+    - Save the prompt again
+    - Search for the prompt by its title
+    - assert: Verify the prompt is still found by title search after the tag is removed
+    - Switch between grid and list presentation
+    - assert: Verify the same search result remains available in both presentation modes
+  - id: FAV-006
+    priority: High
+    name: Use the command palette to search and select a prompt
+    description: Validates that the command palette opens, searches, supports keyboard selection, and closes correctly.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Open the command palette from the header shortcut or keyboard shortcut
+    - Type a prompt title into the palette search
+    - Use the arrow keys to highlight a matching result
+    - Press Enter to open the selected prompt
+    - assert: Verify the selected prompt is opened
+    - Press Escape to close the palette
+    - assert: Verify the palette is dismissed
+  - id: FAV-007
+    priority: Medium
+    name: Show no results in the command palette and recover
+    description: Validates that the command palette shows an empty search state for unmatched text and can be reused afterward.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Open the command palette from the header shortcut or keyboard shortcut
+    - Type a unique TS4-prefixed string that matches no prompt
+    - assert: Verify the palette shows a no-results state
+    - Press Escape to close the palette
+    - Open the command palette again
+    - assert: Verify the command palette opens normally again
+  - id: FAV-008
+    priority: High
+    name: Use a template prompt with default variables and copy output
+    description: Validates the template prompt default metadata, live preview, required-value handling, copy action, and exact persistence after reload.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - 'Create a recipe titled TS4 Favorite Template with description Saved topic tone defaults and body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}.'
+    - Set saved topic Default value Launch. Configure tone as Dropdown with options Friendly, Professional, Concise and saved Default value Friendly.
+    - Save the template prompt
+    - Open the saved recipe, then Cmd/Ctrl+K and select TS4 Favorite Template to open Fill Variables.
+    - In Fill Variables fill topic with Ocean and leave tone Friendly.
+    - assert: 'Verify there is one topic input for both references and the exact live preview is Write Ocean in Friendly. Repeat: Ocean.'
+    - In Fill Variables, focus Value for variable topic and clear it using real keyboard Select All (Control+A, or Meta+A on macOS) then Backspace. Do not substitute an empty fill or a DOM value assignment. Verify the actual value is empty and the rendered preview updates to unresolved topic placeholders before checking the existing disabled-Copy assertion.
+    - assert: Verify Copy to Clipboard is disabled in Fill Variables while topic is empty; do not check the inspector Copy action.
+    - Restore topic Ocean in Fill Variables, verify the exact preview and click Copy to Clipboard.
+    - assert: 'Open a disposable New Prompt draft and paste with Cmd/Ctrl+V into Body. Verify the complete text is exactly Write Ocean in Friendly. Repeat: Ocean. Cancel without saving.'
+    - Reload the page
+    - assert: Verify the original saved title, description, unresolved body and variable metadata/defaults persist after reload. The saved defaults are Launch and Friendly; transient Ocean input does not replace them.
+  - id: FAV-009
+    priority: High
+    name: Preserve literal special characters in a variable value
+    description: Validates that special characters, Unicode, and literal placeholder text render exactly in the editor, preview, modal, and clipboard without recursive replacement.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - 'Create a new prompt named TS4 Favorites Literal with body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. This fixture does not exist in seeded data; create it in this test.'
+    - "In Variables definitions set topic Default value to exactly $& <tag> 中文 \U0001F600 {{tone}}."
+    - In Variables definitions set tone Default value to Professional.
+    - assert: "Verify the editor Preview Result is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. including literal $&, brackets, Chinese, emoji and {{tone}} without HTML interpretation or recursive replacement."
+    - Save the prompt. Select it and verify the inspector renders the same exact output. Open Ctrl+K (Cmd+K on macOS), search TS4 Favorites Literal, and select it to open Fill Variables.
+    - assert: "Verify the Fill Variables modal uses the saved defaults and its preview is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}."
+    - Click Copy to Clipboard. Open a new prompt draft and paste with Ctrl+V (Cmd+V on macOS) into the body field so the actual copied text can be inspected.
+    - assert: "Verify the pasted body is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. A toast alone does not prove clipboard content. Cancel the verification draft without saving."
+  - id: FAV-010
+    priority: High
+    name: Handle constructor and proto placeholder names safely
+    description: Validates that the regression template initially stays inert, saves and reloads safely, and generates the exact output when values are provided for constructor and proto-like variable names.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create within THIS case a recipe titled TS4 Safe FAV010 with body exactly Use {{constructor}} and {{__proto__}}. Keep saved defaults empty, Save, then Cmd/Ctrl+K and select this recipe to open Fill Variables.
+    - assert: In Fill Variables verify both inputs start empty and the rendered preview remains exactly Use {{constructor}} and {{__proto__}}., with no unsafe object expansion.
+    - assert: Verify Copy to Clipboard is disabled in Fill Variables before required values are entered.
+    - Cancel Fill Variables and reload the page. Verify the saved recipe and unresolved body still exist unchanged; do not assume another case created it.
+    - Open Cmd/Ctrl+K, select TS4 Safe FAV010 and fill constructor Ada and __proto__ literal in Fill Variables.
+    - assert: Verify the exact preview is Use Ada and literal. with each placeholder replaced once, without a crash or unsafe object behavior.
+    - Click Copy to Clipboard, then open a disposable New Prompt draft and paste with Cmd/Ctrl+V into Body.
+    - assert: Verify the complete pasted Body is exactly Use Ada and literal., matching the prior preview. Cancel without saving; a toast is not exact clipboard evidence.
+  - id: FAV-011
+    priority: Medium
+    name: Export and reimport active prompts without duplicating unchanged records
+    description: Validates that active prompts can be exported, reimported, and deduplicated correctly while preserving tags and variable metadata.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create at least one disposable active prompt with a unique TS4-prefixed title, description, body, tags, and variable metadata
+    - Export the active prompts collection
+    - Reimport the exported data without modifying the file
+    - assert: Verify unchanged records are not duplicated during import
+    - Reload the page
+    - assert: Verify the imported prompt and its metadata remain present after reload
+  - id: FAV-012
+    priority: Medium
+    name: Import a new prompt and overwrite a disposable duplicate
+    description: Validates that importing can add a new prompt, skip unchanged duplicates, and overwrite a disposable modified duplicate without creating extra records.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the downloaded export and verify the disposable baseline matches the original record in ts4-modified.json by title. Use that actual attached modified file as the deterministic edited import: it changes only the disposable recipe and adds TS4 Imported New. Do not attempt to edit or reconstruct a truncated download.'
+    - Select the attached Test File ts4-modified.json through Choose JSON file, using its actual available attachment path. Verify its incoming records are the modified TS4 Fixture Recipe and TS4 Imported New, then choose Overwrite duplicates. The disposable recipe must become Body Fixture updated {{name}}., Description Modified disposable fixture, tags ts4-fixture and updated. The one new recipe must have Body New unique fixture body. Do not overwrite any seeded recipe; do not substitute ts4-long.json. If the named attachment is unavailable, report its missing filename and stop.
+    - assert: Verify the changed duplicate is overwritten and the new prompt is added without creating an extra record
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the overwritten prompt and imported new prompt persist after reload
+  - id: FAV-013
+    priority: Medium
+    name: Reject malformed import JSON and recover with a valid import
+    description: Validates that malformed or invalid-schema imports show an error without partial mutations and that a later valid import succeeds.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select actual attached ts4-bad-json.json through Choose JSON file and verify the import error and no persisted changes before proceeding. Then select actual attached ts4-bad-schema.json and verify schema rejection and no persisted changes. Keep both files unchanged; do not approximate malformed data in a different UI. Missing required attachments remain blockers.
+    - assert: Verify an import validation error is shown and no partial changes are applied
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the valid import succeeds and the imported prompt is available
+  - id: FAV-014
+    priority: Medium
+    name: Persist long prompt content and recover from empty searches
+    description: Validates that a large multiline prompt with punctuation, Unicode, and emoji saves exactly, survives reload, and can be found again after empty search states in Favorites and Archived recover normally.
+    steps:
+    - Navigate to the PromptDock live site in a fresh anonymous browser context
+    - Choose local-only onboarding if it appears
+    - Create a new prompt containing a long multiline body with quotes, braces, dollar signs, Unicode, and emoji
+    - Save the prompt
+    - Reload the page
+    - assert: Verify the long prompt content persists exactly after reload
+    - Search for a unique portion of the prompt title
+    - assert: Verify search finds the prompt and empty search states are recoverable in the Favorites and Archived views
+- useCase: Archive
+  slug: ARC
+  testCases:
+  - id: ARC-001
+    priority: High
+    name: Archive and restore a prompt
+    description: Verify a prompt can be archived and then restored while moving between active and archived views.
+    steps:
+    - Navigate to the PromptDock app and choose to start locally if onboarding appears.
+    - Create a new prompt with a unique TS4-prefixed title, description, and body.
+    - Save the prompt.
+    - Open the saved prompt.
+    - Archive the prompt.
+    - assert: Verify the prompt is excluded from the active prompts view and appears in the archived view.
+    - Open the archived prompt.
+    - Restore the prompt to the active library.
+    - assert: Verify the prompt returns to the active prompts view and is no longer shown in the archived view.
+  - id: ARC-002
+    priority: High
+    name: Archive and restore persistence after reload
+    description: Verify archive and restore state persists after reloading the app.
+    steps:
+    - Navigate to the PromptDock app in a fresh browser context and choose to start locally if onboarding appears.
+    - Create and save a new prompt with a unique TS4-prefixed title, description, and body.
+    - Open the saved prompt and archive it.
+    - Reload the page.
+    - assert: Verify the archived prompt still appears in the archived view after reload.
+    - Restore the prompt from the archived view.
+    - Reload the page again.
+    - assert: Verify the restored prompt appears in the active prompts view after reload.
+  - id: ARC-003
+    priority: Medium
+    name: Archived prompts stay excluded from active views
+    description: Verify archived prompts do not appear in active library views until restored.
+    steps:
+    - Navigate to the PromptDock app and choose to start locally if onboarding appears.
+    - Create two new prompts with unique TS4-prefixed titles and save them.
+    - Open one of the prompts and archive it.
+    - Return to the all prompts view.
+    - Open the favorites view.
+    - Open the recent view.
+    - assert: Verify the archived prompt is excluded from the active, favorites, and recent views.
+- useCase: Command Palette
+  slug: PAL
+  testCases:
+  - id: PAL-001
+    priority: High
+    name: Open and use the command palette
+    description: Verifies the command palette can be opened, searched, navigated, selected, and dismissed from the app shell.
+    steps:
+    - Navigate to the app as an anonymous user in a fresh browser context
+    - Choose the local setup option if the onboarding screen appears
+    - Open the command palette
+    - Fill the command search with a prompt-related query
+    - Use the arrow keys to move to a matching command
+    - Press Enter to run the selected command
+    - assert: Verify the app navigates to the expected command destination
+    - Open the command palette again
+    - Press Escape to dismiss the palette
+    - assert: Verify the palette is closed and the underlying app remains available
+  - id: PAL-002
+    priority: Medium
+    name: Handle an empty command-palette search and recover
+    description: Verifies the command palette shows an empty state for unmatched input and can recover to a usable result set.
+    steps:
+    - Navigate to the app as an anonymous user in a fresh browser context
+    - Choose the local setup option if the onboarding screen appears
+    - Open the command palette
+    - Fill the command search with a unique TS4-prefixed nonsense query
+    - assert: Verify an empty-state message is shown for the palette search
+    - Clear the command search
+    - Fill the command search with a valid prompt-related query
+    - assert: Verify matching commands are shown again
+  - id: PAL-003
+    priority: Medium
+    name: Open the command palette from header search
+    description: Verifies header search can launch the command palette and allow command execution without using the keyboard shortcut.
+    steps:
+    - Navigate to the app as an anonymous user in a fresh browser context
+    - Choose the local setup option if the onboarding screen appears
+    - Click the header search field
+    - assert: Verify the command palette opens from the header search
+    - Fill the command search with a prompt-related query
+    - Select a matching command
+    - assert: Verify the selected command executes successfully
+- useCase: Template Variables
+  slug: TEM
+  testCases:
+  - id: TEM-001
+    priority: High
+    name: Complete local onboarding and save a variable prompt recipe
+    description: Validates first-use local onboarding, creation of a new prompt recipe with variables, required-field validation, canceling a draft, and exact persistence after reload.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - Open the new prompt editor
+    - Fill in the title field with TS4 onboarding launch update
+    - Fill in the description field with TS4 onboarding description
+    - Fill in the body field with Write a crisp update for {{project}} covering wins, blockers, and next steps for {{audience}}.
+    - In New Prompt, focus the Title textbox and clear it using real keyboard Select All (Control+A, or Meta+A on macOS) then Backspace. Do not substitute an empty fill or a DOM value assignment. Verify BOTH the input value is empty AND its character counter reads 0/100 before proceeding.
+    - While still in the editor with Title verified empty and the original body present, click Save; do not click Library or another navigation control.
+    - assert: Verify Title is required is visible and the editor remains open; saving with an empty required title must be rejected.
+    - Restore the title field with TS4 onboarding launch update
+    - Save the prompt
+    - Open the saved prompt from the library
+    - assert: Verify the saved prompt content is rendered with the exact title, description, and variable placeholders
+    - Reload the page
+    - assert: Verify the saved prompt still appears with the exact same title, description, and body after reload
+    - Create a separate disposable New Prompt draft titled TS4 Canceled TEM001 with body This unsaved draft must not persist. Navigate back and choose Discard changes (or Cancel draft) without saving.
+    - assert: Verify TS4 Canceled TEM001 is absent from All Prompts and remains absent after reload, while the original saved recipe is unchanged.
+  - id: TEM-002
+    priority: High
+    name: Edit, duplicate, favorite, archive, and restore a prompt
+    description: Validates editing an existing prompt, duplicating it into the local workspace, favoriting it, archiving it, and restoring it back to active views.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - Open an existing prompt from the library
+    - Enter edit mode for the prompt
+    - In Edit mode click the Description textbox, select all and replace its contents using real keyboard typing/paste with exactly TS4 edited prompt description. Verify the field value before Save; do not only assign a DOM value without an input event.
+    - Click Save in the editor. Before duplicating, verify the saved inspector description is exactly TS4 edited prompt description; reopen Edit and verify the saved Description field contains it too, then Cancel Edit. If it did not save, fail here rather than duplicate the old record.
+    - Duplicate the prompt
+    - Choose the local workspace destination if a destination dialog appears
+    - Open the duplicated prompt
+    - assert: Verify the duplicated prompt contains the edited content
+    - Toggle the prompt as a favorite
+    - Open the Favorites view
+    - assert: Verify the prompt appears in Favorites membership
+    - Archive the prompt
+    - Open the Archived view
+    - assert: Verify the archived prompt is excluded from active views and appears in Archived
+    - Restore the prompt from Archived
+    - Return to the All Prompts view
+    - assert: Verify the prompt returns to active views
+  - id: TEM-003
+    priority: High
+    name: Assign folders and tags, then filter and search prompts
+    description: Validates creating folder and tag metadata through the editor, filter membership and counts, removing tags, search recovery, and switching between list and grid views.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - Open the new prompt editor
+    - Create a prompt titled TS4 folder tag prompt
+    - Assign the prompt to a new folder named TS4 Planning
+    - Add a tag named TS4alpha to the prompt
+    - Add a tag named TS4beta to the prompt
+    - Save the prompt
+    - Open the folders filter for the created folder
+    - assert: Verify only prompts in the selected folder are shown and the folder membership count is updated
+    - Open the tag filter for TS4alpha
+    - assert: Verify only prompts with the selected tag are shown and the tag membership count is updated
+    - Open the saved prompt and remove the TS4beta tag
+    - Return to the prompt list and search for the saved prompt title
+    - assert: Verify the search returns the prompt and the removed tag no longer appears on the prompt card
+    - Clear the search
+    - Switch to list view and then back to grid view
+    - assert: Verify the prompt list remains visible in both layouts
+  - id: TEM-004
+    priority: Medium
+    name: Use the command palette to search and select prompts
+    description: Validates opening the command palette from keyboard shortcut or header search, searching prompts, handling no results, selecting with arrows and Enter, and closing with Escape.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose local onboarding if it appears. Within THIS case create a recipe titled TS4 Palette TEM-004 with body Use {{topic}}. and saved topic Default value Launch; Save. Do not assume another case created a TS4 fixture.
+    - Press Cmd/Ctrl+K (Cmd+K on macOS) to open Command palette, and operate only its dialog search input.
+    - Fill the palette search with TS4 Palette TEM-004, the recipe created in this case.
+    - assert: Verify matching prompt results are shown in the palette
+    - Replace the search with TS4 no match expected
+    - assert: Verify an empty-state result appears in the palette
+    - Clear the search text
+    - Fill the palette search with TS4 Palette TEM-004 again.
+    - Press ArrowDown to move the selection
+    - Press Enter on the matching VARIABLE recipe to open Fill Variables; verify its topic default is Launch.
+    - assert: Verify the selected recipe opens Fill Variables with its correct title, topic default and rendered preview Use Launch.
+    - Press Escape to dismiss Fill Variables; if the command palette remains open, press Escape again to close it.
+    - assert: Verify Fill Variables and Command palette are dismissed and the library remains accessible.
+  - id: TEM-005
+    priority: High
+    name: Render variable defaults, validation, and copied output for a topic template
+    description: Validates template rendering for the topic and tone variables, default values, multiline input handling, copy availability, exact clipboard output, and persistence after reload.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - 'Create a new prompt titled TS4 Defaults Multiline with body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. In Variables definitions configure topic as Textarea with Default value Launch. Configure tone as Dropdown with options Friendly, Professional, Concise and Default value Friendly.'
+    - Verify the topic variable defaults to Launch
+    - Verify the tone variable defaults to Friendly
+    - In Live Preview open the tone dropdown and choose Professional. Verify the preview uses Professional.
+    - 'In Variables definitions change topic Default value to exactly two lines: first line Launch, second line Campaign. Set tone Default value to Professional so these defaults are saved with the recipe. The topic control must remain Textarea; verify the newline is preserved in its value and live preview.'
+    - |-
+      Verify the editor preview is exactly "Write Launch
+      Campaign in Professional. Repeat: Launch
+      Campaign." where each \n means a real newline, not two literal characters. Save. Open Ctrl+K (Cmd+K on macOS), search TS4 Defaults Multiline and select it to open Fill Variables. Verify defaults, dropdown, multiline preview and enabled Copy to Clipboard, then copy. Open a new prompt draft and paste with Ctrl+V (Cmd+V on macOS) into its body.
+    - assert: Verify the exact pasted body and the previously inspected live preview both contain topic twice with both real line breaks preserved and Professional as tone.
+    - assert: |-
+        Verify clipboard text pasted into the draft is exactly "Write Launch
+        Campaign in Professional. Repeat: Launch
+        Campaign." with real newlines. A toast alone is insufficient.
+    - Cancel the verification draft without saving, then reload the page.
+    - assert: 'Reopen TS4 Defaults Multiline. Verify the saved topic default is exactly Launch newline Campaign, tone default is Professional, and inspector rendering is exactly Write Launch newline Campaign in Professional. Repeat: Launch newline Campaign. Confirm the template body still has unresolved topic/tone placeholders in Edit, then cancel without changes.'
+  - id: TEM-006
+    priority: High
+    name: Preserve literal variable-like text and special characters in template rendering
+    description: Validates that special characters, HTML-like text, Unicode, emoji, and literal double-brace text render exactly without recursive replacement or HTML interpretation.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - 'Create a new prompt named TS4 Template Literal with body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}.'
+    - "In Variables definitions set topic Default value exactly $& <tag> 中文 \U0001F600 {{tone}}."
+    - "In Variables definitions configure tone as Dropdown with options Friendly, Professional, Concise and Default value Professional. Verify editor Preview Result is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}."
+    - "Save and select TS4 Template Literal. Verify the inspector body exactly equals Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Use Ctrl+K (Cmd+K on macOS), search TS4 Template Literal and select it to open Fill Variables. Verify modal preview matches exactly."
+    - Click Copy to Clipboard in the modal. Open a new prompt draft and paste using Ctrl+V (Cmd+V on macOS) into its body so actual clipboard content is visible.
+    - assert: "Verify editor, inspector and modal previews and the pasted body all show exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. The {{tone}} within topic stays literal without recursive substitution."
+    - assert: Verify pasted clipboard text exactly matches that expected output with literal $&, <tag>, Chinese, emoji and braces, without HTML interpretation. A toast alone is insufficient. Cancel the verification draft without saving.
+  - id: TEM-007
+    priority: High
+    name: Prevent unsafe placeholder names from breaking template rendering
+    description: Validates that constructor and __proto__ variable names render safely, default values remain stable, the preview stays unchanged until filled, and copy remains disabled when required values are missing.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - Create a new recipe titled TS4 Safe Placeholder TEM007 with body exactly Use {{constructor}} and {{__proto__}}. Leave both saved variable defaults empty and Save. Open Cmd/Ctrl+K, search that exact title and select it to open Fill Variables.
+    - assert: In Fill Variables verify constructor and __proto__ inputs are initially empty and the rendered preview still contains the unchanged placeholders Use {{constructor}} and {{__proto__}}. No crash or inherited object value may appear.
+    - assert: In Fill Variables verify Copy to Clipboard is disabled while either required value is missing. Inspector Copy is a separate unresolved-template action; perform this assertion in the modal.
+    - Fill the constructor field with Ada
+    - Fill the __proto__ field with literal
+    - Verify the filled modal preview is Use Ada and literal. Cancel the modal. Open Edit for this saved recipe and set constructor Default value Ada and __proto__ Default value literal in Variables definitions, then Save. These are saved defaults, not transient execution inputs.
+    - Reload the page
+    - Reopen the saved recipe after reload and verify its unresolved body is unchanged. Open Cmd/Ctrl+K and select TS4 Safe Placeholder TEM007; verify the persisted defaults populate Ada and literal in Fill Variables.
+    - assert: Verify the preview renders exactly Use Ada and literal. without crashing or showing unsafe object property behavior
+    - assert: Click Copy to Clipboard in Fill Variables. Open a disposable New Prompt draft, paste with Cmd/Ctrl+V into Body, and verify its complete text is exactly Use Ada and literal., matching the previously inspected preview. Cancel the verification draft without saving. A toast is insufficient.
+  - id: TEM-008
+    priority: Medium
+    name: Export and reimport active prompts without duplicating records
+    description: Validates JSON export of active prompts only, schema and metadata preservation, duplicate skipping, overwrite behavior for a disposable record, successful import of a new record, and recovery after invalid import attempts.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Create and save a separate active recipe titled TS4 Export Metadata with Body exactly Write {{topic}} in {{tone}}., Description Exact export metadata, and tag ts4-export. In Variables definitions set topic to Textarea with saved Default value Launch newline Campaign (a real newline), and tone to Dropdown with options Friendly, Professional and saved Default value Friendly. Verify the saved controls before continuing.
+    - Create and save a disposable plain recipe titled TS4 Archived File Check with Body exactly Archived export exclusion. Archive this recipe through its prompt actions. Verify it appears in Archived and is excluded from All Prompts before opening Settings.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the actual downloaded JSON: version must be 1.0, exportedAt must be present, and prompts must contain every active baseline record with exact body, description, tags and variable metadata. Verify TS4 Archived File Check is absent, and record the full active prompt count/content before importing.'
+    - Select the actual exported JSON download in the persistent Choose JSON file input. Choose Skip duplicates. Select that SAME unmodified downloaded file again and choose Skip duplicates again. Verify no active recipe, body, tag or variable metadata changed and no duplicate copies were created after either import. Keep using actual downloaded bytes, not a reconstructed JSON string.
+    - Select the attached Test File ts4-modified.json through Choose JSON file, using its actual available attachment path. Verify its incoming records are the modified TS4 Fixture Recipe and TS4 Imported New, then choose Overwrite duplicates. The disposable recipe must become Body Fixture updated {{name}}., Description Modified disposable fixture, tags ts4-fixture and updated. The one new recipe must have Body New unique fixture body. Do not overwrite any seeded recipe; do not substitute ts4-long.json. If the named attachment is unavailable, report its missing filename and stop.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the imported new prompt appears after reload and the active library is updated
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select actual attached ts4-bad-json.json through Choose JSON file and verify the import error and no persisted changes before proceeding. Then select actual attached ts4-bad-schema.json and verify schema rejection and no persisted changes. Keep both files unchanged; do not approximate malformed data in a different UI. Missing required attachments remain blockers.
+    - assert: Verify an import error state is shown without partial mutations and the app remains usable
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+  - id: TEM-009
+    priority: Medium
+    name: Handle large prompt content, search empty states, and favorites archive recovery
+    description: Validates exact persistence of a large multiline prompt containing quotes, braces, dollar signs, Unicode, and emoji, plus empty search behavior and empty-state recovery in Favorites and Archived views.
+    steps:
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - Open New Prompt and set Title to TS4 Long TEM009. Use the persistent visible file input labelled Load text file to select the actual attached ts4-exact-12k.txt file. This control loads the COMPLETE UTF-8 bytes directly into the unsaved Body. Do not upload the text file to From JSON or Settings JSON import. Do not transcribe a truncated file preview, manually regenerate repetitions, accept an excerpt, or substitute a short sample. Verify the complete Body equals the source before saving. The source has 12,288 UTF-8 bytes and SHA-256 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; these supplied constants alone are not a computed comparison of the saved Body. Report missing attachment or comparison capability as a blocker.
+    - Save the prompt
+    - Reload the page
+    - Reopen the saved prompt
+    - assert: Open Edit after reload and compare the full Body exactly with the attached ts4-exact-12k.txt, including real newlines, punctuation, Unicode, emoji and literal unsupported {{bad-name!}}. Cancel Edit without changes; do not accept visible excerpts as exact persistence.
+    - In All Prompts use keyboard Tab to focus the HEADER library searchbox, search TS4 unmatched 918274 and verify the field value. Do not use the independent Command palette input.
+    - assert: Verify an empty search state is shown
+    - Clear the SAME header library query using select-all and Backspace/Delete and verify it is empty. Open Favorites, which is empty in this fresh context.
+    - assert: Verify the empty favorites state is shown
+    - Open Archived, which is empty in this fresh context; do not delete any records to create the empty state.
+    - assert: Verify the empty archived state is shown
+  - id: TEM-010
+    priority: Medium
+    name: Use PromptDock on mobile without losing access to primary actions
+    description: Validates mobile layout behavior at 390x844, including drawer navigation, settings access and dismissal, creating and editing prompts, long-content scrolling, preview and copy actions, and absence of horizontal overflow.
+    steps:
+    - Use the saved 390 by 844 browser viewport. Verify the actual browser inner width is 390 using the runner viewport measurement or read-only window.innerWidth; the application does not render its dimensions as page text. Do not look for a visible width label or resize via CSS.
+    - Navigate to the PromptDock site in a fresh browser context
+    - Choose to start locally if the onboarding experience appears
+    - Open the navigation drawer
+    - Open Settings from the drawer
+    - Dismiss Settings with the back navigation or Escape key
+    - Create a new prompt from mobile with title TS4 Mobile Variable Scroll.
+    - "Fill Body with this exact multiline template, then set topic Default value to Launch in Variables definitions:\nMobile {{topic}}.\nLine 01: scroll 中文 \U0001F600.\nLine 02: scroll 中文 \U0001F600.\nLine 03: scroll 中文 \U0001F600.\nLine 04: scroll 中文 \U0001F600.\nLine 05: scroll 中文 \U0001F600.\nLine 06: scroll 中文 \U0001F600.\nLine 07: scroll 中文 \U0001F600.\nLine 08: scroll 中文 \U0001F600.\nLine 09: scroll 中文 \U0001F600.\nLine 10: scroll 中文 \U0001F600.\nLine 11: scroll 中文 \U0001F600.\nLine 12: scroll 中文 \U0001F600.\nLine 13: scroll 中文 \U0001F600.\nLine 14: scroll 中文 \U0001F600.\nLine 15: scroll 中文 \U0001F600.\nLine 16: scroll 中文 \U0001F600.\nLine 17: scroll 中文 \U0001F600.\nLine 18: scroll 中文 \U0001F600.\nLine 19: scroll 中文 \U0001F600.\nLine 20: scroll 中文 \U0001F600.\nLine 21: scroll 中文 \U0001F600.\nLine 22: scroll 中文 \U0001F600.\nLine 23: scroll 中文 \U0001F600.\nLine 24: scroll 中文 \U0001F600."
+    - Save the prompt
+    - Open the saved prompt for editing
+    - Scroll through the long content
+    - In the editor Variables preview inputs, set topic to Mobile, verify the preview begins Mobile Mobile. and preserves all 24 numbered lines, then use Copy preview result. Open a disposable New Prompt draft and keyboard-paste into Body to compare the actual clipboard with the rendered text. Cancel that draft without saving.
+    - assert: Verify the primary actions remain usable on mobile without horizontal overflow
+    - assert: Verify one topic variable input exists and changes the live preview; verify the clipboard pasted into the disposable draft equals the entire 24-line template with {{topic}} replaced once by Mobile, including Chinese, emoji and line breaks. Verify original saved template and Launch default remain unchanged after reload.
+- useCase: Literal Token Handling
+  slug: LIT
+  testCases:
+  - id: LIT-001
+    priority: High
+    name: Render literal placeholder-like text safely
+    description: Verify placeholder-like tokens and special characters render as literal text without recursive substitution or HTML interpretation.
+    steps:
+    - Navigate to the PromptDock web app in a fresh anonymous browser context
+    - Choose to start locally if the onboarding screen appears
+    - Open the prompt editor for creating a new prompt
+    - Fill the title with TS4 literal token safety
+    - Fill the description with TS4 literal token safety coverage
+    - Fill the body with Use {{constructor}} and {{__proto__}}.
+    - Save the prompt with both variable defaults empty. Open the command palette with Ctrl+K (Cmd+K on macOS), search for TS4 literal token safety, and choose it to open the Fill Variables modal.
+    - assert: In the Fill Variables modal, verify constructor and __proto__ are empty, the preview is exactly Use {{constructor}} and {{__proto__}}., Copy to Clipboard is disabled, and there is no crash or inherited function text.
+    - Fill the constructor variable with Ada
+    - Fill the __proto__ variable with literal
+    - Verify the modal preview is exactly Use Ada and literal. Click Copy to Clipboard. After the modal closes, open a new prompt draft and paste using Ctrl+V (Cmd+V on macOS) into its body. Verify the pasted body is exactly Use Ada and literal. Do not infer clipboard content from a toast. Cancel this draft.
+    - Reload the page
+    - Reopen TS4 literal token safety and choose Edit prompt. Verify the saved body is exactly Use {{constructor}} and {{__proto__}}. Cancel the editor without changing it. Open this saved prompt through the command palette to show Fill Variables again; fill constructor with Ada and __proto__ with literal.
+    - assert: Verify the preview after reload is exactly Use Ada and literal. Click Copy to Clipboard, open a new prompt draft, and paste into its body using the keyboard. Verify the pasted content is exactly Use Ada and literal. with no quotes, inherited function text or recursive substitution; cancel the verification draft.
+  - id: LIT-002
+    priority: High
+    name: Render a literal token with special characters and preserve it on reload
+    description: Verify special characters, Unicode, emoji, and placeholder-like text are preserved literally in the editor, preview, and clipboard output.
+    steps:
+    - Navigate to the PromptDock web app in a fresh anonymous browser context
+    - Choose to start locally if the onboarding screen appears
+    - Open the prompt editor for creating a new prompt
+    - Fill the title with TS4 literal token characters
+    - Fill the description with TS4 literal token characters coverage
+    - "Set body exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. Configure topic as Textarea with saved Default value exactly $& <tag> 中文 \U0001F600 {{tone}}. Configure tone as Dropdown with options Friendly, Professional, Concise and saved Default value Professional. Keep topic and tone unresolved in the body; do not paste an already-expanded topic value into the body."
+    - "Select Professional for tone in Live Preview. Verify the preview is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Topic-inserted braces must remain literal and <tag> must remain text, with no recursive replacement or HTML execution."
+    - Save the prompt
+    - Reload the page
+    - 'Reopen the saved recipe after reload. Verify the saved literal topic default and Professional tone default survive, and the body in Edit is still Write {{topic}} in {{tone}}. Repeat: {{topic}}.; Cancel Edit without changes.'
+    - Open Cmd/Ctrl+K and select TS4 literal token characters to open Fill Variables. Verify default inputs and the exact nonrecursive preview, then click Copy to Clipboard.
+    - assert: "Open a disposable New Prompt draft and paste clipboard into Body using Cmd/Ctrl+V. Verify the complete text is exactly Write $& <tag> 中文 \U0001F600 {{tone}} in Professional. Repeat: $& <tag> 中文 \U0001F600 {{tone}}. Match the previously inspected preview exactly, preserving both literal {{tone}} strings, dollar/ampersand, angle brackets and Unicode. Verify no HTML execution or crash occurred. Cancel the draft without saving."
+- useCase: JSON Import and Export
+  slug: JSN
+  testCases:
+  - id: JSN-001
+    priority: High
+    name: Export active prompts to JSON
+    description: Validates that active prompts can be exported to JSON with version, content, tags, and variable metadata while archived prompts are excluded.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save a separate active recipe titled TS4 Export Metadata with Body exactly Write {{topic}} in {{tone}}., Description Exact export metadata, and tag ts4-export. In Variables definitions set topic to Textarea with saved Default value Launch newline Campaign (a real newline), and tone to Dropdown with options Friendly, Professional and saved Default value Friendly. Verify the saved controls before continuing.
+    - Create and save a disposable plain recipe titled TS4 Archived File Check with Body exactly Archived export exclusion. Archive this recipe through its prompt actions. Verify it appears in Archived and is excluded from All Prompts before opening Settings.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Begin capturing the browser download, then click Export prompts to JSON file. Obtain the actual downloaded promptdock-export-YYYY-MM-DD.json file, using its real returned download path. Parse and retain its complete JSON document. A toast, screenshot, filename alone or assumed bytes is not export proof. If the runner cannot capture/read the download, report that capability blocker rather than claiming success.
+    - 'Inspect the actual downloaded JSON: version must be 1.0, exportedAt must be present, and prompts must contain every active baseline record with exact body, description, tags and variable metadata. Verify TS4 Archived File Check is absent, and record the full active prompt count/content before importing.'
+    - assert: Verify the exported data includes the prompt recipe version and prompt records with content, tags, and variable metadata
+    - assert: Verify archived prompts are not included in the exported data
+  - id: JSN-002
+    priority: High
+    name: Import prompts from valid JSON and skip duplicates
+    description: Validates that importing valid JSON creates new prompts, skips unchanged duplicates, and preserves existing records on repeat import.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save TS4 Fixture Recipe with Body exactly Fixture original {{name}}., Description Disposable test fixture, and tag ts4-fixture. This is the disposable duplicate baseline; do not modify any seeded recipe. Record its complete saved body, description, tags and variable metadata.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Select actual attached ts4-valid.json in Choose JSON file and choose Skip duplicates. Select ts4-valid.json a second time and choose Skip duplicates again. Verify both unchanged/repeat imports preserve the saved disposable baseline. Missing attachments are blockers; do not use an invented file path.
+    - Select actual attached ts4-modified.json in Choose JSON file. Choose Skip duplicates, not Overwrite. This fixture contains the modified duplicate TS4 Fixture Recipe and the new TS4 Imported New. Return to All Prompts and reload. Do not substitute ts4-long.json or claim an import occurred if the actual named file is unavailable.
+    - assert: Verify exactly one new TS4 Imported New recipe exists after reload and its full body is exactly New unique fixture body.
+    - assert: Verify exactly one TS4 Fixture Recipe exists after reload and that both unchanged/repeat imports and the modified-duplicate skip preserved its exact original body Fixture original {{name}}., description Disposable test fixture and tag ts4-fixture. The incoming updated body, modified description and updated tag must not replace them. There must be exactly one TS4 Imported New and no extra duplicate copies.
+  - id: JSN-003
+    priority: Medium
+    name: Overwrite a modified duplicate during JSON import
+    description: Validates that importing JSON with overwrite updates a disposable modified duplicate without creating an extra record.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Create and save the disposable recipe TS4 Fixture Recipe with Body Local edited {{name}}., Description Local edited fixture, and tag local-edit. Record its identity and the active library count. The incoming ts4-valid.json has the same title with its deliberate replacement content.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Select actual attached ts4-valid.json in Choose JSON file and choose Overwrite duplicates. Verify the existing disposable recipe becomes Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Verify the active count is unchanged. Use its real attachment path; an unavailable named fixture remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the existing prompt is updated with the imported version
+    - assert: Verify no extra duplicate record is added
+  - id: JSN-004
+    priority: Medium
+    name: Import new prompts and persist after reload
+    description: Validates that newly imported prompts remain available after a page reload.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the imported prompt is still present after reload
+    - assert: Verify the imported prompt content and metadata are preserved after reload
+  - id: JSN-005
+    priority: High
+    name: Reject malformed JSON import safely
+    description: Validates that malformed JSON import is rejected without changing existing prompts and that the app remains usable afterward.
+    steps:
+    - Navigate to PromptDock and choose Start locally if the onboarding screen appears
+    - Open the import flow for prompts
+    - Import malformed JSON
+    - assert: Verify a JSON validation error is shown
+    - assert: Verify no prompts are added, removed, or modified
+  - id: JSN-006
+    priority: Medium
+    name: Recover from invalid schema import with a valid file
+    description: Validates that schema-invalid import is blocked and a subsequent valid import works normally.
+    steps:
+    - Open PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep the complete seeded library; use only disposable TS4 records in this case.
+    - Open Settings > Import/Export. Verify the persistent visible file input labelled Choose JSON file is present before selecting a file. Use the runner upload operation on that control. Do not use the editor From JSON textarea, a guessed /tmp path, or require an OS picker to appear in the page screenshot. If this control is absent, report that the new application build is not deployed and stop.
+    - Record the complete saved library baseline. Select the actual attached ts4-bad-schema.json through Choose JSON file. Verify schema rejection without any new record or mutation. If the attachment is unavailable, report the missing filename and stop.
+    - assert: Verify a schema validation error is shown
+    - Select actual attached ts4-valid.json through Choose JSON file, using the runner-reported attachment path. This file contains TS4 Fixture Recipe with Body Fixture original {{name}}., Description Disposable test fixture and tag ts4-fixture. Complete the import, choosing Skip duplicates if unchanged records already exist. Verify success and the exact imported values. An unavailable named attachment remains a blocker.
+    - Return to All Prompts, reload the page and inspect the saved disposable records. Verify their full bodies, descriptions, tags and variable metadata match the expected imported versions and each title appears exactly once. Preserve the complete seeded baseline.
+    - assert: Verify the valid import succeeds and the prompt appears in the library
+- useCase: Mobile Layout
+  slug: MOB
+  testCases:
+  - id: MOB-001
+    priority: High
+    name: Mobile onboarding starts local library
+    description: Verifies first-use onboarding on a mobile viewport enters the local library and shows the seeded prompts.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - Verify the browser viewport is set to a mobile width and height
+    - If onboarding appears, choose the local-first start option
+    - assert: Verify the seeded prompt library is displayed
+    - assert: Verify the mobile layout shows the library navigation and prompt list without horizontal overflow
+  - id: MOB-002
+    priority: High
+    name: Mobile create prompt and persist after reload
+    description: Verifies a new prompt can be created on mobile and the saved content persists exactly after reload.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Start creating a new prompt
+    - Fill in the title field with TS4 Mobile Save Prompt
+    - Fill in the description field with TS4 mobile description
+    - Fill in the body field with TS4 mobile body content
+    - Save the prompt
+    - Reload the page
+    - assert: Verify the saved prompt is still present in the library after reload
+    - assert: Verify the title, description, and body content are restored exactly after reload
+  - id: MOB-003
+    priority: Medium
+    name: Mobile cancel draft keeps library unchanged
+    description: Verifies canceling an in-progress prompt draft on mobile does not save a new record or alter the library.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Start creating a new prompt
+    - Fill in the title field with TS4 Mobile Draft Cancel
+    - Fill in the description field with TS4 draft description
+    - Fill in the body field with TS4 draft body content
+    - Cancel the draft
+    - Reopen the prompt library
+    - assert: Verify the draft prompt is not present in the library
+    - assert: Verify the existing seeded prompts remain available
+  - id: MOB-004
+    priority: High
+    name: Mobile edit prompt and persist changes
+    description: Verifies an existing prompt can be edited on mobile and the updated content persists after reload.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Open an existing seeded prompt for editing
+    - Update the title to TS4 Mobile Edited Prompt
+    - Update the description to TS4 mobile edited description
+    - Update the body to TS4 mobile edited body content
+    - Save the prompt
+    - Reload the page
+    - assert: Verify the edited prompt is still present in the library after reload
+    - assert: Verify the updated title, description, and body content are restored exactly after reload
+  - id: MOB-005
+    priority: Medium
+    name: Mobile preview copy and dismiss workflow
+    description: Verifies the mobile editor preview can be filled, copied, and dismissed with the expected output available for reuse.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Open the prompt editor
+    - Fill the prompt body with TS4 mobile preview body
+    - Open the live preview or variable fill flow
+    - Copy the generated output
+    - Dismiss the preview flow
+    - assert: Verify the copied output matches the rendered preview exactly
+    - assert: Verify the editor remains usable after dismissing the preview
+  - id: MOB-006
+    priority: Medium
+    name: Mobile long content scrolls without trapping primary actions
+    description: Verifies long prompt content can be edited on mobile while the view remains scrollable and core actions stay reachable.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Open the prompt editor
+    - Fill the body with a long TS4 mobile scrolling prompt
+    - Scroll through the editor content
+    - Return to the primary editor actions
+    - assert: Verify the long prompt content remains editable throughout scrolling
+    - assert: Verify the primary save or completion actions remain reachable on mobile
+  - id: MOB-007
+    priority: Medium
+    name: Mobile settings opens and closes from drawer
+    description: Verifies settings can be reached from the mobile navigation drawer and exited using back or escape behavior.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Open the mobile navigation drawer
+    - Open Settings
+    - Return from Settings using the available back navigation
+    - Reopen the mobile navigation drawer
+    - Press Escape to dismiss the drawer or panel
+    - assert: Verify Settings is reachable on mobile
+    - assert: Verify the drawer or panel can be dismissed and the library view is restored
+  - id: MOB-008
+    priority: High
+    name: Mobile search filters the prompt list
+    description: Verifies mobile search narrows the prompt list to matching results and can be recovered back to the full list.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - At the saved mobile viewport, use the drawer to select All Prompts and record baseline titles/count. Focus the header library searchbox by keyboard Tab, without clicking the empty field which opens Command palette, and search Email Draft in that SAME header input.
+    - Wait for the library results, verify the header query is Email Draft and matching prompts are visible. Record the active-search result before clearing.
+    - Clear the SAME header library query using select-all and Backspace/Delete. Verify the header value is empty and no independent palette query remains.
+    - assert: Verify only matching prompts were shown while the header library query Email Draft was active, using the active-search observation captured before clearing.
+    - assert: Verify the full baseline library titles and count are restored at the mobile viewport after clearing the SAME header library query.
+  - id: MOB-009
+    priority: High
+    name: Mobile favorite and archive actions update views
+    description: Verifies mobile favorite and archive actions update library membership and the prompt appears or disappears from the expected views.
+    steps:
+    - Navigate to the PromptDock live site in a fresh browser context at a mobile viewport
+    - If onboarding appears, choose the local-first start option
+    - Open a seeded prompt from the library
+    - Mark the prompt as a favorite
+    - Use the mobile drawer to navigate to Favorites BEFORE archiving and verify the favorited prompt is present. Record this membership check now, while the prompt is active.
+    - Open that favorited prompt again from Favorites.
+    - Archive the prompt
+    - Navigate to Favorites and verify the now-archived prompt is excluded from this active-only view.
+    - Navigate to Archived
+    - assert: Verify the prompt was present in Favorites before archive, is now excluded from active All Prompts and Favorites, and appears in Archived after archiving.
+    - assert: Restore the prompt from Archived, then navigate to Favorites and verify it is present again with the favorite flag retained. Verify it is absent from Archived after restore. Do not require archived prompts to appear in active Favorites.

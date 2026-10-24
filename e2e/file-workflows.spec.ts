@@ -151,8 +151,14 @@ test('loads and edits the entire exact UTF-8 body on mobile through reload, clip
   await selectPrompt(page, 'Exact long file');
   await openPromptAction(page, 'Edit prompt');
   await expect(page.getByLabel('Body', { exact: true })).toHaveValue(source);
+  await page.getByRole('button', { name: 'Text details', exact: true }).click();
+  await expect(page.getByLabel('UTF-8 bytes', { exact: true })).toHaveText('12288');
+  await expect(page.getByLabel('Text SHA-256', { exact: true })).toHaveText(createHash('sha256').update(source).digest('hex'));
+  await page.getByRole('button', { name: 'Text details', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: '/tmp/promptdock-text-details-mobile.png' });
   const edited = source + '\nExact edit 中文 😀';
   await page.getByLabel('Body', { exact: true }).fill(edited);
+  await expect(page.getByLabel('Text SHA-256', { exact: true })).toHaveText(createHash('sha256').update(edited).digest('hex'));
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.reload();
   const details = await selectPrompt(page, 'Exact long file');

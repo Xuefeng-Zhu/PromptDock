@@ -1,0 +1,123 @@
+# Three-case patch only. No application deployment needed; uses live 22647ec controls.
+# FAV-011 and TEM-010 remain unchanged pending TestSprite runner capabilities.
+---
+baseSavedPlanSha256: 89a9bba0fbc823494a3ab04fb6b7b38989f68e044416463af6d017d3e1513869
+testCases:
+- id: ONB-002
+  priority: High
+  name: Edit, duplicate, favorite, archive, and restore a prompt
+  description: >-
+    Verifies editing, duplicating into the local workspace, favorite membership changes, archive/restore behavior, and visibility
+    across active views.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context; choose Start locally if onboarding appears. Preserve all
+    seed prompts.
+  - >-
+    Create one disposable prompt titled TS4 Lifecycle Source with body Disposable lifecycle body. Save and select it in All
+    Prompts.
+  - Open More options > Edit prompt. Change Title to TS4 Edited Prompt and Description to TS4 edited description. Save.
+  - >-
+    Select TS4 Edited Prompt and use More options > Duplicate. In the destination dialog choose My Prompts and click Duplicate.
+    Verify Copy of TS4 Edited Prompt exists, then explicitly reselect the ORIGINAL exact title TS4 Edited Prompt for all following
+    operations.
+  - >-
+    Mark the original TS4 Edited Prompt as favorite. Open Favorites and directly verify the original exact title and edited
+    description are visible BEFORE archiving. Retain this observation.
+  - Select that original in Favorites and use More options > Archive. Verify its exact title is now absent from Favorites.
+  - >-
+    BEFORE restoring anything, explicitly open All Prompts with empty header query and no folder/tag filters. Directly verify
+    the original exact-title TS4 Edited Prompt is absent while Copy of TS4 Edited Prompt remains visible. This is the required
+    active-library exclusion observation; do not defer it until after Restore.
+  - >-
+    Open Archived. Verify TS4 Edited Prompt with edited description is present. Select that exact original and use More options
+    > Restore.
+  - >-
+    Explicitly return to All Prompts. Verify the original TS4 Edited Prompt and TS4 edited description are visible again;
+    also verify the separate copy remains. Open Favorites and verify the restored original is present.
+  - assert: >-
+      Verify the edited prompt appears in Favorites before archiving and is excluded from the active library while archived,
+      then returns after restore
+- id: FLT-011
+  priority: High
+  name: Create a prompt with the default template variables and persist metadata
+  description: >-
+    Validates the template prompt editor behavior with default variable values, one topic input, live preview, and reload
+    persistence.
+  steps:
+  - Navigate to the app and choose local onboarding if it appears.
+  - >-
+    Open New Prompt and create TS4 Topic Tone Metadata with description Saved variable metadata and body exactly Write {{topic}}
+    in {{tone}}. Repeat: {{topic}}. Configure topic as Textarea with Default value Launch. Configure tone as Dropdown with
+    options Friendly, Professional, Concise and Default value Friendly. This fixture is created in this case, not assumed
+    to exist.
+  - Verify the topic field defaults to Launch and the tone selection defaults to Friendly.
+  - >-
+    In Variables definitions change topic Default value to exactly two lines: Launch then Campaign. Verify the textarea value
+    and live preview preserve the real newline. Set the SAVED default, not only the transient Live Preview value.
+  - >-
+    In Variables definitions set tone Default value to Professional, leaving Dropdown options Friendly, Professional, Concise.
+    Verify the live preview uses Professional.
+  - Save the prompt.
+  - Reload the page.
+  - Open the saved prompt again.
+  - >-
+    Select TS4 Topic Tone Metadata and open More options > Edit prompt. Verify saved Title and Description; topic is Textarea
+    with default exactly Launch newline Campaign; tone is Dropdown with options Friendly, Professional, Concise and default
+    Professional. In Live Preview verify exactly ONE topic value control despite two tokens and exact rendered text Write
+    Launch newline Campaign in Professional. Repeat: Launch newline Campaign.
+  - >-
+    Verify Body is exactly Write {{topic}} in {{tone}}. Repeat: {{topic}}. without rendered substitution. To cancel this UNCHANGED
+    saved edit, activate the Library breadcrumb without clicking Save. The saved Edit Prompt screen has no separate Cancel
+    button; Library is its leave-editor control. In this assertion Cancel means leave the unchanged edit without saving. Return
+    to All Prompts, reload, reopen the same saved prompt and verify the unresolved Body and both saved defaults are still
+    exact. Leave via Library again without saving; ensure no extra prompt was created.
+  - assert: >-
+      Verify the saved title, description, variable metadata and live preview persist after reload, including a SINGLE topic
+      input despite its repeated token. Topic default must be Launch newline Campaign and tone default Professional; preview
+      must exactly be Write Launch newline Campaign in Professional. Repeat: Launch newline Campaign. Open Edit and verify
+      the unresolved body remains Write {{topic}} in {{tone}}. Repeat: {{topic}}., then Cancel without changes.
+- id: FAV-014
+  priority: Medium
+  name: Persist long prompt content and recover from empty searches
+  description: >-
+    Validates that a large multiline prompt with punctuation, Unicode, and emoji saves exactly, survives reload, and can be
+    found again after empty search states in Favorites and Archived recover normally.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep all seeded
+    prompts.
+  - >-
+    Open New Prompt and set Title to TS4 Long FAV014. Use the visible Load text file input to upload the ACTUAL attached ts4-exact-12k.txt.
+    Preserve the entire text with quotes, braces, dollar signs, Chinese, emoji and literal {{bad-name!}}. Do not type a sample,
+    regenerate the fixture, use From JSON or copy a truncated preview.
+  - >-
+    Click Text details and read the actual locally computed Text SHA-256 of the complete Body. Compare all 64 hex characters
+    with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; UTF-8 bytes must be 12288. A mismatch fails; an
+    excerpt, length alone or pasted expected hash does not verify equality.
+  - >-
+    Save the recipe, then perform an actual browser page reload. In All Prompts select TS4 Long FAV014 and open More options
+    > Edit prompt.
+  - >-
+    Click Text details and read the ACTUAL post-reload full Body fingerprint. Verify Text SHA-256 equals 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a
+    and UTF-8 bytes equals 12288. This compares the complete restored text against the independently calculated source-file
+    digest. Verify literal {{bad-name!}} remains. Retain this exact-comparison evidence; do not infer it from a toast or excerpt.
+  - assert: Verify the long prompt content persists exactly after reload
+  - >-
+    Leave the unchanged saved edit through the Library breadcrumb without Save. In All Prompts record baseline titles/count.
+    Focus the HEADER LIBRARY searchbox using keyboard Tab; do not click an empty searchbox because that opens a separate command
+    palette. Search for Long FAV014 and verify the exact saved prompt is found.
+  - >-
+    Clear that same header searchbox using keyboard Select All and Backspace. Verify its actual value is empty and the entire
+    recorded All Prompts baseline returns.
+  - >-
+    Open Favorites with query empty and observe its normal empty state. Focus the header library searchbox using Tab, enter
+    TS4 unmatched 918274 and verify no matching cards. Clear the SAME searchbox using Select All and Backspace, verify query
+    empty and normal empty Favorites state returns.
+  - >-
+    Open Archived with query empty. Enter TS4 unmatched 918274 into the header library searchbox, verify no matches, then
+    clear the same searchbox with Select All and Backspace. Verify query empty and normal empty Archived state returns.
+  - >-
+    Explicitly select All Prompts with query empty and no folder/tag filters. Verify all recorded baseline titles/count and
+    TS4 Long FAV014 return.
+  - assert: Verify search finds the prompt and empty search states are recoverable in the Favorites and Archived views

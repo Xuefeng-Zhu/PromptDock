@@ -10,7 +10,7 @@ async function expectFingerprint(page: Page, expected: string) {
   await expect(page.getByLabel('Text SHA-256', { exact: true })).toHaveText(createHash('sha256').update(expected).digest('hex'));
 }
 
-for (const id of ['ONB-009', 'LIB-013', 'EDT-009', 'FLT-018', 'TEM-009']) {
+for (const id of ['ONB-009', 'LIB-013', 'EDT-009', 'FLT-018', 'TEM-009', 'FAV-014']) {
   test(`${id}: verifies complete text after reload and recovers search and empty views`, async ({ page }) => {
     const source = await readFile(resolve('docs/hackathon/fixtures/ts4-exact-12k.txt'), 'utf8');
     const title = `Long text ${id}`;
@@ -55,6 +55,16 @@ for (const id of ['ONB-009', 'LIB-013', 'EDT-009', 'FLT-018', 'TEM-009']) {
       await navigation.getByRole('button', { name: new RegExp(view) }).click();
       await expect(page.getByRole('heading', { name: view, exact: true })).toBeVisible();
       await expect(page.getByRole('option')).toHaveCount(0);
+      if (id === 'FAV-014') {
+        await searchPrompts(page, 'TS4 unmatched 918274');
+        await expect(search).toHaveValue('TS4 unmatched 918274');
+        await expect(page.getByRole('option')).toHaveCount(0);
+        await search.press('ControlOrMeta+a');
+        await search.press('Backspace');
+        await expect(search).toHaveValue('');
+        await expect(page.getByRole('heading', { name: view, exact: true })).toBeVisible();
+        await expect(page.getByRole('option')).toHaveCount(0);
+      }
     }
     await navigation.getByRole('button', { name: /All Prompts/ }).click();
     await expect(page.getByRole('option')).toHaveCount(5);

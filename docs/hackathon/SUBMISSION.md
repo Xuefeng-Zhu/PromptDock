@@ -1,80 +1,103 @@
 # PromptDock — TestSprite Hackathon Season 4 submission
 
-**Updated deadline: Monday, October 26, 2026, 11:59 PM America/Los_Angeles.** On October 23 at 12:57 PM Pacific, TestSprite admin Holly McAninch announced the extension in [hackathon-season-4](https://discord.com/channels/1227394620623949934/1556776381894099117/1563280349557956740). This supersedes the original October 22 deadline still shown on the public event page. The same announcement says credit boosts are processed on weekdays, typically by day's end. The linked form limits eligibility to participants with completely depleted credits; do not submit an inaccurate eligibility acknowledgment. Current workspace credit balance was verified as **280.4**, including 250 extra credits, on October 23. No purchase or credit request was made in this follow-up.
+## Published entry — October 24, 2026
 
-## Current status — October 22, about 10:10 PM Pacific
+**[Open the Discord submission](https://discord.com/channels/1227394620623949934/1563612968724209664).** The entry titled **PromptDock — Local-first prompt recipes with exact variable output** was posted by `frankzhu94` on October 24, 2026 at **10:59 AM Pacific**, with two real app screenshots. Publication was verified through Discord's Post created notification and readback of the full message and both attachments.
 
-- Live app: https://promptdock-95e31.web.app. GitHub Pages is the marketing/download page only.
-- PR #201 merged into develop as `82bcafe`; constructor/proto and literal substitution regressions were fixed and verified live.
-- [PR #202](https://github.com/Xuefeng-Zhu/PromptDock/pull/202) fixes scope headings, tag casing, nonempty search editing and stripped multiline defaults. All seven normal CI checks passed. Lint/build passed, 1,035 Vitest tests passed (13 existing skips), and all 20 browser E2E tests passed.
-- Production [deployment #33](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39899769500) succeeded from `e6339b1` with Frank's approval. Neither main nor develop moved. Independent live multiline save/reload/preview/clipboard checks passed.
-- TEM-005 passed in the resulting full TestSprite PR run, proving a real red-then-green regression. The **full** result remains **63 passed, 23 failed, 21 blocked**. [PR bot comment](https://github.com/Xuefeng-Zhu/PromptDock/pull/202#issuecomment-6357306595).
-- The saved develop rule requires **Build and test** from GitHub Actions and **TestSprite V3** from TestSprite. PR #202 is open and unmerged; do not bypass the failing check.
-- All 107 cases remain in the suite. Both reviewed YAML updates preserved case IDs, goals, priorities and assertion counts. All 13 mobile cases have 390×844 viewport overrides. Sync/workspace/desktop-native flows are excluded from this anonymous suite.
-- The focused corrected-plan run `08336884-1d91-4e66-8b95-821e00ac09d1` finished **12 passed, 3 failed**. The three clearing-input failures did not reproduce in independent live Chrome checks; runner event/focus behavior still needs investigation. These results do not establish a green PR.
-- Frank uploaded all eight synthetic fixtures; Test Files shows each as Ready. Actual export/import and long-content assertions still need rerunning with those attachments.
-- **Immediate blocker:** Run All 107 was rejected with **Insufficient credits**. No new full run was created, and no purchase or upgrade was made.
-- Frank chose the fixed production URL for the deadline. TestSprite uses successful eligible PR preview deployment events as its trigger but tests production. New application code must be deployed with approval before it is exercised.
-- No Discord submission has been posted. Keep the confirmed submission email out of the public repository.
+The entry describes the user problem, a one-minute walkthrough, the TEM-005 bug and fix, coverage, and current runner limitations. It explicitly reports **91 Passed / 2 Failed / 14 Blocked** as the latest result per case across focused runs, and says no green full-suite TestSprite PR result exists. The required account information was included in the approved Discord entry; the account email is omitted from this repository.
 
-## Finish in order
+| Item | Verified checkpoint |
+|---|---|
+| Live browser app | [promptdock-95e31.web.app](https://promptdock-95e31.web.app), anonymous local mode |
+| Repository and PR | [PromptDock](https://github.com/Xuefeng-Zhu/PromptDock), [PR #202](https://github.com/Xuefeng-Zhu/PromptDock/pull/202), base `develop`, open/unmerged |
+| Production and remote PR head | `22647ec76670ae7401148f9cb6208c1982c681cb`; [production deployment succeeded](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/40074130187) |
+| Ordinary CI | [Build and test passed](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/40073649533); PR preview and CodeQL checks also passed at that head |
+| TestSprite inventory | **107 cases / 217 assertions; 91 Passed / 2 Failed / 14 Blocked; 0 running**, refreshed October 24 |
+| Latest focused run | FLT-011, ONB-002 and FAV-014: [3 Passed / 0 Failed / 0 Blocked](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/db9cdc55-47a7-451b-9b78-800da332b0c3) |
+| Automatic PR testing | Paused during investigation; required **Build and test** and **TestSprite V3** checks remain |
+| Submission media | Two screenshots attached; no demo video published as part of this submission |
 
-Restore TestSprite workspace credits; investigate the clearing-input execution mismatch and run file/long-content cases; get a passing full 107-case TestSprite check on the current PR head; merge after required checks pass; Frank posts the final submission before 11:59 PM Pacific. Do not present an individual regression pass as a green suite.
+Posting the entry is complete. Passing a complete TestSprite PR run and merging the PR remain separate engineering follow-ups.
 
-## Discord draft — Frank posts after a green TestSprite result
+## Local execution-obstacle correction — pending deployment
 
-PromptDock — a local-first prompt recipe manager for reusable AI workflows.
+Account → Layout details now provides actual numeric viewport and overflow measurements in the local candidate. [Investigation and verification](evidence/runner-obstacle-investigation.md) and the [pending TEM-010 action patch](evidence/testsprite-layout-pending.yaml) explain the correction. The patch preserves both original assertions and is not saved in TestSprite. Production, remote PR head and portal verdicts above remain the recorded submission checkpoint; this local correction has not been pushed or deployed. The remaining JSON/download cases still require supported runner file access.
 
-PR: <passing TestSprite PR link — required>
-Live URL: https://promptdock-95e31.web.app
-Repo: https://github.com/Xuefeng-Zhu/PromptDock
-TestSprite account: <confirmed account email> — Frank Zhu
-Demo: <optional video URL; omit if unavailable>
+## Submission screenshots
 
-Create and organize templates, fill typed variables with defaults and live previews, then copy the exact result. The anonymous web experience works without login.
+These are the two screenshots attached to the published entry. Both show synthetic sample recipes in the deployed browser app, without private prompts or account details.
 
-Test coverage: prompt lifecycle, folders/tags, search and command palette, variable rendering and clipboard, JSON import/export and duplicate handling, persistence and responsive navigation. <Replace this sentence with the actual generated suite's executed coverage and result.>
+### Prompt library
 
-<Only after evidence exists: TestSprite runs on every PR with Blocking PRs enabled.>
-<Only if its run proves this: The regression first failed in TestSprite, then passed after the fix.>
+![PromptDock library with sample recipes, tags, search and navigation](images/library.jpg)
 
-## Two-minute demo script
+### Template variables and live preview
+
+![PromptDock editor showing variable placeholders and filled live preview](images/variables.jpg)
+
+## Try the app in a minute
+
+1. Open the [live app](https://promptdock-95e31.web.app), choose local mode, and create a **New Prompt**.
+2. Enter `Write {{topic}}. Repeat: {{topic}}.` as the body. Set `topic` to **Textarea** and give it a two-line default.
+3. Check the preview, save, and reload. Find the recipe with **Cmd/Ctrl+K**, fill the variable, and copy the result.
+
+TEM-005 caught a real defect: a saved multiline default `Launch` followed by `Campaign` became `LaunchCampaign`. The default-value control now uses a textarea for textarea variables. Its [passing TestSprite case](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/620b8fd6-556b-40eb-b96d-bcee225d8515?test=85e13acc-2b21-46f0-b3c8-f43d43dfcb54) verifies defaults, reload persistence, preview, and exact clipboard text. That individual result does not establish a green full suite.
+
+## Remaining verification and follow-up
+
+- **FAV-011:** TestSprite must obtain, inspect, and reimport the actual exported JSON file; a download toast does not verify its bytes.
+- **TEM-010:** The runner must measure actual numeric viewport width and horizontal overflow; a narrow screenshot does not verify `window.innerWidth`.
+- **14 Blocked cases:** JSON file selection, download/reimport, and required fixture access remain unresolved. Eight Test Files showed Ready, but the import probe could not access the required pair. The relationship to the displayed 8/3 upload-limit gate is unconfirmed.
+- **Support:** The approved report was sent through Intercom and [Discord](https://discord.com/channels/1227394620623949934/1227394621362143326/1563460634979340358). [Technical evidence and focused-run receipts](evidence/discord-support-report.md) record the issues and three subsequent case passes.
+- **Next validation:** Obtain a supported correction, then request approval for the smallest affected run with an explicit credit ceiling. Re-enabling automatic PR runs, pushing, deployment, and merging require their own approval. Keep all 107 cases and 217 assertions intact.
+
+Independent production Playwright checks passed actual JSON download/reimport twice with full metadata equality, exact text after reload, and mobile `innerWidth = document scrollWidth = 390`. Five long-text portal cases now pass complete 12 KiB SHA-256 comparisons. The application fix was validated with **1,050 Vitest passes / 13 existing emulator-dependent skips** and **31 browser E2E passes** at the deployed head. These are recorded results; this documentation refresh did not rerun them. Real cloud sync was outside that verification.
+
+## Optional 90-second demo script — not yet recorded
 
 | Time | Visual and narration |
 |---|---|
-| 0:00–0:20 | Open live app. “PromptDock stores reusable prompt recipes locally, with no account required.” Create/find a recipe, show folder/tag/favorite. |
-| 0:20–0:45 | Cmd/Ctrl+K → choose a recipe → show defaults/dropdown, update values, compare preview and exact clipboard text. |
-| 0:45–1:05 | Show TEM-005 red evidence from TestSprite: a multiline default became LaunchCampaign. Keep the run ID and actual failure visible. |
-| 1:05–1:30 | Show the dedicated multiline-default fix commit and its regression test. Explain that textarea variables now use a textarea for saved defaults, preserving real newlines. |
-| 1:30–1:50 | Show the actual TEM-005 passing rerun. Show the full PR green comment/check only after all cases genuinely pass; then show the saved GitHub required-check rule. Do not present a single passing case as a green full suite. |
-| 1:50–2:00 | Close on live URL and repo. “Recipes stay reusable; automated tests protect the full path from editing to clipboard.” |
+| 0:00–0:15 | Open the live app and show the library. Explain reusable prompt recipes and anonymous local storage. |
+| 0:15–0:40 | Create or open a recipe, show a multiline variable default, and compare template placeholders with the live preview. |
+| 0:40–1:00 | Save, reload, find it with Cmd/Ctrl+K, and copy the filled result. |
+| 1:00–1:20 | Show the genuine TEM-005 defect, textarea fix, and passing portal case with its run identity visible. |
+| 1:20–1:30 | Close on the live URL, repo and current 91/2/14 inventory, clearly distinguishing it from a complete PR run. |
 
-Never stage a fake TestSprite failure or imply production tested an unmerged branch. Record after deployment/URL decision and evidence are complete.
+Use genuine app actions and run evidence. A demo must not present an individual case pass as a full-suite pass or imply native desktop/cloud-sync verification from browser-only footage.
 
-## X draft — Frank reviews and posts
+## Optional X draft — unpublished
 
-Building PromptDock for @Test_Sprite Hackathon S4: a local-first prompt recipe manager with typed variables, live previews, and exact clipboard output. TestSprite caught a multiline-default bug; we fixed it with unit and browser regressions, and its portal case now passes.
+Building PromptDock for @Test_Sprite Hackathon S4: reusable prompt recipes with typed variables and live previews. TestSprite caught a multiline-default bug; the fix now passes its portal case. Full suite still has runner gaps.
 
 Try it: https://promptdock-95e31.web.app
 
-<Add passing PR/demo link and the verified TestSprite result before posting; adjust length.>
+Review wording and length, and obtain explicit approval before posting. No X post was made as part of this submission or documentation refresh.
 
-## Evidence
+## Evidence index
 
-- [Production deployment for the multiline fix](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39899769500).
-- [TEM-005 passing TestSprite result](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/620b8fd6-556b-40eb-b96d-bcee225d8515?test=85e13acc-2b21-46f0-b3c8-f43d43dfcb54).
+- [Published submission and attached images](https://discord.com/channels/1227394620623949934/1563612968724209664).
+- [Production deployment for current head 22647ec](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/40074130187).
+- [CI for current head 22647ec](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/40073649533).
+- [TEM-005 passing TestSprite case](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/620b8fd6-556b-40eb-b96d-bcee225d8515?test=85e13acc-2b21-46f0-b3c8-f43d43dfcb54).
+- [Historical production deployment of the multiline-default fix](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/39899769500).
+- [Three corrected cases passing](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/db9cdc55-47a7-451b-9b78-800da332b0c3).
+- [Correction methodology and independent production checks](evidence/failed-case-correction-verification.md).
 - [Saved GitHub branch-protection rule](https://github.com/Xuefeng-Zhu/PromptDock/settings/branch_protection_rules/76447933).
-- [Final saved 107-case test plan](evidence/testsprite-plan-final-saved.yaml).
-- [Setup history](PORTAL_SETUP.md) and [remaining cases](REMAINING_CASES.md).
+- [Saved 107-case test plan](evidence/testsprite-plan-final-saved.yaml), [setup history](PORTAL_SETUP.md), and [remaining cases](REMAINING_CASES.md).
 
-Still required: a passing full PR status, final merged PR link, and Discord submission permalink/timestamp. The optional demo can be omitted to meet the deadline.
+## Historical checkpoints — superseded by the published entry above
 
+The original draft was revised after comparison with 30 project posts. Its final 1,961-character body added the user problem, one-minute judge path, concrete TEM-005 defect and passing-case link. Discord posting was initially disabled until the Season 4 participation options enabled it. Frank approved publication after reviewing the entry and event-rule implications, then requested the two screenshots. The earlier draft-only and preview-only status no longer applies.
 
-### Focused reruns after fixture upload
+The [October 23 organizer announcement](https://discord.com/channels/1227394620623949934/1556776381894099117/1563280349557956740) extended project submissions to **October 26, 2026 at 11:59 PM Pacific**, superseding the original October 22 date. The published entry preceded that announced deadline. [Organizer guidance on another participant's runner blocker](https://discord.com/channels/1227394620623949934/1227394621362143326/1562286371010248846) says such constraints are considered in judging; it does not guarantee this entry's eligibility, score, or outcome.
 
-All 21 previously blocked cases are running in execution `e6f25b36-3436-4edf-a88a-acf91afaea11`; all six remaining failed cases ran in `4ec13a85-b047-4a47-a986-f8216f0fcfc9`. The workspace displayed 45.8 credits before these launches, enough for focused investigation but not the full 107-case request. LIB-005, FAV-008 and TEM-001 now explicitly use real keyboard Select All/Backspace instead of an empty fill. The three-case plan update was saved and read back through the UI; parsed YAML matched the reviewed plan exactly. All 107 cases and all assertions remain. These in-progress subset runs do not replace the required full PR check.
+| Historical checkpoint | Recorded result and scope |
+|---|---|
+| October 23 production head `a2b180c` | [Deployment succeeded](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/40024458312); 1,039 unit and 23 browser tests passed, with 13 existing emulator-dependent skips. Superseded by deployed head `22647ec`. |
+| Last recorded complete PR execution | [`cbc9b35d-6c77-4d56-815a-b56e11a49370`](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/cbc9b35d-6c77-4d56-815a-b56e11a49370): **81 Passed / 5 Failed / 21 Blocked**. |
+| Earlier required-status target | [`a3935999-3d33-4c6b-836a-9fb0f3ffb26d`](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/a3935999-3d33-4c6b-836a-9fb0f3ffb26d): **81 Passed / 7 Failed / 19 Blocked**; a different execution from the newer bot-report link. |
+| Post-upload subsets | `e6f25b36-3436-4edf-a88a-acf91afaea11`: **3 Passed / 5 Failed / 13 Blocked**; `4ec13a85-b047-4a47-a986-f8216f0fcfc9`: **3 Passed / 0 Failed / 3 Blocked**. Explicit keyboard clearing fixed TEM-001, LIB-005 and FAV-008. Latest-per-case inventory then was 86/5/16. |
+| Five long-text passes | Complete-file fingerprint checks brought the latest-per-case inventory to 88/5/14. |
+| Three corrected cases | Execution `db9cdc55-47a7-451b-9b78-800da332b0c3` passed 3/3, bringing the latest-per-case inventory to **91/2/14**. |
 
-
-### Completed post-upload subsets
-
-Execution e6f25b36-3436-4edf-a88a-acf91afaea11 completed **3 passed / 5 failed / 13 blocked**. Execution 4ec13a85-b047-4a47-a986-f8216f0fcfc9 completed **3 passed / 0 failed / 3 blocked**. All three clearing-input cases (TEM-001, LIB-005, FAV-008) now pass with explicit native keyboard actions. The remaining long cases are blocked: fixture text readout is truncated, and the runner attempted to upload into the From JSON textarea. A duplicate import case selected ts4-long.json rather than the required disposable duplicate pair and could not handle the native Settings Import picker. TestSprite AI was asked for read-only capability diagnosis; no additional runs were requested. Aggregate latest-case counts are 86 passed / 5 failed / 16 blocked, not a full PR result.
+Earlier plans to wait for a green full suite before posting were superseded by Frank's request to submit with explicit limitations. The submission receipt does not imply a passing TestSprite merge gate or approval to merge.

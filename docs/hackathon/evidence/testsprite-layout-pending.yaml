@@ -1,0 +1,56 @@
+# PENDING — NOT SAVED IN TESTSPRITE. Apply only after production deployment and verification.
+# TEM-010 actions only; both current saved assertions remain verbatim.
+# Baseline: testsprite-plan-final-saved.yaml SHA256 d882186d42d625ebeb84fced06e0ed30318cec726aa5ee778d76ac9959bd47d2
+# The other 106 cases must remain unchanged. No run is authorized by this file.
+
+useCases:
+  - useCase: Template Variables
+    slug: TEM
+    testCases:
+      - id: TEM-010
+        priority: Medium
+        name: Use PromptDock on mobile without losing access to primary actions
+        description: Validates mobile layout behavior at 390x844, including drawer navigation, settings access and dismissal, creating and editing prompts, long-content scrolling, preview and copy actions, and absence of horizontal overflow.
+        steps:
+          - Use the saved 390 by 844 browser viewport. Do not resize the page with CSS or infer its numeric width from a screenshot. The deployed Account > Layout details panel must be available before executing this candidate.
+          - Navigate to the PromptDock site in a fresh browser context
+          - Choose to start locally if the onboarding experience appears
+          - Open Account > Layout details. Read Browser inner width, Browser inner height, Document client width, Document scroll width and Horizontal overflow. These are live browser measurements in CSS pixels. Verify actual inner width is 390 and inner height is 844, record the document widths and numeric overflow, then close Account by clicking its button again. If the panel or values are unavailable, report the missing measurement; never substitute a screenshot, expected constant or a toast.
+          - Open the navigation drawer
+          - Open Settings from the drawer
+          - Dismiss Settings with the back navigation or Escape key
+          - Create a new prompt from mobile with title TS4 Mobile Variable Scroll.
+          - |-
+            Fill Body with this exact multiline template, then set topic Default value to Launch in Variables definitions:
+            Mobile {{topic}}.
+            Line 01: scroll 中文 😀.
+            Line 02: scroll 中文 😀.
+            Line 03: scroll 中文 😀.
+            Line 04: scroll 中文 😀.
+            Line 05: scroll 中文 😀.
+            Line 06: scroll 中文 😀.
+            Line 07: scroll 中文 😀.
+            Line 08: scroll 中文 😀.
+            Line 09: scroll 中文 😀.
+            Line 10: scroll 中文 😀.
+            Line 11: scroll 中文 😀.
+            Line 12: scroll 中文 😀.
+            Line 13: scroll 中文 😀.
+            Line 14: scroll 中文 😀.
+            Line 15: scroll 中文 😀.
+            Line 16: scroll 中文 😀.
+            Line 17: scroll 中文 😀.
+            Line 18: scroll 中文 😀.
+            Line 19: scroll 中文 😀.
+            Line 20: scroll 中文 😀.
+            Line 21: scroll 中文 😀.
+            Line 22: scroll 中文 😀.
+            Line 23: scroll 中文 😀.
+            Line 24: scroll 中文 😀.
+          - Save the prompt
+          - Open the saved prompt for editing
+          - Scroll through the long content
+          - While the saved long prompt editor remains the underlying page, open Account > Layout details again and Refresh measurements. Read the actual Browser inner width and height (390 and 844), Document client width, Document scroll width and Horizontal overflow. Verify the real page has zero horizontal overflow and scroll width does not exceed client width; retain the numerical observation for the original mobile assertion. This is a nonmodal popover and must not change root/body overflow styles. Close Account before continuing.
+          - In the editor Variables preview inputs, set topic to Mobile, verify the preview begins Mobile Mobile. and preserves all 24 numbered lines, then use Copy preview result. Open a disposable New Prompt draft and keyboard-paste into Body to compare the actual clipboard with the rendered text. Cancel that draft without saving.
+          - assert: Verify the primary actions remain usable on mobile without horizontal overflow
+          - assert: Verify one topic variable input exists and changes the live preview; verify the clipboard pasted into the disposable draft equals the entire 24-line template with {{topic}} replaced once by Mobile, including Chinese, emoji and line breaks. Verify original saved template and Launch default remain unchanged after reload.

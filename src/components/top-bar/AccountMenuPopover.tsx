@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { User } from 'lucide-react';
 import { AccountPanel } from '../account';
+import { LayoutDetails } from './LayoutDetails';
 import { useDismissablePopover } from '../ui/listbox/use-dismissable-popover';
 import type { IAuthService } from '../../services/interfaces';
 import type { AppMode, AuthUser, SyncStatus } from '../../types/index';
@@ -53,7 +54,7 @@ export function AccountMenuPopover({
         <div
           role="dialog"
           aria-label="Account"
-          className="absolute right-0 top-full z-50 mt-2 w-[calc(100vw-1.5rem)] max-w-72 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3 shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100dvh-5rem)] w-[calc(100vw-1.5rem)] max-w-72 overflow-y-auto overscroll-contain rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-3 shadow-lg"
         >
           <AccountPanel
             authService={authService}
@@ -67,6 +68,7 @@ export function AccountMenuPopover({
               closePopover();
             }}
           />
+          <LayoutDetails />
         </div>
       )}
     </div>

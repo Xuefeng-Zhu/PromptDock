@@ -1,34 +1,14 @@
 /**
  * File dialog utilities for saving and opening files.
- * Uses native Tauri dialogs in the desktop shell and browser APIs elsewhere.
+ * Uses native Tauri save dialogs in the desktop shell and browser downloads elsewhere.
  */
 
 import { isTauriRuntime } from './runtime';
 
-type BrowserFileHandle = {
-  createWritable: () => Promise<{
-    write: (data: Blob) => Promise<void>;
-    close: () => Promise<void>;
-  }>;
-};
-
-type BrowserSavePicker = {
-  showSaveFilePicker?: (options: {
-    suggestedName: string;
-    types: Array<{
-      description: string;
-      accept: Record<string, string[]>;
-    }>;
-  }) => Promise<BrowserFileHandle>;
-};
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError';
-}
-
 /**
- * Save content to a JSON file.
- * Returns false when the user cancels the save picker.
+ * Saves JSON through Tauri or starts a standard browser download, accessible to
+ * browsers without native picker automation. Returns false on Tauri cancellation;
+ * browser success means download initiated, not confirmation of a disk write.
  */
 export async function saveFile(content: string, defaultName: string): Promise<boolean> {
   if (isTauriRuntime()) {
@@ -49,30 +29,6 @@ export async function saveFile(content: string, defaultName: string): Promise<bo
     return true;
   }
 
-  const browserSavePicker = (window as Window & BrowserSavePicker).showSaveFilePicker;
-  if (browserSavePicker) {
-    try {
-      const handle = await browserSavePicker({
-        suggestedName: defaultName,
-        types: [
-          {
-            description: 'JSON file',
-            accept: { 'application/json': ['.json'] },
-          },
-        ],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(new Blob([content], { type: 'application/json' }));
-      await writable.close();
-      return true;
-    } catch (error) {
-      if (isAbortError(error)) {
-        return false;
-      }
-      throw error;
-    }
-  }
-
   const blob = new Blob([content], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -81,7 +37,8 @@ export async function saveFile(content: string, defaultName: string): Promise<bo
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Keep the URL alive until the browser has consumed the click's default action.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
   return true;
 }
 

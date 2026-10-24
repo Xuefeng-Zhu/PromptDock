@@ -23,13 +23,14 @@ test.describe('settings, import, and export', () => {
     const chooser = page.waitForEvent('filechooser');
     await page.getByRole('button', { name: 'Import prompts from JSON file' }).click();
     await chooser;
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.locator('input[type="file"][hidden]').setInputFiles({
       name: 'dom-import.json',
       mimeType: 'application/json',
       buffer: Buffer.from(exportDocument([{ title: 'E2E DOM Import', body: 'Exact 中文 😀\nBody.', tags: ['dom-import'] }])),
     });
     await expect(page.getByText('Imported 1 prompt(s) successfully.')).toBeVisible();
-    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+    await expect(page.locator('input[type="file"][hidden]')).toHaveCount(0);
+    await expect(page.getByLabel('Choose JSON file', { exact: true })).toBeVisible();
     await page.reload();
     const details = await selectPrompt(page, 'E2E DOM Import');
     await expect(details).toContainText('Exact 中文 😀');

@@ -2,7 +2,7 @@
   "name": "prompt-dock",
   "private": true,
   "version": "0.4.1",
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"

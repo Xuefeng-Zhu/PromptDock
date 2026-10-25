@@ -194,5 +194,4 @@ See [Release](docs/RELEASE.md) before publishing; desktop release builds run thr
 
 ## License
 
-PromptDock is licensed under the GNU Affero General Public License v3.0 only
-(`AGPL-3.0-only`). See [LICENSE](LICENSE).
+PromptDock is licensed under the MIT License. See [LICENSE](LICENSE).

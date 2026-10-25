@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef } from 'react';
 import { Code, Copy, Info, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { splitPromptTemplateParts } from '../../utils/prompt-template';
+import { BodyFileImport } from './BodyFileImport';
+import { BodyTextDetails } from './BodyTextDetails';
 
 const BODY_EDITOR_MIN_ROWS = 12;
 const BODY_EDITOR_LINE_HEIGHT_REM = 1.625;
@@ -91,6 +93,9 @@ export function BodyTemplateEditor({
           )}
         </div>
       </div>
+
+      <BodyFileImport onBodyChange={onBodyChange} />
+      <BodyTextDetails body={body} />
 
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] overflow-hidden focus-within:border-[var(--color-primary)] focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20">
         <div className="relative min-w-0" style={{ minHeight: editorMinHeight }}>

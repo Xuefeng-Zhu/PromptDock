@@ -8,6 +8,24 @@ PromptDock is a local-first prompt recipe manager for people who reuse AI prompt
 
 Users create reusable prompt templates, organize them with folders/tags/favorites, fill `{{variable}}` placeholders, then copy or paste the rendered prompt into another app.
 
+The [TestSprite Hackathon Season 4 submission](https://discord.com/channels/1227394620623949934/1563612968724209664) was posted on October 24, 2026 with two app screenshots and the current test limitations. See [submission and evidence](docs/hackathon/SUBMISSION.md).
+
+## Try it in a minute
+
+1. Open the [live app](https://promptdock-95e31.web.app), choose local mode, and create a **New Prompt**.
+2. Enter `Write {{topic}}. Repeat: {{topic}}.` as the body. Set `topic` to **Textarea** and give it a two-line default.
+3. Check the live preview, save, and reload. Use **Cmd/Ctrl+K** to find the recipe, fill its variable, and copy the result.
+
+## Screenshots
+
+The prompt library organizes reusable recipes with tags, favorites, search, and grid/list views.
+
+![PromptDock library showing sample prompt recipes and navigation](docs/hackathon/images/library.jpg)
+
+The editor highlights template variables and renders example values in a live preview. These screenshots show sample content from the deployed browser app.
+
+![PromptDock variable template alongside filled inputs and live preview](docs/hackathon/images/variables.jpg)
+
 ## Documentation
 
 | Document | Purpose |
@@ -22,6 +40,7 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common setup, runtime, sync, and build/test issues. |
 | [Architecture Decision Records](docs/adr) | Durable engineering decisions and their consequences. |
 | [Deferred Issues](docs/Issues.md) | Known deferred implementation and test-coverage follow-ups. |
+| [Hackathon submission](docs/hackathon/SUBMISSION.md) | Published entry, screenshots, judge walkthrough, and verification evidence. |
 
 ## Key Features
 
@@ -37,6 +56,7 @@ Users create reusable prompt templates, organize them with folders/tags/favorite
 - Synced workspaces with owner/editor/viewer roles, member invites, viewer domain access, workspace switching, and duplicate-to-workspace flows.
 - Sync status, offline-synced mode, and in-memory conflict review UI.
 - Browser runtime support for development and static hosting experiments.
+- On-demand Account → Layout details for reporting actual viewport size and horizontal overflow.
 
 ## Tech Stack
 
@@ -151,9 +171,13 @@ The main verification suite covers linting, typecheck/build, Vitest, Playwright 
 
 The TestSprite 3.0 portal suite targets the [live web app](https://promptdock-95e31.web.app) in anonymous local mode. The [suite scope](docs/hackathon/TESTSPRITE_SCOPE.md) covers prompt create/edit/duplicate/favorite/archive/restore, folders and tags, search and the command palette, variable defaults/dropdowns/live preview, exact clipboard output, JSON import/export and duplicate handling, invalid input, reload persistence, long and special-character content, and mobile navigation. Firebase sync/workspace scenarios require dedicated test accounts and are optional.
 
-The intended GitHub App configuration runs the suite on **every pull request** into the confirmed base branch and enables **Blocking PRs**. **Setup is pending verification:** the portal currently shows GitHub as unconnected, and no passing TestSprite PR result has been recorded. Installation, enabling these options, and evidence links must be completed before claiming the integration is active. The repository default branch is `develop`; Frank confirmed `develop` as the TestSprite base branch.
+As of October 24, 2026, the portal's **latest result for each case** is **91 Passed / 2 Failed / 14 Blocked**, with 107 cases, all 217 assertions retained, and 0 running. This inventory combines focused runs; it is not a passing full-suite PR result. Five long-text cases now pass complete 12 KiB SHA-256 comparisons after reload. The latest [three-case correction run](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/db9cdc55-47a7-451b-9b78-800da332b0c3) passed FLT-011, ONB-002, and FAV-014. See [current triage and run history](docs/hackathon/REMAINING_CASES.md).
 
-The production Hosting workflow deploys only on pushes to `main`. The [PR preview workflow](.github/workflows/firebase-hosting-preview.yml) verifies same-repository PRs into `develop` and deploys a seven-day Firebase Hosting preview channel. It reuses the existing `firebase-hosting` environment secrets and publishes the URL in the Firebase bot comment and GitHub deployment. Fork and Dependabot PRs do not deploy. Configure TestSprite to wait for the successful preview deployment and test its actual URL; a fixed production URL does not validate unmerged PR changes. The preview workflow is prepared; its first successful deployment and TestSprite trigger are still pending. See the [submission checklist](docs/hackathon/SUBMISSION.md) for the decision and remaining evidence.
+The TestSprite GitHub App is connected. **Automatic PR runs are paused** while runner issues are investigated. The `develop` rules require **Build and test** and **TestSprite V3**. [PR #202](https://github.com/Xuefeng-Zhu/PromptDock/pull/202) is open and unmerged; ordinary CI and CodeQL checks passed at `22647ec`, but there is no green full 107-case TestSprite PR result. The last recorded [full PR execution](https://www.testsprite.com/dashboard-v3/o/6167b83c-97c5-5141-8f17-545913fba1fa/projects/43ae1231-cf5e-4d9a-81ee-e93fdf6dcf28/execution/cbc9b35d-6c77-4d56-815a-b56e11a49370) was **81 Passed / 5 Failed / 21 Blocked**. The historical required-status link pointed to a different failing run; [setup history](docs/hackathon/PORTAL_SETUP.md) records the distinction.
+
+The [approved production deployment](https://github.com/Xuefeng-Zhu/PromptDock/actions/runs/40074130187) succeeded for PR head `22647ec76670ae7401148f9cb6208c1982c681cb`, the build used for these focused checks. The suite uses the fixed production URL. The [PR preview workflow](.github/workflows/firebase-hosting-preview.yml) also creates seven-day previews for eligible same-repository PRs; these preview URLs are separate from the production test target.
+
+The remaining results concern actual JSON download/reimport (FAV-011), numeric viewport/overflow measurement (TEM-010), and JSON file/fixture workflows (14 Blocked). Eight synthetic Test Files showed Ready, but the import probe could not access the required pair; whether the displayed 8/3 upload-limit gate causes mounting failures is unconfirmed. These issues were reported through [Discord support](https://discord.com/channels/1227394620623949934/1227394621362143326/1563460634979340358) and Intercom. Independent production Playwright checks pass actual file round trips, exact text, and mobile measurements; they do not replace TestSprite verdicts. Further runs require a concrete correction and explicit credit approval.
 
 Local checks supplement the portal suite: `npm run lint`, `npm run build`, `npm test`, and `npm run test:e2e`. TestSprite results must come from its own portal/GitHub App; local checks do not satisfy that requirement.
 

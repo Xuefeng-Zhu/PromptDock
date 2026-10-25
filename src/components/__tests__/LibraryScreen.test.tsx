@@ -17,9 +17,54 @@ const defaultProps = {
 };
 
 describe('LibraryScreen', () => {
+  it.each([
+    ['favorites', 'Favorites'],
+    ['recent', 'Recent'],
+    ['archived', 'Archived'],
+    ['tag-writing', '#writing'],
+    ['folder-writing', 'Writing'],
+  ])('labels the %s view with its selected scope', (activeSidebarItem, heading) => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        activeSidebarItem={activeSidebarItem}
+        folders={[{ id: 'folder-writing', name: 'Writing', createdAt: new Date(), updatedAt: new Date() }]}
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeDefined();
+  });
+
+  it('preserves the selected tag display spelling even when its filtered view is empty', () => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={[]}
+        filterSourcePrompts={[{ ...MOCK_PROMPTS[0], tags: ['Writing'] }]}
+        activeSidebarItem="tag-writing"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: '#Writing' })).toBeDefined();
+    expect(screen.getByText('No prompts found')).toBeDefined();
+  });
+
   it('renders the "All Prompts" heading', () => {
     render(<LibraryScreen {...defaultProps} />);
     expect(screen.getByText('All Prompts')).toBeDefined();
+  });
+
+  it('matches the visible sidebar tag casing when archived tags appear first', () => {
+    render(
+      <LibraryScreen
+        {...defaultProps}
+        prompts={[]}
+        filterSourcePrompts={[
+          { ...MOCK_PROMPTS[0], id: 'archived-tag', archived: true, tags: ['writing'] },
+          { ...MOCK_PROMPTS[0], id: 'active-tag', archived: false, tags: ['Writing'] },
+        ]}
+        activeSidebarItem="tag-writing"
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: '#Writing' })).toBeDefined();
   });
 
   it('renders the prompt count', () => {

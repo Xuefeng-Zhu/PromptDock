@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-10-22T00:00:00.000Z",
+  "prompts": [
+    {
+      "title": "TS4 Fixture Recipe",
+      "body": "Fixture updated {{name}}.",
+      "description": "Modified disposable fixture",
+      "tags": [
+        "ts4-fixture",
+        "updated"
+      ]
+    },
+    {
+      "title": "TS4 Imported New",
+      "body": "New unique fixture body."
+    }
+  ]
+}

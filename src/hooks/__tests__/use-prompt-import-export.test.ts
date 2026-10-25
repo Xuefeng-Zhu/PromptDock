@@ -197,6 +197,23 @@ describe('usePromptImportExport', () => {
     vi.useRealTimers();
   });
 
+  it('reads a selected file without another chooser and validates empty files', async () => {
+    const { repo } = setupStores();
+    const { result } = renderHook(() => usePromptImportExport());
+    const file = new File([], 'selected.json');
+    Object.defineProperty(file, 'text', { value: vi.fn().mockResolvedValue(createImportJson([
+      { title: 'Selected file', body: 'Exact 中文 😀\nBody.' },
+    ])) });
+    await act(async () => { await result.current.handleImport(file); });
+    expect(mockOpenFile).not.toHaveBeenCalled();
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ body: 'Exact 中文 😀\nBody.' }));
+    const empty = new File([], 'empty.json');
+    Object.defineProperty(empty, 'text', { value: vi.fn().mockResolvedValue('') });
+    await act(async () => { await result.current.handleImport(empty); });
+    expect(result.current.importErrors).toContain('Invalid JSON: unable to parse input');
+    expect(repo.create).toHaveBeenCalledTimes(1);
+  });
+
   it('exports only active prompts and reports success after saving', async () => {
     setupStores([
       makePrompt({ id: 'active', title: 'Active prompt' }),

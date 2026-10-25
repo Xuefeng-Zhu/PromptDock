@@ -1,0 +1,279 @@
+# FIVE-CASE PATCH ONLY; not a complete portal-plan replacement.
+# Pending production deployment of Text details. All original assertions remain.
+---
+requiresDeployment: true
+baseSavedPlanSha256: e62799e1d3701bae5f7cd692b1c790b889b3c335510116edf06e65a4b88c1ad6
+testCases:
+- id: ONB-009
+  priority: Medium
+  name: Handle long prompt content, search empty states, and favorites or archive recovery
+  description: >-
+    Verifies long multiline content round-trips exactly, unsupported placeholder names remain literal, and empty-state recovery
+    for search, favorites, and archived views.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep all seeded
+    recipes; this case uses only one disposable recipe.
+  - Open New Prompt once and set Title to TS4 Long ONB009.
+  - >-
+    Use the visible Load text file input to upload the actual attached ts4-exact-12k.txt. Preserve its complete UTF-8 text,
+    including literal {{bad-name!}}. Do not use From JSON, copy a truncated preview, type a sample or regenerate the fixture.
+  - >-
+    Click Text details in the editor. Wait for the locally computed Text SHA-256 and UTF-8 bytes outputs. Read the actual
+    full 64-character digest and compare with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; bytes must
+    be 12288. This is a fingerprint of ALL current text, independently compared with the source-file digest, not a screenshot/length/toast
+    comparison. Treat any different digest as failure, not a pass. If Text details is absent, report the undeployed-build
+    blocker. Keep the Body unchanged.
+  - Save the recipe.
+  - >-
+    Reload the actual browser page. This must restore the saved recipe from persistence; navigating to Library alone does
+    not perform a reload.
+  - >-
+    In All Prompts select TS4 Long ONB009, open More options > Edit prompt, and click Text details. Read the ACTUAL computed
+    full Text SHA-256 after reload. Compare all 64 hex characters with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a;
+    UTF-8 bytes must be 12288. This verifies the complete restored Body against the independently calculated expected source
+    digest. Also verify the literal unsupported {{bad-name!}} text remains present. A copied expected constant, visible excerpt
+    or approximate character count cannot satisfy this comparison. Retain this exact-comparison evidence for the assertion
+    below. To cancel this unchanged saved edit, use the Library breadcrumb; the saved Edit Prompt screen has no separate Cancel
+    button. Do not click Save.
+  - >-
+    Leave the unchanged editor through the Library breadcrumb without saving (cancel the edit). Return to All Prompts and
+    record the complete baseline titles/count including the long recipe.
+  - >-
+    Focus the HEADER LIBRARY searchbox with keyboard Tab. Enter TS4 unmatched 918274 into that same searchbox, verify its
+    actual query and the No prompts found library state. Do not click an empty header searchbox or operate the independent
+    command palette.
+  - >-
+    Clear the SAME header library searchbox using actual keyboard Select All and Backspace/Delete. Verify its value is empty
+    and the complete baseline library returns.
+  - Open Favorites in sidebar navigation and verify the empty Favorites state with the header query still empty.
+  - Open Archived in sidebar navigation and verify the empty Archived state with the header query still empty.
+  - >-
+    Explicitly select All Prompts with header query empty and no tag/folder filters. Verify every recorded baseline title/count
+    and the saved long recipe return. Retain the full computed post-reload fingerprint comparison evidence above.
+  - assert: >-
+      Compare the entire saved Body after reload with the attached ts4-exact-12k.txt exactly, including unsupported {{bad-name!}}
+      remaining literal. Verify all empty search, Favorites and Archived states can be exited back to the full baseline library
+      and saved recipe. An excerpt or toast is insufficient.
+- id: LIB-013
+  priority: Medium
+  name: Render a large prompt and preserve search and empty states
+  description: >-
+    Validate the app can store and restore a long prompt containing multiline text, quotes, braces, dollar signs, and Unicode,
+    while empty search and empty library states recover correctly.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep all seeded
+    recipes; this case uses only one disposable recipe.
+  - Open New Prompt once and set Title to TS4 Long LIB013.
+  - >-
+    Use the visible Load text file input to upload the actual attached ts4-exact-12k.txt. Preserve its complete UTF-8 text,
+    including literal {{bad-name!}}. Do not use From JSON, copy a truncated preview, type a sample or regenerate the fixture.
+  - >-
+    Click Text details in the editor. Wait for the locally computed Text SHA-256 and UTF-8 bytes outputs. Read the actual
+    full 64-character digest and compare with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; bytes must
+    be 12288. This is a fingerprint of ALL current text, independently compared with the source-file digest, not a screenshot/length/toast
+    comparison. Treat any different digest as failure, not a pass. If Text details is absent, report the undeployed-build
+    blocker. Keep the Body unchanged.
+  - Save the recipe.
+  - >-
+    Reload the actual browser page. This must restore the saved recipe from persistence; navigating to Library alone does
+    not perform a reload.
+  - >-
+    In All Prompts select TS4 Long LIB013, open More options > Edit prompt, and click Text details. Read the ACTUAL computed
+    full Text SHA-256 after reload. Compare all 64 hex characters with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a;
+    UTF-8 bytes must be 12288. This verifies the complete restored Body against the independently calculated expected source
+    digest. Also verify the literal unsupported {{bad-name!}} text remains present. A copied expected constant, visible excerpt
+    or approximate character count cannot satisfy this comparison. Retain this exact-comparison evidence for the assertion
+    below. To cancel this unchanged saved edit, use the Library breadcrumb; the saved Edit Prompt screen has no separate Cancel
+    button. Do not click Save.
+  - assert: >-
+      Open Edit on TS4 Long LIB013 after reload and compare its entire saved Body with the attached ts4-exact-12k.txt source
+      exactly. Preserve all symbols and unsupported {{bad-name!}} literally. Cancel Edit without changes. A screenshot or
+      approximate length is insufficient.
+  - >-
+    Leave the unchanged editor through the Library breadcrumb without saving (cancel the edit). Return to All Prompts and
+    record the complete baseline titles/count including the long recipe.
+  - >-
+    Focus the HEADER LIBRARY searchbox with keyboard Tab. Enter TS4 unmatched 918274 into that same searchbox, verify its
+    actual query and the No prompts found library state. Do not click an empty header searchbox or operate the independent
+    command palette.
+  - >-
+    Clear the SAME header library searchbox using actual keyboard Select All and Backspace/Delete. Verify its value is empty
+    and the complete baseline library returns.
+  - Open Favorites in sidebar navigation and verify the empty Favorites state with the header query still empty.
+  - Open Archived in sidebar navigation and verify the empty Archived state with the header query still empty.
+  - >-
+    Explicitly select All Prompts with header query empty and no tag/folder filters. Verify every recorded baseline title/count
+    and the saved long recipe return. Retain the full computed post-reload fingerprint comparison evidence above.
+  - assert: >-
+      Verify no-match search and empty Favorites/Archived states were visible with the intended query/scope. Explicitly select
+      All Prompts with the header query empty and verify the saved long recipe and full baseline list are restored.
+- id: EDT-009
+  priority: Medium
+  name: Edit long prompts and preserve exact content with empty search and empty-state recovery
+  description: >-
+    Validates editing a very long prompt with multiline text, quotes, braces, dollar signs, Unicode, and emoji while confirming
+    exact reload persistence and recovery from empty search and empty Favorites or Archived states.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep all seeded
+    recipes; this case uses only one disposable recipe.
+  - Open New Prompt once and set Title to TS4 Long EDT009. Set Description to Long edit regression.
+  - >-
+    Use the visible Load text file input to upload the actual attached ts4-exact-12k.txt. Preserve its complete UTF-8 text,
+    including literal {{bad-name!}}. Do not use From JSON, copy a truncated preview, type a sample or regenerate the fixture.
+  - >-
+    Click Text details in the editor. Wait for the locally computed Text SHA-256 and UTF-8 bytes outputs. Read the actual
+    full 64-character digest and compare with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; bytes must
+    be 12288. This is a fingerprint of ALL current text, independently compared with the source-file digest, not a screenshot/length/toast
+    comparison. Treat any different digest as failure, not a pass. If Text details is absent, report the undeployed-build
+    blocker. Keep the Body unchanged.
+  - Save the recipe.
+  - >-
+    Select TS4 Long EDT009 in All Prompts, open More options > Edit prompt. Focus Body, use keyboard Select All then ArrowRight
+    to collapse the selection at the absolute end without deleting anything, press Enter once, then type exactly TS4 edited
+    marker. Preserve every original character and the original final newline. Do not reload the source file over the edit.
+  - >-
+    Click Text details and verify the actual computed full Text SHA-256 is now 6d9ab4a1b54864dfd0297432de40915d370e187fc995b76e8204be148bb2f0e8
+    and UTF-8 bytes is 12306, independently calculated from original file plus exactly one newline and TS4 edited marker.
+    Verify it differs from the original digest. Save the edited recipe.
+  - >-
+    Reload the actual browser page. This must restore the saved recipe from persistence; navigating to Library alone does
+    not perform a reload.
+  - >-
+    In All Prompts select TS4 Long EDT009, open More options > Edit prompt, and click Text details. Read the ACTUAL computed
+    full Text SHA-256 after reload. Compare all 64 hex characters with 6d9ab4a1b54864dfd0297432de40915d370e187fc995b76e8204be148bb2f0e8;
+    UTF-8 bytes must be 12306. This verifies the complete restored Body against the independently calculated expected source-plus-marker
+    digest. Also verify the literal unsupported {{bad-name!}} text remains present. A copied expected constant, visible excerpt
+    or approximate character count cannot satisfy this comparison. Retain this exact-comparison evidence for the assertion
+    below. To cancel this unchanged saved edit, use the Library breadcrumb; the saved Edit Prompt screen has no separate Cancel
+    button. Do not click Save.
+  - assert: >-
+      Open Edit after reload and compare the ENTIRE Body exactly against the attached ts4-exact-12k.txt content plus one newline
+      and TS4 edited marker. Every original symbol and unsupported {{bad-name!}} must remain literal. Cancel Edit; a visible
+      excerpt does not prove exact equality.
+  - >-
+    Leave the unchanged editor through the Library breadcrumb without saving (cancel the edit). Return to All Prompts and
+    record the complete baseline titles/count including the long recipe.
+  - >-
+    Focus the HEADER LIBRARY searchbox with keyboard Tab. Enter TS4 unmatched 918274 into that same searchbox, verify its
+    actual query and the No prompts found library state. Do not click an empty header searchbox or operate the independent
+    command palette.
+  - >-
+    Clear the SAME header library searchbox using actual keyboard Select All and Backspace/Delete. Verify its value is empty
+    and the complete baseline library returns.
+  - Open Favorites in sidebar navigation and verify the empty Favorites state with the header query still empty.
+  - Open Archived in sidebar navigation and verify the empty Archived state with the header query still empty.
+  - >-
+    Explicitly select All Prompts with header query empty and no tag/folder filters. Verify every recorded baseline title/count
+    and the saved long recipe return. Retain the full computed post-reload fingerprint comparison evidence above.
+  - assert: Verify empty search and empty-state views recover back to the prompt library without losing the saved prompt
+- id: FLT-018
+  priority: Medium
+  name: Handle a long prompt with exact persistence and literal unsupported placeholder punctuation
+  description: >-
+    Validates that a very long prompt with multiline content, quotes, braces, dollar signs, Unicode, and unsupported placeholder
+    punctuation reloads exactly and survives search and empty-state recovery flows.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep all seeded
+    recipes; this case uses only one disposable recipe.
+  - Open New Prompt once and set Title to TS4 Long FLT018.
+  - >-
+    Use the visible Load text file input to upload the actual attached ts4-exact-12k.txt. Preserve its complete UTF-8 text,
+    including literal {{bad-name!}}. Do not use From JSON, copy a truncated preview, type a sample or regenerate the fixture.
+  - >-
+    Click Text details in the editor. Wait for the locally computed Text SHA-256 and UTF-8 bytes outputs. Read the actual
+    full 64-character digest and compare with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; bytes must
+    be 12288. This is a fingerprint of ALL current text, independently compared with the source-file digest, not a screenshot/length/toast
+    comparison. Treat any different digest as failure, not a pass. If Text details is absent, report the undeployed-build
+    blocker. Keep the Body unchanged.
+  - Save the recipe.
+  - >-
+    Reload the actual browser page. This must restore the saved recipe from persistence; navigating to Library alone does
+    not perform a reload.
+  - >-
+    In All Prompts select TS4 Long FLT018, open More options > Edit prompt, and click Text details. Read the ACTUAL computed
+    full Text SHA-256 after reload. Compare all 64 hex characters with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a;
+    UTF-8 bytes must be 12288. This verifies the complete restored Body against the independently calculated expected source
+    digest. Also verify the literal unsupported {{bad-name!}} text remains present. A copied expected constant, visible excerpt
+    or approximate character count cannot satisfy this comparison. Retain this exact-comparison evidence for the assertion
+    below. To cancel this unchanged saved edit, use the Library breadcrumb; the saved Edit Prompt screen has no separate Cancel
+    button. Do not click Save.
+  - assert: >-
+      Open Edit after reload and compare the full Body exactly with the attached ts4-exact-12k.txt, including real newlines
+      and all literal {{bad-name!}} punctuation. Verify the original source has 12,288 UTF-8 bytes as recorded in manifest.json;
+      do not confuse bytes with JavaScript character count. Cancel Edit without changes.
+  - >-
+    Leave the unchanged editor through the Library breadcrumb without saving (cancel the edit). Return to All Prompts and
+    record the complete baseline titles/count including the long recipe.
+  - >-
+    Focus the HEADER LIBRARY searchbox with keyboard Tab. Enter TS4 unmatched 918274 into that same searchbox, verify its
+    actual query and the No prompts found library state. Do not click an empty header searchbox or operate the independent
+    command palette.
+  - assert: Verify the empty search state is shown.
+  - >-
+    Clear the SAME header library searchbox using actual keyboard Select All and Backspace/Delete. Verify its value is empty
+    and the complete baseline library returns.
+  - Open Favorites in sidebar navigation and verify the empty Favorites state with the header query still empty.
+  - Open Archived in sidebar navigation and verify the empty Archived state with the header query still empty.
+  - assert: Verify the empty state is shown in Favorites and Archived when no matching items are present.
+  - >-
+    Explicitly select All Prompts with header query empty and no tag/folder filters. Verify every recorded baseline title/count
+    and the saved long recipe return. Retain the full computed post-reload fingerprint comparison evidence above.
+  - assert: Verify the prompt list is restored.
+- id: TEM-009
+  priority: Medium
+  name: Handle large prompt content, search empty states, and favorites archive recovery
+  description: >-
+    Validates exact persistence of a large multiline prompt containing quotes, braces, dollar signs, Unicode, and emoji, plus
+    empty search behavior and empty-state recovery in Favorites and Archived views.
+  steps:
+  - >-
+    Navigate to PromptDock in a fresh anonymous browser context and choose Start locally if onboarding appears. Keep all seeded
+    recipes; this case uses only one disposable recipe.
+  - Open New Prompt once and set Title to TS4 Long TEM009.
+  - >-
+    Use the visible Load text file input to upload the actual attached ts4-exact-12k.txt. Preserve its complete UTF-8 text,
+    including literal {{bad-name!}}. Do not use From JSON, copy a truncated preview, type a sample or regenerate the fixture.
+  - >-
+    Click Text details in the editor. Wait for the locally computed Text SHA-256 and UTF-8 bytes outputs. Read the actual
+    full 64-character digest and compare with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a; bytes must
+    be 12288. This is a fingerprint of ALL current text, independently compared with the source-file digest, not a screenshot/length/toast
+    comparison. Treat any different digest as failure, not a pass. If Text details is absent, report the undeployed-build
+    blocker. Keep the Body unchanged.
+  - Save the recipe.
+  - >-
+    Reload the actual browser page. This must restore the saved recipe from persistence; navigating to Library alone does
+    not perform a reload.
+  - >-
+    In All Prompts select TS4 Long TEM009, open More options > Edit prompt, and click Text details. Read the ACTUAL computed
+    full Text SHA-256 after reload. Compare all 64 hex characters with 23e14e2b4353242e11ada37a7f645db7d74437b015efdf598179cb0ce70cff7a;
+    UTF-8 bytes must be 12288. This verifies the complete restored Body against the independently calculated expected source
+    digest. Also verify the literal unsupported {{bad-name!}} text remains present. A copied expected constant, visible excerpt
+    or approximate character count cannot satisfy this comparison. Retain this exact-comparison evidence for the assertion
+    below. To cancel this unchanged saved edit, use the Library breadcrumb; the saved Edit Prompt screen has no separate Cancel
+    button. Do not click Save.
+  - assert: >-
+      Open Edit after reload and compare the full Body exactly with the attached ts4-exact-12k.txt, including real newlines,
+      punctuation, Unicode, emoji and literal unsupported {{bad-name!}}. Cancel Edit without changes; do not accept visible
+      excerpts as exact persistence.
+  - >-
+    Leave the unchanged editor through the Library breadcrumb without saving (cancel the edit). Return to All Prompts and
+    record the complete baseline titles/count including the long recipe.
+  - >-
+    Focus the HEADER LIBRARY searchbox with keyboard Tab. Enter TS4 unmatched 918274 into that same searchbox, verify its
+    actual query and the No prompts found library state. Do not click an empty header searchbox or operate the independent
+    command palette.
+  - assert: Verify an empty search state is shown
+  - >-
+    Clear the SAME header library searchbox using actual keyboard Select All and Backspace/Delete. Verify its value is empty
+    and the complete baseline library returns.
+  - Open Favorites in sidebar navigation and verify the empty Favorites state with the header query still empty.
+  - assert: Verify the empty favorites state is shown
+  - Open Archived in sidebar navigation and verify the empty Archived state with the header query still empty.
+  - assert: Verify the empty archived state is shown
+  - >-
+    Explicitly select All Prompts with header query empty and no tag/folder filters. Verify every recorded baseline title/count
+    and the saved long recipe return. Retain the full computed post-reload fingerprint comparison evidence above.

@@ -102,6 +102,7 @@ export function AppShellView({ controller }: AppShellViewProps) {
       style={{ backgroundColor: 'var(--color-background)' }}
     >
       <TopBar
+        isLibraryScreen={screen.name === 'library'}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
         onCommandPaletteOpen={handleCommandPaletteOpen}

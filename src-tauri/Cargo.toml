@@ -2,7 +2,7 @@
 name = "prompt-dock"
 version = "0.4.1"
 description = "A local-first desktop prompt recipe manager"
-license = "AGPL-3.0-only"
+license = "MIT"
 authors = []
 edition = "2021"
 

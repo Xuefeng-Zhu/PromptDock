@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AuthUser, Workspace, WorkspaceDomainInvite } from '../../types/index';
+import type {
+  AuthUser,
+  Workspace,
+  WorkspaceDomainInvite,
+  WorkspaceInvite,
+} from '../../types/index';
 import { WorkspaceRepository } from '../workspace-repository';
 import type { LocalStorageBackend } from '../local-storage-backend';
 
@@ -10,8 +15,16 @@ const firestoreMocks = vi.hoisted(() => {
     path: string;
     ref: { id: string; path: string };
   };
+  type BatchSet = { path: string; data: Record<string, unknown> };
+  type BatchUpdate = { path: string; data: Record<string, unknown> };
   const state = {
-    batches: [] as Array<{ commit: ReturnType<typeof vi.fn>; operations: string[] }>,
+    batches: [] as Array<{
+      commit: ReturnType<typeof vi.fn>;
+      deletes: string[];
+      operations: string[];
+      sets: BatchSet[];
+      updates: Array<{ path: string; data: Record<string, unknown> }>;
+    }>,
     collectionDocs: new Map<string, DocSnapshot[]>(),
     documentData: new Map<string, Record<string, unknown>>(),
     workspaceExists: false,
@@ -38,7 +51,17 @@ const firestoreMocks = vi.hoisted(() => {
   return {
     state,
     collection: vi.fn((_firestore: unknown, ...path: string[]) => ({ path: path.join('/') })),
-    doc: vi.fn((_firestore: unknown, ...path: string[]) => makeRef(path.join('/'))),
+    doc: vi.fn((firestoreOrCollection: unknown, ...path: string[]) => {
+      if (
+        path.length === 0
+        && typeof firestoreOrCollection === 'object'
+        && firestoreOrCollection !== null
+        && 'path' in firestoreOrCollection
+      ) {
+        return makeRef(`${String(firestoreOrCollection.path)}/workspace-created`);
+      }
+      return makeRef(path.join('/'));
+    }),
     addDoc: vi.fn(async () => makeRef('workspaceInvites/invite-created')),
     getDoc: vi.fn(async (ref: { id?: string; path: string }) => ({
       data: () => state.documentData.get(ref.path) ?? state.workspaceData,
@@ -57,17 +80,36 @@ const firestoreMocks = vi.hoisted(() => {
     where: vi.fn(() => ({})),
     writeBatch: vi.fn(() => {
       const batch = {
-        commit: vi.fn(async () => undefined),
+        commit: vi.fn(async () => {
+          for (const { data, path } of batch.sets) {
+            state.documentData.set(path, data);
+          }
+          for (const { data, path } of batch.updates) {
+            state.documentData.set(path, {
+              ...(state.documentData.get(path) ?? {}),
+              ...data,
+            });
+          }
+          for (const path of batch.deletes) {
+            state.documentData.delete(path);
+          }
+        }),
         delete: vi.fn((ref: { path: string }) => {
           batch.operations.push(`delete:${ref.path}`);
+          batch.deletes.push(ref.path);
         }),
+        deletes: [] as string[],
         operations: [] as string[],
-        set: vi.fn((ref: { path: string }) => {
+        set: vi.fn((ref: { path: string }, data: Record<string, unknown>) => {
           batch.operations.push(`set:${ref.path}`);
+          batch.sets.push({ path: ref.path, data });
         }),
-        update: vi.fn((ref: { path: string }) => {
+        sets: [] as BatchSet[],
+        update: vi.fn((ref: { path: string }, data: Record<string, unknown>) => {
           batch.operations.push(`update:${ref.path}`);
+          batch.updates.push({ path: ref.path, data });
         }),
+        updates: [] as BatchUpdate[],
       };
       state.batches.push(batch);
       return batch;
@@ -135,6 +177,23 @@ function makeDomainInvite(overrides: Partial<WorkspaceDomainInvite> = {}): Works
   };
 }
 
+function makeInvite(overrides: Partial<WorkspaceInvite> = {}): WorkspaceInvite {
+  return {
+    id: 'invite-1',
+    workspaceId: syncedWorkspace.id,
+    workspaceName: syncedWorkspace.name,
+    email: domainUser.email,
+    role: 'editor',
+    status: 'pending',
+    invitedBy: 'owner-1',
+    createdAt: new Date('2024-01-03T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-03T00:00:00.000Z'),
+    acceptedAt: null,
+    acceptedBy: null,
+    ...overrides,
+  };
+}
+
 function createMockBackend(initial?: Workspace): LocalStorageBackend {
   let stored: Workspace = initial ? { ...initial } : { ...DEFAULT_WORKSPACE };
 
@@ -144,6 +203,15 @@ function createMockBackend(initial?: Workspace): LocalStorageBackend {
       stored = { ...workspace };
     }),
   } as unknown as LocalStorageBackend;
+}
+
+function seedWorkspaceDocument(workspace = syncedWorkspace) {
+  firestoreMocks.state.documentData.set(`workspaces/${workspace.id}`, {
+    name: workspace.name,
+    ownerId: workspace.ownerId,
+    createdAt: { toDate: () => workspace.createdAt },
+    updatedAt: { toDate: () => workspace.updatedAt },
+  });
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────
@@ -461,6 +529,176 @@ describe('WorkspaceRepository', () => {
     });
   });
 
+  describe('synced workspace writes', () => {
+    it('creates a synced workspace with owner member and membership records in one batch', async () => {
+      const result = await repo.createSyncedWorkspace(' Product Team ', domainUser);
+
+      expect(result.workspace).toMatchObject({
+        id: 'workspace-created',
+        name: 'Product Team',
+        ownerId: domainUser.uid,
+      });
+      expect(result.membership).toMatchObject({
+        workspaceId: 'workspace-created',
+        userId: domainUser.uid,
+        role: 'owner',
+        workspaceName: 'Product Team',
+      });
+      expect(firestoreMocks.state.batches).toHaveLength(1);
+      expect(firestoreMocks.state.batches[0].operations).toEqual([
+        'set:workspaces/workspace-created',
+        'set:workspaces/workspace-created/members/user-2',
+        'set:workspaceMemberships/workspace-created_user-2',
+      ]);
+      expect(firestoreMocks.state.batches[0].sets).toEqual([
+        {
+          path: 'workspaces/workspace-created',
+          data: expect.objectContaining({
+            createdAt: 'server-timestamp',
+            name: 'Product Team',
+            ownerId: domainUser.uid,
+            updatedAt: 'server-timestamp',
+          }),
+        },
+        {
+          path: 'workspaces/workspace-created/members/user-2',
+          data: expect.objectContaining({
+            email: domainUser.email,
+            role: 'owner',
+            userId: domainUser.uid,
+            workspaceId: 'workspace-created',
+          }),
+        },
+        {
+          path: 'workspaceMemberships/workspace-created_user-2',
+          data: expect.objectContaining({
+            role: 'owner',
+            userId: domainUser.uid,
+            workspaceId: 'workspace-created',
+            workspaceName: 'Product Team',
+          }),
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
+    });
+
+    it('accepts email invites by creating membership records and marking the invite accepted', async () => {
+      seedWorkspaceDocument();
+
+      const result = await repo.acceptInvite(makeInvite(), domainUser);
+
+      expect(result).toMatchObject({
+        workspaceId: syncedWorkspace.id,
+        userId: domainUser.uid,
+        role: 'editor',
+        acceptedInviteId: 'invite-1',
+      });
+      expect(firestoreMocks.state.batches).toHaveLength(1);
+      expect(firestoreMocks.state.batches[0].operations).toEqual([
+        'set:workspaces/workspace-1/members/user-2',
+        'set:workspaceMemberships/workspace-1_user-2',
+        'update:workspaceInvites/invite-1',
+      ]);
+      expect(firestoreMocks.state.batches[0].sets).toEqual([
+        {
+          path: 'workspaces/workspace-1/members/user-2',
+          data: expect.objectContaining({
+            acceptedInviteId: 'invite-1',
+            role: 'editor',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+          }),
+        },
+        {
+          path: 'workspaceMemberships/workspace-1_user-2',
+          data: expect.objectContaining({
+            acceptedInviteId: 'invite-1',
+            role: 'editor',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+            workspaceName: syncedWorkspace.name,
+          }),
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].updates).toEqual([
+        {
+          path: 'workspaceInvites/invite-1',
+          data: {
+            acceptedAt: 'server-timestamp',
+            acceptedBy: domainUser.uid,
+            status: 'accepted',
+            updatedAt: 'server-timestamp',
+          },
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects email invite acceptance when the workspace document is gone', async () => {
+      await expect(repo.acceptInvite(makeInvite(), domainUser)).rejects.toThrow(
+        'Workspace no longer exists.',
+      );
+
+      expect(firestoreMocks.writeBatch).not.toHaveBeenCalled();
+    });
+
+    it('updates member role in both member and membership records before returning the member', async () => {
+      firestoreMocks.state.documentData.set('workspaces/workspace-1/members/user-2', {
+        id: domainUser.uid,
+        workspaceId: syncedWorkspace.id,
+        userId: domainUser.uid,
+        role: 'viewer',
+        email: domainUser.email,
+        displayName: domainUser.displayName,
+      });
+
+      const result = await repo.updateMemberRole(syncedWorkspace.id, domainUser.uid, 'editor');
+
+      expect(result).toMatchObject({
+        userId: domainUser.uid,
+        role: 'editor',
+      });
+      expect(firestoreMocks.state.batches).toHaveLength(1);
+      expect(firestoreMocks.state.batches[0].operations).toEqual([
+        'update:workspaces/workspace-1/members/user-2',
+        'update:workspaceMemberships/workspace-1_user-2',
+      ]);
+      expect(firestoreMocks.state.batches[0].updates).toEqual([
+        {
+          path: 'workspaces/workspace-1/members/user-2',
+          data: { role: 'editor', updatedAt: 'server-timestamp' },
+        },
+        {
+          path: 'workspaceMemberships/workspace-1_user-2',
+          data: { role: 'editor', updatedAt: 'server-timestamp' },
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
+    });
+
+    it('removes a member from both workspace members and membership index records', async () => {
+      await repo.removeMember(syncedWorkspace.id, domainUser.uid);
+
+      expect(firestoreMocks.state.batches).toHaveLength(1);
+      expect(firestoreMocks.state.batches[0].operations).toEqual([
+        'delete:workspaces/workspace-1/members/user-2',
+        'delete:workspaceMemberships/workspace-1_user-2',
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a synced workspace by deleting only the current user membership records', async () => {
+      await repo.leaveSyncedWorkspace(syncedWorkspace.id, domainUser.uid);
+
+      expect(firestoreMocks.state.batches).toHaveLength(1);
+      expect(firestoreMocks.state.batches[0].operations).toEqual([
+        'delete:workspaces/workspace-1/members/user-2',
+        'delete:workspaceMemberships/workspace-1_user-2',
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('domain invites', () => {
     it('normalizes domains and writes deterministic active viewer invites', async () => {
       const result = await repo.createDomainInvite(syncedWorkspace, ' @Example.COM ', 'owner-1');
@@ -570,6 +808,28 @@ describe('WorkspaceRepository', () => {
         'set:workspaces/workspace-1/members/user-2',
         'set:workspaceMemberships/workspace-1_user-2',
       ]);
+      expect(firestoreMocks.state.batches[0].sets).toEqual([
+        {
+          path: 'workspaces/workspace-1/members/user-2',
+          data: expect.objectContaining({
+            acceptedDomainInviteId: invite.id,
+            role: 'viewer',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+          }),
+        },
+        {
+          path: 'workspaceMemberships/workspace-1_user-2',
+          data: expect.objectContaining({
+            acceptedDomainInviteId: invite.id,
+            role: 'viewer',
+            userId: domainUser.uid,
+            workspaceId: syncedWorkspace.id,
+            workspaceName: syncedWorkspace.name,
+          }),
+        },
+      ]);
+      expect(firestoreMocks.state.batches[0].commit).toHaveBeenCalledTimes(1);
     });
 
     it('rejects accepting a domain invite when the email domain does not match', async () => {

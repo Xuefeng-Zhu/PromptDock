@@ -14,8 +14,8 @@ export interface AppModeProviderProps {
 
 /**
  * Bridges the Zustand AppModeStore into React context so that components
- * can consume `mode`, `userId`, and `isOnline` via `useAppMode()` without
- * depending on Zustand directly.
+ * can consume app-mode state via `useAppMode()` without depending on Zustand
+ * directly.
  */
 export function AppModeProvider({ children }: AppModeProviderProps) {
   const mode: AppMode = useAppModeStore((s) => s.mode);
@@ -23,8 +23,9 @@ export function AppModeProvider({ children }: AppModeProviderProps) {
   const userEmail: string | null = useAppModeStore((s) => s.userEmail);
   const userDisplayName: string | null = useAppModeStore((s) => s.userDisplayName);
   const isOnline: boolean = useAppModeStore((s) => s.isOnline);
+  const syncError: string | null = useAppModeStore((s) => s.syncError);
 
-  const value: AppModeState = { mode, userId, userEmail, userDisplayName, isOnline };
+  const value: AppModeState = { mode, userId, userEmail, userDisplayName, isOnline, syncError };
 
   return (
     <AppModeContext.Provider value={value}>

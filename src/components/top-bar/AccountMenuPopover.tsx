@@ -9,7 +9,9 @@ interface AccountMenuPopoverProps {
   authService?: IAuthService;
   mode: AppMode;
   onAuthSuccess?: (user: AuthUser) => void;
+  onRetrySync?: () => void;
   onSignOutSuccess?: () => void;
+  syncError?: string | null;
   syncStatus?: SyncStatus;
   userId: string | null;
 }
@@ -18,7 +20,9 @@ export function AccountMenuPopover({
   authService,
   mode,
   onAuthSuccess,
+  onRetrySync,
   onSignOutSuccess,
+  syncError,
   syncStatus,
   userId,
 }: AccountMenuPopoverProps) {
@@ -59,9 +63,11 @@ export function AccountMenuPopover({
             authService={authService}
             mode={mode}
             userId={userId}
+            syncError={syncError}
             syncStatus={syncStatus}
             variant="popover"
             onAuthSuccess={(user) => onAuthSuccess?.(user)}
+            onRetrySync={onRetrySync}
             onSignOutSuccess={() => {
               onSignOutSuccess?.();
               closePopover();

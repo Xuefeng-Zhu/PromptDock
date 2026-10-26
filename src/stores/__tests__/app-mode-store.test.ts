@@ -28,6 +28,10 @@ describe('AppModeStore', () => {
       expect(store.getState().syncStatus).toBe('local');
     });
 
+    it('should default syncError to null', () => {
+      expect(store.getState().syncError).toBeNull();
+    });
+
     it('should default lastSyncedAt to null', () => {
       expect(store.getState().lastSyncedAt).toBeNull();
     });
@@ -65,6 +69,14 @@ describe('AppModeStore', () => {
       store.getState().setUserId('user-123');
       store.getState().setUserId(null);
       expect(store.getState().userId).toBeNull();
+    });
+
+    it('should clear syncError when clearing the user', () => {
+      store.getState().setUserId('user-123');
+      store.getState().setSyncError('Could not enable sync');
+      store.getState().setUserId(null);
+
+      expect(store.getState().syncError).toBeNull();
     });
   });
 
@@ -113,6 +125,18 @@ describe('AppModeStore', () => {
 
       store.getState().setSyncStatus('syncing');
       expect(store.getState().lastSyncedAt).toBe(syncedAt);
+    });
+  });
+
+  // ── setSyncError ───────────────────────────────────────────────────────────
+
+  describe('setSyncError', () => {
+    it('should store and clear the latest sync setup error', () => {
+      store.getState().setSyncError('Could not enable sync');
+      expect(store.getState().syncError).toBe('Could not enable sync');
+
+      store.getState().setSyncError(null);
+      expect(store.getState().syncError).toBeNull();
     });
   });
 });
